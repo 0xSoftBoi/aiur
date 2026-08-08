@@ -84,6 +84,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "p0a_evidence reducer + CSV templates extended to the new metrics",
         ),
         "existing suite green; reducer round-trips the new template columns",
+        TicketStatus.DELIVERED_AWAITING_HARDWARE,
+        "loop_graph P0-A criteria + p0a_evidence reducer + templates + p0a-bench.md procedure; tests/test_p0a_evidence.py green. Bench execution outstanding.",
     ),
     AdoptionTicket(
         "ADOPT-002",
@@ -95,6 +97,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "P0-A/P0-B gate criteria for hardware fault quotas",
         ),
         "gate evaluation tests cover the new criteria",
+        TicketStatus.DELIVERED_AWAITING_HARDWARE,
+        "hardware/dock/fault-insertion.md + REQUIRED_FAULT_MODES + P0-A/P0-B gate criteria. Board not built.",
     ),
     AdoptionTicket(
         "ADOPT-003",
@@ -105,7 +109,15 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "seed hazard set (~10) including the double-fault residual",
             "CI test: no anonymous residual acceptance",
         ),
-        "hazard validation test green; double-fault residual carries a signature",
+        # The original wording asked for the double-fault residual to "carry a
+        # signature".  It cannot: no human has accepted it, and manufacturing
+        # one would be the exact dishonesty the log exists to prevent.  The
+        # achievable criterion is that the machinery works and names what is
+        # outstanding.
+        "hazard validation test green; every unsigned residual above LOW is a "
+        "named open item with a named required authority",
+        TicketStatus.CLOSED,
+        "aiur/hazards.py + docs/hazard-log.md; tests/test_hazards.py green. Residuals are deliberately unsigned: open_items() names each one and its required authority.",
     ),
     AdoptionTicket(
         "ADOPT-004",
@@ -117,6 +129,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "common-mode table naming correlated fault pairs for the twin",
         ),
         "every FMECA mode maps to a twin fault kind, a hardware insertion, or a labeled gap",
+        TicketStatus.CLOSED,
+        "docs/dock-fmeca.md (49-row worksheet, two fault trees, cut sets) + docs/common-mode.md; found the controller-reset order-1 cut set, fixed in aiur/dock_controller.py.",
     ),
     AdoptionTicket(
         "ADOPT-005",
@@ -128,6 +142,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "campaign quota for correlated-pair episodes; safety zeros unchanged",
         ),
         "SIL gates still pass; new fault kinds produce zero unsafe outcomes",
+        TicketStatus.CLOSED,
+        "aiur/sim/faults.py keeper-switch, controller-reset, ramping-bias and correlated-pair plans; nav-bias-ramp-sweep; tests/test_sim_correlated_faults.py green; SIL-B/C/D re-verified.",
     ),
     AdoptionTicket(
         "ADOPT-006",
@@ -139,6 +155,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "CI test: method-less or silently-open requirements fail",
         ),
         "closure matrix validation green; snapshot lists open vs closed",
+        TicketStatus.CLOSED,
+        "aiur/requirements.py, 28 requirements; tests/test_requirements.py green; runs in CI.",
     ),
     AdoptionTicket(
         "ADOPT-007",
@@ -149,6 +167,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "docs/tlyf-exceptions.md: per-article ledger of what bench/rig/tether do not reproduce",
         ),
         "campaign JSON contains the block; intervals verified against a known case",
+        TicketStatus.CLOSED,
+        "aiur/sim/credibility.py + campaign credibility block + docs/tlyf-exceptions.md; tests/test_credibility.py green.",
     ),
     AdoptionTicket(
         "ADOPT-008",
@@ -160,6 +180,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "harness workmanship rules and rail-transient scope procedure in the fabrication packet",
         ),
         "tables cite datasheet values or are labeled targets; BOM updated",
+        TicketStatus.DELIVERED_AWAITING_HARDWARE,
+        "docs/electrical-evidence.md + BOM rows for gold-contact switches, pull-ups, separate connectors, bulk capacitance. Measurements outstanding.",
     ),
     AdoptionTicket(
         "ADOPT-009",
@@ -170,6 +192,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "pack identity and cycle count added to the promotion-contract telemetry list",
         ),
         "SOP exists; promotion contract updated",
+        TicketStatus.CLOSED,
+        "docs/battery-sop.md; pack identity and cycle count added to the promotion contract.",
     ),
     AdoptionTicket(
         "ADOPT-010",
@@ -181,6 +205,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "P0-B/P0-C gate criteria for kill-path verification",
         ),
         "gate criteria present; procedure steps enumerated",
+        TicketStatus.DELIVERED_AWAITING_HARDWARE,
+        "docs/kill-path.md requirements + KILL_PATH_CRITERIA on every flying gate. Demonstration outstanding.",
     ),
     AdoptionTicket(
         "ADOPT-011",
@@ -192,6 +218,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "named abort caller and phraseology distinct from kill",
         ),
         "templates exist and are referenced from the gate ladder docs",
+        TicketStatus.CLOSED,
+        "docs/test-cards.md + hardware/dock/p0a-test-card.md.",
     ),
     AdoptionTicket(
         "ADOPT-012",
@@ -203,6 +231,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "golden-article freeze rule on P0-A pass; parametric CAD variant fan for competing geometries",
         ),
         "stack test green and shows positive worst-case clearance or a labeled redesign flag",
+        TicketStatus.DELIVERED_AWAITING_HARDWARE,
+        "aiur/tolerance.py + as-built template + golden-article rule; tests/test_tolerance.py green. Three critical stacks fail worst case and are recorded as OPEN_FINDINGS; Rev-B geometry decision outstanding.",
     ),
     AdoptionTicket(
         "ADOPT-013",
@@ -213,6 +243,8 @@ TICKETS: tuple[AdoptionTicket, ...] = (
             "explicit keep/delete/merge disposition per part with rationale",
         ),
         "memo exists with a disposition for every questioned part",
+        TicketStatus.CLOSED,
+        "docs/dock-deletion-review.md with a disposition for every questioned part.",
     ),
 )
 

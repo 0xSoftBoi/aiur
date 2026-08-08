@@ -247,7 +247,11 @@ by aiur's own rule what is unmeasured does not exist.
 
 ## Adoption table
 
-Ordered by leverage; "What aiur has" is this survey's assessment.
+Ordered by leverage; "What aiur has" is this survey's assessment **as of
+2026-08-08, before any of it was adopted**. The rows are deliberately not
+rewritten as work lands — this is the baseline the program was measured
+against. Current status lives in [the adoption plan](adoption-plan.md) and
+its executable register, `python -m aiur.adoption_loop`.
 
 | Practice | Source discipline | What aiur has | Adopt? | Effort |
 | --- | --- | --- | --- | --- |

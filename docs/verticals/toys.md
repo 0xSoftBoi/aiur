@@ -70,7 +70,7 @@ All rows Status: engineering target. Cost figures are assumptions, not quotes.
 | TOY-009 | Small-parts and mechanical safety | No detachable component fails small-parts gauge; no accessible pinch >X N at keeper (X set by standard) | ASTM F963 consideration to verify; keeper is a powered pinch point |
 | TOY-010 | Out-of-box setup time | ≤15 min, non-expert, no tools | Toy-tier operator model |
 | TOY-011 | Dock mechanism unit cost at volume | ≤$4 molded funnel + keeper set at 50k units (assumption) | The cost-down feedback this vertical owes the rest of the program |
-| TOY-012 | Dock cycle life, unattended handling | ≥1,000 capture/release cycles, ≥200 crash-adjacent probe insertions off-axis | Children are a worst-case load spectrum vs the P0-A 50-cycle gate |
+| TOY-012 | Dock cycle life, unattended handling | ≥1,000 capture/release cycles, ≥200 crash-adjacent probe insertions off-axis | Children are a worst-case load spectrum; the P0-A life test derives its 600 cycles from a lab duty cycle, not a toy one |
 | TOY-013 | Battery cell compliance path | Cells with UN 38.3-style transport test documentation; charge only while docked or in cradle | Consumer shipping and household charging; consideration to verify |
 | TOY-014 | Single-action kill | One physical control drops carrier propulsion and inhibits release, reachable by an adult | Same fail-safe philosophy as P0 physical kill path, consumer-shaped |
 

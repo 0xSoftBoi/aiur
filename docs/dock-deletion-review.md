@@ -73,7 +73,7 @@ fork cannot close on, by a factor of 3.3. Today the collet is the only part
 that closes that gap.
 
 **Evidence.** No bench evidence exists: P0-A inserts the probe by hand, so
-the 50-cycle test measures the insert's wear, not its function. Twin
+the life-test cycling measures the insert's wear, not its function. Twin
 evidence is in the study below — deleting the modeled retention changes no
 capture outcome and produces no probe-withdrawal event at all in indoor
 calm air. The registration problem is invisible to the twin, whose dock
