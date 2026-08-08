@@ -277,11 +277,13 @@ chart —
 that ≈5 mW boundary down to the 3.3 V logic rail:
 
 ```
-I_min(3.3 V) = 5.0 mW / 3.3 V = 1.5 mA
+I_min(3.3 V) = 5.0 mW / 3.3 V = 1.52 mA  ->  held as 1.5 mA
 ```
 
 The extrapolation is ours, not Omron's; the datasheet chart is not drawn below
-5 V. It is the conservative reading, so the design holds to it.
+5 V. It is the conservative reading, so the design holds to it. Every margin
+below is quoted against the rounded 1.5 mA; against the unrounded 1.52 mA the
+worst-case margin is 2.05× rather than 2.07×, which changes no decision.
 
 Sizing, nominal:
 

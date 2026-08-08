@@ -50,6 +50,11 @@ REQUIRED_FAULT_MODES: tuple[str, ...] = (
     "SERVO_POWER_LOSS",
     "SERVO_STALL",
     "CONTROLLER_RESET_DURING_LOCK",
+    # Distinct from the mode above: resetting during LOCKING risks nothing,
+    # because nothing is retained yet.  Resetting while an aircraft hangs from
+    # the keeper is the case that can drop it, and it is the one a brownout
+    # during a docked cruise actually produces.
+    "CONTROLLER_RESET_WHILE_CAPTURED",
 )
 
 

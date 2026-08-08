@@ -205,6 +205,21 @@ REQUIREMENTS: tuple[Requirement, ...] = (
         "ambiguous_capture_confirmations",
     ),
     Requirement(
+        "P0-DOCK-011",
+        "keeper command after a controller restart with the keeper closed",
+        "a restarted controller holds a closed keeper and never commands it "
+        "open on its own; opening a keeper whose contents are unknown "
+        "requires an explicit emergency-release command",
+        "hold the keeper closed and report the ambiguous state; await an "
+        "operator decision",
+        "hardware fault insertion CONTROLLER_RESET_WHILE_CAPTURED with a "
+        "dummy mass retained, plus the controller unit tests",
+        VerificationMethod.TEST,
+        Stage.BENCH_HIL,
+        "P0-A",
+        "fault_insertion_unsafe_responses",
+    ),
+    Requirement(
         "P0-FLEET-001",
         "completion of a sequential two-aircraft release/recovery cycle",
         ">= 1 complete sequence, one aircraft at a time",

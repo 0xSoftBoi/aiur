@@ -9,6 +9,12 @@ injected fault plan.  Fault episodes are excluded from the capture-rate
 statistic (a correctly refused recovery is good behavior) but are held to
 the absolute safety zeros: any unsafe outcome under fault fails the gate.
 
+Reporting policy: every report carries a ``credibility`` block built by
+:mod:`aiur.sim.credibility` — NASA-STD-7009B factor levels against declared
+thresholds, the [M&S 32] warning list, and Wilson intervals on the rate
+metrics.  A point estimate travels further than its caveats, so the caveats
+travel inside the same JSON.
+
 Run from the command line::
 
     python -m aiur.sim.campaign --scenario sil-p0b --episodes 200 --seed 1
@@ -25,6 +31,11 @@ from dataclasses import asdict, dataclass
 import json
 from typing import Callable, Iterable
 
+from .credibility import (
+    TWIN_CREDIBILITY,
+    RateInterval,
+    credibility_block,
+)
 from .engine import EpisodeConfig, EpisodeOutcome, EpisodeResult, run_episode
 from .events import EventKind
 from .gates import evaluate_sil_gate
@@ -57,6 +68,10 @@ class CampaignResult:
     unsafe_details: tuple[str, ...]
     verdict_passed: bool
     verdict: dict[str, object]
+    #: NASA-STD-7009B disclosure block: assessed credibility levels and
+    #: their gaps to the declared thresholds, the [M&S 32] warnings, and the
+    #: [M&S 33]/[M&S 34] uncertainty estimate for the rate metrics above.
+    credibility: dict[str, object]
 
 
 def _count_events(results: Iterable[EpisodeResult], kind: EventKind) -> int:
@@ -168,6 +183,33 @@ def run_campaign(
             outcome_counts.get(result.outcome.value, 0) + 1
         )
 
+    # The rate metric is a binomial proportion over the fault-free episodes,
+    # so its sampling uncertainty is computable exactly where the gate reads
+    # it — a 6-episode campaign and a 200-episode campaign both report a
+    # percentage, and only the interval tells them apart.
+    rate_metric = (
+        "sequence_success_rate_pct"
+        if gate_id == "SIL-D"
+        else "nominal_capture_rate_pct"
+    )
+    rate_intervals = (
+        (RateInterval(rate_metric, nominal_successes, len(nominal_results)),)
+        if nominal_results
+        else ()
+    )
+    credibility = credibility_block(
+        TWIN_CREDIBILITY,
+        rate_intervals=rate_intervals,
+        no_estimate_reason=(
+            "the campaign ran no fault-free episodes, so the reported rate "
+            "is a placeholder zero rather than an estimate"
+        ),
+        # A failed or unevaluable gate criterion is an unachieved acceptance
+        # criterion in [M&S 32]a terms; report it as one.
+        unachieved_acceptance_criteria=tuple(verdict.failed_criteria)
+        + tuple(f"metric {name} was not reported" for name in verdict.missing_metrics),
+    )
+
     return CampaignResult(
         scenario=scenario,
         gate_id=gate_id,
@@ -177,6 +219,7 @@ def run_campaign(
         unsafe_details=unsafe_details,
         verdict_passed=verdict.passed,
         verdict=asdict(verdict),
+        credibility=credibility,
     )
 
 
@@ -195,14 +238,24 @@ def run_sweep(
         bins: tuple[float, ...] = OUTDOOR_GUST_BINS_M_S
         case = outdoor_gust_case
         bin_label = "mean_wind_m_s"
+        domain_limit = 0.0
+        domain_limit_text = (
+            "the twin is declared for indoor still air with zero mean flow"
+        )
     elif study == "degraded-sensor-sweep":
         bins = SENSOR_NOISE_SCALES
         case = degraded_sensor_case
         bin_label = "noise_scale"
+        domain_limit = 1.0
+        domain_limit_text = (
+            "the twin is declared for external optical positioning at the "
+            "Lighthouse-grade sigma of 3 mm (noise_scale 1.0)"
+        )
     else:
         raise KeyError(f"unknown sweep study: {study}")
 
     rows: list[dict[str, float | int]] = []
+    intervals: list[RateInterval] = []
     for bin_index, bin_value in enumerate(bins):
         results = [
             run_episode(
@@ -213,18 +266,46 @@ def run_sweep(
         ]
         successes = sum(1 for r in results if r.outcome is EpisodeOutcome.SUCCESS)
         unsafe = sum(1 for r in results if r.outcome is EpisodeOutcome.UNSAFE)
+        # A sweep bin is small by design, so its point estimate is the most
+        # over-read number the twin produces: 30/30 and 300/300 both print
+        # 100.0.  Carry the interval next to the point in the same row.
+        interval = RateInterval(
+            f"capture_rate_pct[{bin_label}={bin_value}]",
+            successes,
+            episodes_per_bin,
+        )
+        intervals.append(interval)
+        ci_low, ci_high = interval.bounds
         rows.append(
             {
                 bin_label: bin_value,
                 "episodes": episodes_per_bin,
                 "capture_rate_pct": round(100.0 * successes / episodes_per_bin, 2),
+                "ci_low_pct": round(100.0 * ci_low, 2),
+                "ci_high_pct": round(100.0 * ci_high, 2),
                 "unsafe_episodes": unsafe,
                 "mean_aborts": round(
                     sum(r.aborts for r in results) / episodes_per_bin, 2
                 ),
             }
         )
-    return {"study": study, "bins": rows}
+
+    return {
+        "study": study,
+        "bins": rows,
+        "credibility": credibility_block(
+            TWIN_CREDIBILITY,
+            rate_intervals=intervals,
+            # Sweeps exist to push the model past where it is declared to
+            # apply; that is the study's purpose and also an [M&S 32]c
+            # occurrence, so it is reported rather than assumed understood.
+            outside_declared_domain=tuple(
+                f"{bin_label}={value} — {domain_limit_text}"
+                for value in bins
+                if value > domain_limit
+            ),
+        ),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:

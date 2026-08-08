@@ -49,6 +49,17 @@ class DockController:
     Pre-capture faults fail open so a vehicle can abort.  Once a capture has
     been confirmed, sensor disagreement fails locked so software does not drop
     a docked aircraft.  Emergency release always has authority to command open.
+
+    Power-on is treated as its own case.  A restarted controller has no
+    history, so a closed keeper is ambiguous: it may be a stuck mechanism with
+    nothing in the dock, or it may be holding an aircraft.  The two readings
+    are indistinguishable from the switches alone, and their costs are not
+    symmetric — wrongly assuming "empty" drops a docked aircraft, while
+    wrongly assuming "holding" only requires an operator to command a release.
+    The controller therefore starts held rather than open whenever the keeper
+    reports closed on its first observation.  This is the same fail-locked
+    principle the running machine already applies after capture; without it,
+    a brownout during a docked cruise commands the keeper open.
     """
 
     def __init__(
@@ -106,6 +117,7 @@ class DockController:
     def step(self, now_s: float, inputs: DockInputs) -> DockOutput:
         """Advance the state machine using a monotonic timestamp."""
 
+        first_observation = self._last_now_s is None
         if self._last_now_s is not None and now_s < self._last_now_s:
             raise ValueError("now_s must be monotonic")
         self._last_now_s = now_s
@@ -114,6 +126,17 @@ class DockController:
         if inputs.emergency_release:
             if self.state is not DockState.RELEASING:
                 self._transition(DockState.RELEASING, now_s)
+            return self._output(inputs)
+
+        # Power-on with a physically closed keeper: hold, do not open.  Only an
+        # explicit emergency release may open a keeper whose contents are
+        # unknown, because the alternative is dropping whatever it holds.
+        if first_observation and inputs.keeper_closed_switch:
+            self._transition(
+                DockState.FAULT_LOCKED,
+                now_s,
+                "power_on_with_keeper_closed",
+            )
             return self._output(inputs)
 
         if self.state is DockState.OPEN:

@@ -6,6 +6,23 @@ Scope: 1S LiPo packs for the Crazyflie micro-UAVs, plus any battery pack used
 to power the dock, the bench controller, or a fault-insertion unit
 Precedence: the institution's own safety rules override every line below
 
+## Operator quick card
+
+Print this. The rest of the document explains where each number comes from and
+what to do when reality does not match it.
+
+| Situation | Do | Section |
+| --- | --- | --- |
+| Pack arrives | assign ID, write the receiving row, file the UN 38.3 test summary, visual pass, record baseline thickness/mass, arrival OCV 3.60–3.90 V/cell | [Receiving](#receiving) |
+| Before a charge | charger set LiPo / 1S / ≤1C (0.25 A for a 250 mAh pack) / terminate 4.20 V/cell; pack not swollen, not damaged, OCV ≥3.00 V/cell, temperature 0–45 °C and below 40 °C after a sortie | [Charging](#charging) |
+| During a charge | attended, in a bag inside the metal bin, ≥1 m from combustibles, one channel per pack, timer set | [Charging](#charging) |
+| After a charge | write the cycle-log line: mAh accepted, end voltage, pack temperature | [Charging](#charging) |
+| Before a run | pack from the flight pool only; `battery_pack_id` and `battery_cycle_count` into the run record before the run starts | [In use](#in-use-pre-flight-sortie-post-flight) |
+| After a run | pack out, into the bin, cool; resting OCV at ≥30 min logged | [In use](#in-use-pre-flight-sortie-post-flight) |
+| Not flying within 7 days | storage-charge to 3.80 V/cell, bagged, in the bin | [Storage](#storage) |
+| Swollen, damaged, hot, or faded | retire the same day — discharge if safe, mark, remove from the pool | [Retirement criteria](#retirement-criteria) |
+| Venting, smoke, or flame | containment first, clear the room, alarm and call from outside; water is not the plan | [Incident response](#incident-response) |
+
 ## Why this document exists
 
 Everything else in this program is analytical. A gate is closed by a number, a
@@ -247,6 +264,50 @@ end voltage, pack temperature at end of charge, operator. The mAh-accepted
 number is the capacity-fade trend; without it, retirement criterion 3 below
 cannot be evaluated.
 
+## In use: pre-flight, sortie, post-flight
+
+Retirement criteria 3, 4, and 6 are readings. This section is where the readings
+are taken; without it they are aspirations.
+
+**Pre-flight.** Only a pack in the flight-pool container flies. Confirm the ID
+is legible, run the same visual checks as receiving (pouch, film, leads,
+connector), read resting OCV, and measure thickness if the pack is at a
+multiple of 10 cycles or if anything looks off. Write `battery_pack_id` and
+`battery_cycle_count` into the run record **before** the run starts — a field
+filled in afterwards from memory is the field that will be wrong in the one run
+that matters. Seat the pack in its retention so it cannot swing, strain its
+leads, or reach a propeller arc.
+
+**Sortie.** End the sortie on a reserve, not on the aircraft's own low-voltage
+shutdown: land at the first low-battery indication or **3.40 V/cell under
+load**, whichever comes first (engineering target — replace it with the measured
+distribution once 20 sorties are logged, and reconcile it against the aircraft's
+own low-voltage behaviour). Repeatedly flying a 1S pack to cutoff is the
+cheapest way to manufacture retirement criterion 3.
+
+**Post-flight, every time.**
+
+1. Disconnect and remove the pack before anything else on the aircraft is
+   touched. It goes into the containment bin, not onto the bench.
+2. Let it cool. No charger below 40 °C pack temperature (target); check by
+   thermometer, not by hand.
+3. At **≥30 minutes** after removal, measure resting OCV and write
+   `post_run_rest_ocv_v`. This single number feeds retirement criteria 4 and 6,
+   and it is the only cheap early warning of a pack going soft.
+4. Decide the pack's next state and record it: back to the flight pool,
+   storage-charged if it will not fly within 7 days, or quarantined.
+
+**After a crash, hard landing, or any side load on the pack**, the pack goes
+straight to the containment bin and is observed for at least 30 minutes before
+anything else happens to it — charging in that window is prohibited (AMA:
+"carefully move the battery pack to a safe place for at least a half hour to
+observe"). Log the event even if the pack looks perfect.
+
+**If the run itself was anomalous** — early abort, unexplained sag, thrust loss
+— quarantine the pack and put its ID in the run disposition. It returns to the
+flight pool only after one full logged charge whose mAh accepted and end voltage
+are normal for that pack.
+
 ## Storage
 
 | Item | Rule | Type |
@@ -411,7 +472,11 @@ Copy these. Two files, one row per event, no free-text-only entries.
 
 `un383_ts_file` is the filename of the filed test summary, or `MISSING` with a
 date the vendor was asked. `iec62133_2` is `yes` / `no` / `unknown — vendor did
-not answer`.
+not answer`. The example row's `7.0` is the datasheet's nominal 7 mm dimension
+shown for shape only — a receiving row is not complete until
+`base_thickness_mm` and `base_mass_g` are caliper and scale readings taken from
+that individual pack, because they are the reference the swelling criterion is
+measured against.
 
 ### Per-pack cycle log
 
@@ -451,6 +516,8 @@ labelled a target.
 | Low-voltage discard | 2.00 V/cell for a week | BU-702 | cited practice |
 | Program voltage floor | 3.00 V/cell resting | conservative against the above | target |
 | Post-flight check | 3.50 V/cell at 30 min, two failures in 10 cycles | none | target, to be replaced by measurement |
+| Sortie end reserve | 3.40 V/cell under load, or first low-battery indication | none | target, to be replaced by measurement |
+| Pre-charge pack temperature | below 40 °C | sits inside the datasheet's 0–45 °C charging window; the 40 °C figure is ours | target inside a cited window |
 | Swelling threshold | any visible bulge; ≥0.5 mm over baseline | AMA (any swelling removes a pack from service); the 0.5 mm figure is ours | target on a cited rule |
 | Heat retirement | >45 °C trigger, >60 °C immediate | 60 °C is the datasheet discharge limit; 45 °C is ours | mixed |
 | Unattended charging, containment, combustibles, damaged-pack observation, swelling response, salt-water disposal, Call2Recycle | as quoted | AMA safety handbook, lithium battery section | cited practice |
