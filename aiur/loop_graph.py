@@ -210,12 +210,22 @@ def evaluate_gate(
     gate_id: str,
     metrics: Mapping[str, float | int | bool],
 ) -> GateVerdict:
-    """Evaluate one gate from measured metrics.
+    """Evaluate one P0 hardware gate from measured metrics."""
 
-    Missing evidence is a failed gate, never an implicit pass.
+    return evaluate_gate_definition(gate_by_id(gate_id), metrics)
+
+
+def evaluate_gate_definition(
+    gate: Gate,
+    metrics: Mapping[str, float | int | bool],
+) -> GateVerdict:
+    """Evaluate any gate definition from measured metrics.
+
+    Shared by the hardware gates above and the SIL gates in ``aiur.sim``:
+    both must go through the same rule that missing evidence is a failed
+    gate, never an implicit pass.
     """
 
-    gate = gate_by_id(gate_id)
     missing: list[str] = []
     failed: list[str] = []
 
@@ -227,7 +237,7 @@ def evaluate_gate(
             failed.append(criterion.description)
 
     return GateVerdict(
-        gate_id=gate_id,
+        gate_id=gate.gate_id,
         passed=not missing and not failed,
         missing_metrics=tuple(missing),
         failed_criteria=tuple(failed),

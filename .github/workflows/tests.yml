@@ -21,3 +21,9 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Print P0 budget
         run: python -m aiur.p0
+      - name: SIL-B gate (digital twin)
+        run: python -m aiur.sim.campaign --scenario sil-p0b --episodes 200 --seed 1
+      - name: SIL-C gate (digital twin)
+        run: python -m aiur.sim.campaign --scenario sil-p0c --episodes 200 --seed 1
+      - name: SIL-D gate (digital twin)
+        run: python -m aiur.sim.campaign --scenario sil-p0d --episodes 80 --seed 1
