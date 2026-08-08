@@ -28,10 +28,39 @@ The first flight article is an indoor helium platform built around a ~4.5 m airs
 
 P0 does **not** attempt hydrogen lift, outdoor/BVLOS operations, eight full-size drones, a 40 m envelope, or DGX-class airborne compute. Those are downstream scaling problems.
 
+## Digital twin
+
+The engineering loop's SIL stage is executable. `aiur/sim` is a
+deterministic, dependency-free digital twin — carrier, aircraft, sensing,
+disturbances, fault injection, and the dock mechanics wrapped around the
+**real** `DockController` — with a Monte Carlo campaign runner that closes
+SIL-B/SIL-C/SIL-D gates mirroring the P0-B/C/D hardware gates:
+
+```
+python -m aiur.sim.campaign --scenario sil-p0b --episodes 200 --seed 1
+```
+
+Architecture, current model findings, and the sim-to-real calibration
+contract: [docs/digital-twin.md](docs/digital-twin.md). CI runs the SIL
+gates on every push.
+
+## Dual-use verticals
+
+The product core (buoyant carrier + mechanically positive dock + recovery
+autonomy + evidence-gated loop + twin) is vertical-agnostic. Exploratory
+concept studies with derived requirement deltas live in
+[docs/verticals/](docs/verticals/README.md): agriculture, energy
+infrastructure, wildfire response support, and toys/STEM. CARRIER-P0
+remains the only funded article; the twin's `outdoor-gust-sweep` and
+`degraded-sensor-sweep` studies quantify the two milestones every non-lab
+vertical shares.
+
 ## Repository map
 
 - [Prototype specification](docs/prototype-p0.md)
 - [Closed-loop engineering graph](docs/engineering-loop.md)
+- [Digital twin](docs/digital-twin.md)
+- [Dual-use vertical studies](docs/verticals/README.md)
 - [Docking mechanism](hardware/dock/README.md)
 - [P0-A Rev-A bench article](hardware/dock/p0a-bench.md)
 - [P0-A fabrication + electrical packet](hardware/dock/p0a-fabrication.md)
@@ -39,6 +68,7 @@ P0 does **not** attempt hydrogen lift, outdoor/BVLOS operations, eight full-size
 - [Prototype BOM](hardware/bom.csv)
 - [Mass and capture-envelope model](aiur/p0.py)
 - [Fail-safe dock controller](aiur/dock_controller.py)
+- [Digital-twin package](aiur/sim/)
 - [P0-A evidence reducer](aiur/p0a_evidence.py)
 - [Engineering tests](tests/test_p0.py)
 
@@ -55,4 +85,5 @@ Concept art is not evidence.
 
 ## Status
 
-Pre-alpha. CARRIER-P0 definition and bench-test tooling.
+Pre-alpha. CARRIER-P0 definition, bench-test tooling, and an executable
+digital twin closing SIL gates ahead of hardware.

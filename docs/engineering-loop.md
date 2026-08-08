@@ -28,6 +28,8 @@ The key rule is simple: **if hardware, software, calibration, or safety configur
 
 The executable form of this graph and its gate criteria lives in [`aiur/loop_graph.py`](../aiur/loop_graph.py). CI checks the graph for unsafe flight shortcuts and evaluates the gate logic.
 
+The SIL stage itself is executable: the [digital twin](digital-twin.md) in [`aiur/sim`](../aiur/sim/) runs seeded Monte Carlo campaigns with fault injection against the real dock controller and closes SIL-B/SIL-C/SIL-D gates — evaluated by the same gate evaluator as the hardware gates — before an article revision earns bench time.
+
 ## Runtime recovery loop
 
 The flight software should be built around a second, faster loop. Safety is a supervisor, not an afterthought in the docking state machine.
