@@ -1,0 +1,2 @@
+run_id,article_rev,git_commit,cycle,seat_switch_seen,keeper_closed_seen,capture_confirmed,structural_failure,ambiguous_capture_confirmation,emergency_release_trial,emergency_release_success,axial_screen_load_held_n,lateral_screen_load_held_n,dock_mass_g,probe_mass_g,notes
+

@@ -1,5 +1,12 @@
 """Engineering models for the Aiur prototype program."""
 
+from .dock_controller import (
+    DockController,
+    DockInputs,
+    DockOutput,
+    DockState,
+    KeeperCommand,
+)
 from .p0 import (
     CarrierSpec,
     DockEnvelope,
@@ -10,6 +17,11 @@ from .p0 import (
 )
 
 __all__ = [
+    "DockController",
+    "DockInputs",
+    "DockOutput",
+    "DockState",
+    "KeeperCommand",
     "CarrierSpec",
     "DockEnvelope",
     "PayloadItem",

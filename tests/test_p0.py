@@ -19,8 +19,8 @@ class CarrierP0Tests(unittest.TestCase):
     def test_baseline_budget_keeps_large_payload_reserve(self) -> None:
         carrier = CarrierSpec()
         items = baseline_p0_budget()
-        self.assertAlmostEqual(payload_mass_kg(items), 0.3994, places=4)
-        self.assertAlmostEqual(payload_margin_kg(carrier, items), 0.6006, places=4)
+        self.assertAlmostEqual(payload_mass_kg(items), 0.4254, places=4)
+        self.assertAlmostEqual(payload_margin_kg(carrier, items), 0.5746, places=4)
 
     def test_capture_accepts_state_inside_envelope(self) -> None:
         dock = DockEnvelope()

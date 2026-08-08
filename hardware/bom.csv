@@ -1,10 +1,11 @@
 phase,category,item,vendor,quantity,unit_cost_usd,carried_mass_g_each,origin_or_supply_note,source,notes
 P0,carrier,4.5m indoor RC blimp B100-I-450-VT,RC-Zeppelin,1,2820,,Serbia; vendor states 100-micron PU envelope,https://www.rc-zeppelin.com/4.5m-indoor-RC-Blimp.html,"RTF reference; ~5.5 m3 helium; vendor-rated payload up to 1 kg"
-P0,aircraft,Crazyflie 2.1 Brushless,Bitcraze,2,480,32,Vietnam,https://store.bitcraze.io/products/crazyflie-2-1-brushless,"10 min published stock flight time; 40 g published max recommended stock payload"
+P0,aircraft,Crazyflie 2.1 Brushless + guards,Bitcraze,2,480,37,Vietnam,https://store.bitcraze.io/products/crazyflie-2-1-brushless,"Budget uses current 37 g guard-equipped takeoff weight from https://www.bitcraze.io/products/crazyflie-2-1-brushless/; 40 g published max recommended stock payload"
 P0,positioning,Lighthouse positioning deck,Bitcraze,2,95,2.7,Verify lot origin at purchase,https://www.bitcraze.io/products/lighthouse-positioning-deck/,"Onboard pose computation; test instrumentation"
 P0,positioning,Lighthouse V2 base station,Bitcraze/SteamVR,2,240,0,Taiwan,https://store.bitcraze.io/products/lighthouse-v2-base-station/,"Ground equipment; not carried"
 P0,radio,Crazyradio 2.0,Bitcraze,1,43,0,Verify lot origin at purchase,https://store.bitcraze.io/collections/accessories,"Ground equipment; current listed price checked 2026-08-08"
 P0,dock,Prototype capture funnel + latch,Aiur,1,200,180,In-house / dual-source commodity parts,hardware/dock/README.md,"$200 and 180 g are engineering budgets, not supplier quotes"
+P0,dock,Drone-side capture probe,Aiur,2,,8,In-house / dual-source commodity materials,hardware/dock/p0a-bench.md,"8 g each is an engineering allocation and is now included in the executable mass budget"
 P0,consumable,Helium fill,Local industrial-gas supplier,1,,,Avoid single-source contract,,"Quote locally; do not hard-code volatile gas pricing"
 P0.5,flight-control,Control Zero OEM H7,3DR / mRo,1,349.9,3.5,3DR markets current components as American-made,https://docs.3dr.com/autopilots/,"Candidate after docking is proven"
 P0.5,compute,Jetson Orin family,NVIDIA,1,,,Global semiconductor supply chain; select carrier separately,https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-orin/,"Select exact Nano/NX module only after measured mass/power budget"
