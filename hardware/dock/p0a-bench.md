@@ -89,6 +89,8 @@ Instrument at minimum:
 - applied retention screening load;
 - measured dock mass and probe mass.
 
+Record article identity/mass in [`p0a-article-template.csv`](p0a-article-template.csv), every capture/release cycle in [`p0a-run-template.csv`](p0a-run-template.csv), and the pre/post screening loads in [`p0a-load-template.csv`](p0a-load-template.csv). Keep one `run_id`, hardware revision, and Git commit across the evidence set.
+
 ## P0-A procedure
 
 1. Photograph and weigh the complete dock and complete aircraft-side probe.
@@ -123,7 +125,16 @@ P0-A passes only when every executable criterion passes:
 | `emergency_release_failures` | 0 |
 | `propellers_installed` | 0 |
 
-Use [`p0a-run-template.csv`](p0a-run-template.csv) as the raw cycle sheet. Missing evidence is a failed gate, not an implied pass.
+Use all three raw sheets above, then reduce them with:
+
+```bash
+python -m aiur.p0a_evidence \
+  --article p0a-article.csv \
+  --cycles p0a-cycles.csv \
+  --loads p0a-loads.csv
+```
+
+The reducer requires both pre-cycle and post-cycle screens for `AXIAL`, `+X`, `-X`, `+Y`, and `-Y`. A load is credited only when it is retained without structural damage for at least 10 s. Missing evidence is an evidence error, never an implied pass.
 
 ## Stop conditions
 
@@ -138,4 +149,3 @@ Stop the run and disposition the failure before continuing if:
 - wiring enters the funnel/probe load path.
 
 After a design change, issue a new hardware revision and restart the relevant screening/cycle evidence. Do not append changed hardware to the same 50-cycle run.
-

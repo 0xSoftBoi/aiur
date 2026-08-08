@@ -1,0 +1,91 @@
+{
+  "article": "CARRIER-P0 P0-A Rev-A",
+  "design": {
+    "flange_hole_diameter_mm": 3.2,
+    "flange_hole_square_mm": 40.0,
+    "funnel_depth_mm": 65.0,
+    "funnel_flange_diameter_mm": 70.0,
+    "funnel_flange_thickness_mm": 3.0,
+    "funnel_mouth_diameter_mm": 180.0,
+    "funnel_mouth_wall_mm": 1.2,
+    "funnel_throat_diameter_mm": 16.0,
+    "funnel_total_height_mm": 73.0,
+    "keeper_length_mm": 28.0,
+    "keeper_nominal_open_travel_mm": 11.0,
+    "keeper_slot_width_mm": 4.2,
+    "keeper_thickness_mm": 2.5,
+    "keeper_width_mm": 18.0,
+    "lathe_segments": 64,
+    "probe_head_bore_diameter_mm": 3.2,
+    "probe_head_diameter_mm": 12.0,
+    "probe_mast_diameter_mm": 3.0,
+    "probe_tip_height_above_prop_plane_mm": 110.0
+  },
+  "notes": [
+    "STL volume is geometry-derived; weigh every physical part.",
+    "The four M3 flange holes are drilled after print using the 1:1 template.",
+    "The probe head is a coupon component; the Crazyflie flight-probe base is not frozen."
+  ],
+  "parts": {
+    "p0a_funnel": {
+      "bounds_mm": {
+        "max": [
+          90.0,
+          90.0,
+          73.0
+        ],
+        "min": [
+          -90.0,
+          -90.0,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "solid_petg_mass_estimate_g": 52.58,
+      "triangles": 1152,
+      "volume_cm3": 41.402
+    },
+    "p0a_keeper": {
+      "bounds_mm": {
+        "max": [
+          8.0,
+          9.0,
+          2.5
+        ],
+        "min": [
+          -20.0,
+          -9.0,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "solid_petg_mass_estimate_g": 1.47,
+      "triangles": 56,
+      "volume_cm3": 1.159
+    },
+    "p0a_probe_head": {
+      "bounds_mm": {
+        "max": [
+          6.0,
+          6.0,
+          10.2
+        ],
+        "min": [
+          -6.0,
+          -6.0,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "solid_petg_mass_estimate_g": 0.87,
+      "triangles": 1280,
+      "volume_cm3": 0.687
+    }
+  },
+  "printed_petg_mass_estimate_g": 54.92,
+  "status": "bench screening geometry; not flight qualified",
+  "units": "mm"
+}
