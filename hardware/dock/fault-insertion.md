@@ -60,14 +60,16 @@ targets for the build:
 - fault command and dock telemetry share a monotonic time base.
 
 Exact part numbers follow from the electrical evidence packet
-([electrical-evidence.md](electrical-evidence.md)); nothing here should be
+([electrical-evidence.md](../../docs/electrical-evidence.md)); nothing here should be
 ordered before the switch and pull-up choices are frozen.
 
 ## Required fault modes
 
-These eight modes are the P0-A quota and are enumerated in
-`aiur/p0a_evidence.py` (`REQUIRED_FAULT_MODES`). The reducer refuses a gate
-verdict if any mode was never exercised.
+These modes are the P0-A quota and are enumerated once, in
+`aiur/loop_graph.py` (`REQUIRED_FAULT_MODES`); the gate criterion counts that
+list rather than a literal, and the reducer refuses a gate verdict if any mode
+was never exercised. Both were briefly out of step after a mode was added,
+which is why the number now lives in one place.
 
 | Mode | Physical meaning | Required response |
 | --- | --- | --- |
@@ -79,6 +81,8 @@ verdict if any mode was never exercised.
 | `SERVO_POWER_LOSS` | keeper actuator loses power mid-motion | mechanism does not claim capture; an already-captured probe stays mechanically retained (the keeper is not the load path); state is reported, not guessed |
 | `SERVO_STALL` | keeper blocked by an obstruction | lock times out to a fault state within the configured timeout; no capture confirmation; no repeated stall drive |
 | `CONTROLLER_RESET_DURING_LOCK` | controller browns out or resets while locking | on restart the controller does not assume a capture it cannot observe; it re-reads `S1`/`S2` and reports the true state; a latched capture-enable does not survive a reset as a capture claim |
+
+| `CONTROLLER_RESET_WHILE_CAPTURED` | controller browns out or resets while an aircraft hangs from the closed keeper | the restarted controller does not command the keeper open; it holds, reports the ambiguous state, and waits for an operator decision. A dummy mass stands in for the aircraft; nothing falls |
 
 `CONTROLLER_RESET_DURING_LOCK` is on this list because of a twin finding:
 the guidance stack must latch the capture enable once seating is confirmed,

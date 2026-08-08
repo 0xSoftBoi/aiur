@@ -51,6 +51,20 @@ class FaultKind(str, Enum):
     BATTERY_SAG = "battery_sag"
 
 
+class FaultTrigger(str, Enum):
+    """What decides when a fault opens."""
+
+    #: ``t_start_s`` is the moment it fires.
+    TIME = "time"
+    #: ``t_start_s`` is the earliest it may fire; it actually fires on the
+    #: first step at or after that time where the keeper is physically closed.
+    #: Some faults are meaningless until the mechanism is doing something —
+    #: restarting a controller whose dock is open is indistinguishable from
+    #: not restarting it — and episode length varies by a factor of five
+    #: across the gate scenarios, so no fixed clock time can serve them all.
+    KEEPER_CLOSED = "keeper_closed"
+
+
 @dataclass(frozen=True)
 class FaultSpec:
     kind: FaultKind
@@ -58,6 +72,7 @@ class FaultSpec:
     duration_s: float = math.inf
     #: Kind-specific magnitude: bias meters, gust multiplier, or performance scale.
     magnitude: float = 1.0
+    trigger: FaultTrigger = FaultTrigger.TIME
 
     def active(self, t_s: float) -> bool:
         return self.t_start_s <= t_s < self.t_start_s + self.duration_s
@@ -88,6 +103,7 @@ class FaultInjector:
         self._targets = targets
         self._announced: set[int] = set()
         self._reset_done: set[int] = set()
+        self._armed_at: dict[int, float] = {}
 
     @property
     def plan(self) -> tuple[FaultSpec, ...]:
@@ -113,7 +129,17 @@ class FaultInjector:
         drain = 1.0
 
         for index, spec in enumerate(self._plan):
-            if not spec.active(t_s):
+            if spec.trigger is FaultTrigger.KEEPER_CLOSED:
+                # Arm on the condition, then run for the declared duration
+                # from the moment it armed.
+                if index not in self._armed_at:
+                    if t_s >= spec.t_start_s and targets.dock.servo.physically_closed:
+                        self._armed_at[index] = t_s
+                    else:
+                        continue
+                if t_s >= self._armed_at[index] + spec.duration_s:
+                    continue
+            elif not spec.active(t_s):
                 continue
             if index not in self._announced:
                 self._announced.add(index)
@@ -236,6 +262,33 @@ CORRELATED_PAIRS: tuple[tuple[str, FaultKind, FaultKind], ...] = (
 )
 
 
+#: The approach/terminal phase of a nominal recovery.  Most faults have to
+#: open here to reach the behaviour they test.
+_EARLY_WINDOW = (2.0, 10.0)
+
+def _start_window(kind: FaultKind) -> tuple[float, float]:
+    """Earliest and latest a fault may open.
+
+    Condition-triggered faults use this as an earliest-time floor rather than
+    a firing time; see :class:`FaultTrigger`.
+    """
+
+    return _EARLY_WINDOW
+
+
+def _shared_window(first: FaultKind, second: FaultKind) -> tuple[float, float]:
+    """One window in which a coupled pair can both be meaningful.
+
+    A shared cause does not fire its effects at unrelated times, so the pair
+    gets one start.  Condition-triggered members treat it as a floor and wait
+    for their condition, so the windows always intersect.
+    """
+
+    lo = max(_start_window(first)[0], _start_window(second)[0])
+    hi = min(_start_window(first)[1], _start_window(second)[1])
+    return (lo, hi) if lo < hi else _EARLY_WINDOW
+
+
 def _spec_for(kind: FaultKind, rng: random.Random, start: float) -> FaultSpec:
     """Build one fault spec with a kind-appropriate window and magnitude."""
 
@@ -267,9 +320,11 @@ def _spec_for(kind: FaultKind, rng: random.Random, start: float) -> FaultSpec:
     if kind is FaultKind.BATTERY_SAG:
         return FaultSpec(kind, start, magnitude=rng.uniform(0.6, 0.85))
     if kind is FaultKind.CONTROLLER_RESET:
-        # Edge-triggered inside the injector; the window only has to be open
-        # long enough to contain the restart.
-        return FaultSpec(kind, start, duration_s=0.5)
+        # Fires on the keeper actually closing rather than on a clock time, so
+        # it lands where it tests something in every scenario.
+        return FaultSpec(
+            kind, start, duration_s=0.5, trigger=FaultTrigger.KEEPER_CLOSED
+        )
     return FaultSpec(kind, start)
 
 
@@ -282,7 +337,8 @@ def sample_correlated_fault_plan(rng: random.Random) -> tuple[FaultSpec, ...]:
     """
 
     _, first, second = rng.choice(CORRELATED_PAIRS)
-    start = rng.uniform(2.0, 9.0)
+    lo, hi = _shared_window(first, second)
+    start = rng.uniform(lo, max(lo, hi - 1.0))
     return (
         _spec_for(first, rng, start),
         _spec_for(second, rng, start + rng.uniform(0.0, 1.0)),
@@ -293,9 +349,7 @@ def sample_fault_plan(rng: random.Random) -> tuple[FaultSpec, ...]:
     """Draw one deterministic fault plan for a fault episode."""
 
     kind = rng.choice(_FAULT_MENU)
-    # The fastest nominal recovery (SIL-P0-B) completes around 19 s, so a
-    # window opening by 10 s is guaranteed to activate in every scenario.
-    start = rng.uniform(2.0, 10.0)
+    start = rng.uniform(*_start_window(kind))
     if kind in (FaultKind.POSE_DROPOUT, FaultKind.DOCK_POSE_DROPOUT):
         return (FaultSpec(kind, start, duration_s=rng.uniform(0.3, 2.5)),)
     if kind is FaultKind.POSE_BIAS:

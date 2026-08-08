@@ -486,15 +486,23 @@ class TerminalGuidance:
                 self._abort(now_s, "seat_lost_before_lock", events)
             elif controller_state in (DockState.FAULT_OPEN, DockState.FAULT_LOCKED):
                 # One dock fault earns one retry; a second means the dock is
-                # broken, not unlucky.  The retry must clear the latched
-                # controller fault on the way out (FAULT_OPEN resets only
-                # with reset_fault while both switches read open, which
-                # holds once the probe is back at the standoff).
+                # broken, not unlucky.  Which command clears the fault is not
+                # a detail: `reset_fault` means opposite things in the two
+                # fault states.  FAULT_OPEN clears only while both switches
+                # read open, so requesting it on the way out is safe and the
+                # aircraft is already clear.  FAULT_LOCKED clears while both
+                # read closed — it *confirms a capture* — so sending it
+                # during an abort re-latches the mechanism onto an aircraft
+                # the supervisor has just decided to fly away from, and both
+                # halves then wait for each other forever.  Leaving means
+                # releasing.
                 self._dock_fault_aborts += 1
                 if self._dock_fault_aborts >= 2:
                     self.dock_untrusted = True
-                else:
+                elif controller_state is DockState.FAULT_OPEN:
                     self._request_dock_reset = True
+                else:
+                    self._emergency_release = True
                 self._abort(now_s, f"dock_fault_{controller_state.value}", events)
             elif self._seated_wait_s >= p.lock_wait_timeout_s:
                 # The keeper had every chance to close on a confirmed seat.

@@ -137,7 +137,7 @@ and fails on the vehicle when the battery sags or the funnel is dirty.
 10. Apply a **1 N lateral screening load for 10 s in +X, −X, +Y, and −Y**. No release or structural damage is allowed.
 11. Complete **≥15 run-in cycles** logged as `phase=run_in` with insertion and release force per cycle. Confirm the force trend has leveled off before continuing.
 12. Complete **600 life-test cycles** logged as `phase=life`. Every 25th cycle is an emergency-release trial; alternate them between unloaded and **loaded with the 5 N axial screening load applied**, giving ≥10 of each.
-13. Run the [fault-insertion](p0a-fabrication.md) sequence: exercise every required fault mode (`S1_OPEN`, `S1_SHORT`, `S2_OPEN`, `S2_SHORT`, `S1_S2_BOTH_OPEN`, `SERVO_POWER_LOSS`, `SERVO_STALL`, `CONTROLLER_RESET_DURING_LOCK`), writing the required response **before** each trial and recording what actually happened.
+13. Run the [fault-insertion](p0a-fabrication.md) sequence: exercise every required fault mode (`S1_OPEN`, `S1_SHORT`, `S2_OPEN`, `S2_SHORT`, `S1_S2_BOTH_OPEN`, `SERVO_POWER_LOSS`, `SERVO_STALL`, `CONTROLLER_RESET_DURING_LOCK`, `CONTROLLER_RESET_WHILE_CAPTURED`), writing the required response **before** each trial and recording what actually happened.
 14. Repeat the 5 N axial and 1 N four-direction lateral screening loads after life cycling.
 15. Inspect the funnel, probe base, collet, keeper, fasteners, switches, wiring, and mount for cracks, looseness, permanent deformation, or intermittent indication.
 16. Reduce the raw run: `python -m aiur.p0a_evidence --article ... --cycles ... --loads ... --faults ...`.

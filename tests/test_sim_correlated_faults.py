@@ -186,17 +186,77 @@ class ControllerResetFaultTests(unittest.TestCase):
         self.assertEqual(dock.servo.position, servo_position)
         self.assertEqual(dock.probe_phase, probe_phase)
 
-    def test_reset_fault_activates_and_stays_safe_in_an_episode(self) -> None:
-        config = replace(
-            sil_p0b(9),
-            fault_plan=(FaultSpec(FaultKind.CONTROLLER_RESET, 6.0, duration_s=0.5),),
+    def test_reset_fault_actually_perturbs_the_episode(self) -> None:
+        """Activating is not the same as testing anything.
+
+        An earlier window put the reset at 2-10 s, but nominal captures land
+        between about 10 s and 35 s, so the reset always arrived while the dock
+        was open — where restarting the controller is indistinguishable from
+        not restarting it.  The FAULT_INJECTED event fired and the episode was
+        byte-identical to nominal, which is a fault quota that measures
+        nothing.  The window must reach the keeper.
+        """
+
+        seed = 3
+        baseline = run_episode(sil_p0b(seed), seed)
+        capture = next(
+            e.t_s for e in baseline.events if e.kind is EventKind.CAPTURE_CONFIRMED
         )
-        result = run_episode(config, 9)
+
+        config = replace(
+            sil_p0b(seed),
+            fault_plan=(FaultSpec(FaultKind.CONTROLLER_RESET, capture, duration_s=0.5),),
+        )
+        result = run_episode(config, seed)
+
         self.assertTrue(
             any(e.kind is EventKind.FAULT_INJECTED for e in result.events),
             "controller reset never activated",
         )
+        perturbed = [
+            (e.kind, round(e.t_s, 2))
+            for e in result.events
+            if e.kind is not EventKind.FAULT_INJECTED
+        ]
+        self.assertNotEqual(
+            perturbed,
+            [(e.kind, round(e.t_s, 2)) for e in baseline.events],
+            "the reset changed nothing; it landed where the dock was open",
+        )
         self.assertEqual(result.unsafe_events, ())
+
+    def test_reset_at_the_capture_instant_does_not_strand_the_aircraft(self) -> None:
+        """Regression: the abort retry must not re-latch the dock it is leaving.
+
+        ``reset_fault`` means opposite things in the two fault states.  In
+        FAULT_OPEN it clears only while both switches read open, so it is a
+        safe retry.  In FAULT_LOCKED it clears while both read closed — it
+        confirms a capture — so sending it during an abort re-captured the
+        aircraft the supervisor had just decided to leave, and guidance and
+        mechanism then waited for each other until the episode timed out with
+        the vehicle armed and held.
+        """
+
+        for seed in (0, 1, 2, 3, 7):
+            baseline = run_episode(sil_p0b(seed), seed)
+            capture = [
+                e.t_s for e in baseline.events if e.kind is EventKind.CAPTURE_CONFIRMED
+            ]
+            if not capture:
+                continue
+            config = replace(
+                sil_p0b(seed),
+                fault_plan=(
+                    FaultSpec(FaultKind.CONTROLLER_RESET, capture[0], duration_s=0.5),
+                ),
+            )
+            result = run_episode(config, seed)
+            self.assertEqual(result.unsafe_events, (), f"seed {seed}")
+            self.assertNotEqual(
+                result.outcome.value,
+                "timeout",
+                f"seed {seed} deadlocked: guidance and dock disagreed until timeout",
+            )
 
 
 if __name__ == "__main__":

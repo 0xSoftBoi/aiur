@@ -144,9 +144,27 @@ class DockControllerTests(unittest.TestCase):
 
         self.assertEqual(out.state, DockState.FAULT_LOCKED)
         self.assertEqual(out.keeper_command, KeeperCommand.CLOSE)
-        self.assertEqual(out.fault_reason, "power_on_with_keeper_closed")
+        self.assertEqual(out.fault_reason, "keeper_closed_over_occupied_seat")
         # It holds the aircraft, but it does not claim a capture it never saw.
         self.assertFalse(out.capture_confirmed)
+
+    def test_hold_rule_is_state_based_not_first_step_based(self) -> None:
+        """One stale sample must not be able to skip the protection.
+
+        An earlier version triggered on the controller's first observation.
+        That is defeated by a single S2 reading of open arriving first — a
+        shorted or bouncing channel, or the S2_OPEN fault that is itself on the
+        required hardware fault list — after which the closed keeper is read as
+        a plain anomaly and commanded open with an aircraft still on the seat.
+        Keying on the seat instead cannot be skipped by sample ordering.
+        """
+
+        controller = DockController()
+        controller.step(0.00, DockInputs(seat_switch=True, keeper_closed_switch=False))
+        out = controller.step(0.02, DockInputs(seat_switch=True, keeper_closed_switch=True))
+
+        self.assertEqual(out.state, DockState.FAULT_LOCKED)
+        self.assertEqual(out.keeper_command, KeeperCommand.CLOSE)
 
     def test_power_on_held_state_recovers_to_captured_on_operator_confirmation(self) -> None:
         rebooted = DockController()
@@ -156,18 +174,27 @@ class DockControllerTests(unittest.TestCase):
         self.assertEqual(out.state, DockState.CAPTURED)
         self.assertTrue(out.capture_confirmed)
 
-    def test_power_on_with_closed_keeper_and_no_probe_needs_emergency_release(self) -> None:
-        """Opening a keeper whose contents are unknown stays a human decision."""
+    def test_power_on_with_closed_keeper_and_empty_seat_fails_open(self) -> None:
+        """An empty dock has nothing to drop, so the anomaly response stands.
+
+        The hold rule exists to protect an aircraft, not to protect a stuck
+        mechanism from being commanded open.  With the seat clear there is
+        nothing to lose by opening and something to gain — the dock tries to
+        clear itself instead of demanding an operator.
+        """
 
         rebooted = DockController()
-        rebooted.step(0.0, DockInputs(seat_switch=False, keeper_closed_switch=True))
-        # A plain reset cannot clear it: the seat switch is open, so the
-        # operator cannot confirm a capture either.
-        blocked = rebooted.step(0.1, DockInputs(False, True, reset_fault=True))
-        self.assertEqual(blocked.state, DockState.FAULT_LOCKED)
-        self.assertEqual(blocked.keeper_command, KeeperCommand.CLOSE)
+        out = rebooted.step(0.0, DockInputs(seat_switch=False, keeper_closed_switch=True))
 
-        released = rebooted.step(0.2, DockInputs(False, True, emergency_release=True))
+        self.assertEqual(out.state, DockState.FAULT_OPEN)
+        self.assertEqual(out.keeper_command, KeeperCommand.OPEN)
+        self.assertFalse(out.capture_confirmed)
+
+    def test_emergency_release_still_opens_a_held_dock_after_restart(self) -> None:
+        rebooted = DockController()
+        rebooted.step(0.0, DockInputs(True, True))
+        released = rebooted.step(0.1, DockInputs(True, True, emergency_release=True))
+
         self.assertEqual(released.state, DockState.RELEASING)
         self.assertEqual(released.keeper_command, KeeperCommand.OPEN)
 

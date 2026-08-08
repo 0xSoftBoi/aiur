@@ -24,7 +24,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Iterable
 
-from .loop_graph import evaluate_gate
+from .loop_graph import REQUIRED_FAULT_MODES, evaluate_gate
 
 
 RUN_KEY_FIELDS = ("run_id", "article_rev", "git_commit")
@@ -37,25 +37,6 @@ CYCLE_PHASES = ("run_in", "life")
 #: until real run-in data exists.
 RUN_IN_STABILITY_FRACTION = 0.10
 
-#: Electrical fault modes the bench fault-insertion unit must exercise, each
-#: paired with the response the system is required to produce.  The set mirrors
-#: the twin's fault menu so a hardware trial can be compared to its simulated
-#: counterpart directly.
-REQUIRED_FAULT_MODES: tuple[str, ...] = (
-    "S1_OPEN",
-    "S1_SHORT",
-    "S2_OPEN",
-    "S2_SHORT",
-    "S1_S2_BOTH_OPEN",
-    "SERVO_POWER_LOSS",
-    "SERVO_STALL",
-    "CONTROLLER_RESET_DURING_LOCK",
-    # Distinct from the mode above: resetting during LOCKING risks nothing,
-    # because nothing is retained yet.  Resetting while an aircraft hangs from
-    # the keeper is the case that can drop it, and it is the one a brownout
-    # during a docked cruise actually produces.
-    "CONTROLLER_RESET_WHILE_CAPTURED",
-)
 
 
 class EvidenceError(ValueError):

@@ -103,6 +103,27 @@ DERIVED_LIFE_TEST_CYCLES = int(EXPECTED_OPERATIONAL_CYCLES * LIFE_TEST_FACTOR)
 #: an actuator that merely "worked once" has no demonstrated margin.
 KEEPER_FORCE_MARGIN_FACTOR = 2.0
 
+#: Electrical fault modes the bench fault-insertion unit must exercise, each
+#: paired with a required response written before the trial.  The set mirrors
+#: the twin's fault menu so a hardware trial and its simulated counterpart can
+#: be compared directly.  The gate criterion counts this list rather than a
+#: literal, because the two drifted apart the first time a mode was added.
+REQUIRED_FAULT_MODES: tuple[str, ...] = (
+    "S1_OPEN",
+    "S1_SHORT",
+    "S2_OPEN",
+    "S2_SHORT",
+    "S1_S2_BOTH_OPEN",
+    "SERVO_POWER_LOSS",
+    "SERVO_STALL",
+    "CONTROLLER_RESET_DURING_LOCK",
+    # Distinct from the mode above: resetting during LOCKING risks nothing,
+    # because nothing is retained yet.  Resetting while an aircraft hangs from
+    # the keeper is the case that can drop it, and it is what a brownout
+    # during a docked cruise actually produces.
+    "CONTROLLER_RESET_WHILE_CAPTURED",
+)
+
 #: The physical kill path (carrier propulsion disable + release inhibit) is
 #: held to a higher standard than the autonomy it protects: it must be
 #: demonstrated end-to-end before every session and must still work with the
@@ -211,7 +232,7 @@ GATES: tuple[Gate, ...] = (
             Criterion(
                 "fault_insertion_trials",
                 ">=",
-                8,
+                len(REQUIRED_FAULT_MODES),
                 "every insertable electrical fault mode exercised on hardware",
             ),
             Criterion(
