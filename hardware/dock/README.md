@@ -8,24 +8,9 @@ It is mounted to the carrier's structural payload rail. **No recovery load is re
 
 The control system should not need millimeter-perfect coincidence in free flight. The hardware absorbs the last part of the alignment problem.
 
-```text
-carrier structural rail
-        │
-  compliant mount
-        │
-  ┌─────────────┐
-  │  180 mm     │  capture mouth
-   \           /
-    \         /
-     \       /     passive tapered funnel
-      \     /
-       [ ○ ]       spring collet / probe seat
-       [ ─ ]       servo positive keeper
-         │
-         ●         drone-top capture probe
-      ───────
-       drone
-```
+The current dimensioned first article is [P0-A Rev A](p0a-bench.md):
+
+![P0-A Rev-A dimensioned cross-section](p0a-rev-a.svg)
 
 ## Carrier-side assembly
 
@@ -36,11 +21,12 @@ P0 targets:
 - low-friction polymer funnel surface;
 - spring-loaded terminal collet;
 - independent servo keeper;
-- physical capture-confirmation switch;
+- `S1` physical probe-seat switch;
+- `S2` physical keeper-closed switch independent of the servo command;
 - total dock mass ≤180 g;
 - no exposed sharp edge within the drone approach volume.
 
-The servo is not the primary alignment mechanism. The funnel and collet should hold the probe before the keeper closes.
+The servo is not the primary alignment mechanism. The funnel and collet should hold the probe before the keeper closes. Capture truth is `S1 AND S2`; a commanded servo position is never sufficient evidence.
 
 ## Drone-side probe
 
@@ -71,6 +57,8 @@ Any timeout before `CAPTURE_CONFIRMED` commands an abort, not a forced latch.
 
 Capture confirmation should be based on the physical interface. Position estimate alone is not proof of capture.
 
+The executable keeper interlock is [`aiur/dock_controller.py`](../../aiur/dock_controller.py). Before confirmed capture it fails open so the vehicle can abort. After confirmed capture, contradictory sensor state fails locked so software does not drop a docked aircraft; emergency release retains explicit authority to command open.
+
 ## Release state machine
 
 ```text
@@ -100,9 +88,12 @@ Before flight, construct a fixture that can translate the dock laterally at low 
 
 - relative position estimate;
 - commanded velocity;
-- capture switch state;
+- `S1` probe-seat state;
+- `S2` keeper-closed state;
 - servo command/state;
 - aircraft arm/disarm state;
 - timestamped success/abort reason.
 
 The test rig is the place to break docking hardware, not the airship.
+
+P0-A uses the rigid fixture and cycle/load procedure in [p0a-bench.md](p0a-bench.md). P0-B introduces suspended motion only after P0-A evidence closes.

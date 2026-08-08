@@ -77,8 +77,8 @@ The minimum time-aligned recovery telemetry is:
 
 - relative `x/y/z` position and estimate validity;
 - relative velocity and commanded velocity;
-- dock capture switch state;
-- keeper/servo command and feedback where available;
+- `S1` probe-seat switch state;
+- keeper/servo command and independent `S2` keeper-closed state;
 - drone arm/disarm state;
 - carrier control/kill state;
 - state-machine state and abort reason.
@@ -89,7 +89,7 @@ Video is useful corroboration, but telemetry is the primary gate evidence.
 
 | Gate | Article | Promotion evidence | Stop / fail condition |
 | --- | --- | --- | --- |
-| P0-A | dock on rigid bench; props removed | ≥50 manual cycles; no structural failure; unambiguous capture indication; emergency release has zero failures | any structural damage, ambiguous capture, or failed release |
+| P0-A | dock on rigid bench; props removed | ≥50 manual cycles; dock ≤180 g; probe ≤8 g; hold 5 N axial + 1 N lateral screening loads; dual-sensor capture truth; ≥10 emergency releases with zero failures | any structural damage, ambiguous capture, load-test release, or failed emergency release |
 | P0-B | moving suspended dock + live aircraft | ≥9/10 captures; max closing speed ≤0.20 m/s; zero prop/funnel contacts; safety abort has zero failures | contact, overspeed, failed abort, or missing telemetry |
 | P0-C | tethered helium carrier | ≥9/10 captures; zero envelope strikes; zero abort failures; no full-payload control loss | envelope strike, abort failure, loss of carrier control, or incomplete evidence |
 | P0-D | tethered carrier + two aircraft | complete sequential release/recovery; positive separation; zero simultaneous dock approaches; zero envelope strikes | separation violation, simultaneous approach, or envelope strike |
@@ -122,4 +122,3 @@ Stop the active run set and return to bench/HIL on any of the following:
 - a configuration change made without generating a new configuration identity.
 
 The loop is working when failures become small, attributable, and reproducible. CARRIER-P0 is done when autonomous recovery is repeatable enough to be boring—not when one cinematic flight works.
-

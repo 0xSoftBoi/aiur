@@ -101,15 +101,16 @@ def baseline_p0_budget() -> tuple[PayloadItem, ...]:
     """Baseline carried mass allocation.
 
     Published masses:
-      * Crazyflie 2.1 Brushless: 32 g each.
+      * Crazyflie 2.1 Brushless with guards: 37 g each.
       * Lighthouse deck: 2.7 g each.
 
-    Dock, carrier-localization, and wiring figures are engineering allocations.
+    Dock, probe, carrier-localization, and wiring figures are engineering allocations.
     """
 
     return (
-        PayloadItem("Crazyflie 2.1 Brushless", 0.032, 2),
+        PayloadItem("Crazyflie 2.1 Brushless + guards", 0.037, 2),
         PayloadItem("Lighthouse positioning deck", 0.0027, 2),
+        PayloadItem("drone-side capture probe allocation", 0.008, 2),
         PayloadItem("active recovery dock allocation", 0.180),
         PayloadItem("carrier localization + telemetry allocation", 0.050),
         PayloadItem("wiring + mounting reserve", 0.100),

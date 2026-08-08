@@ -39,14 +39,17 @@ P0 uses one Crazyflie 2.1 Brushless first, then two.
 
 Published reference figures:
 
-- 32 g stock vehicle mass;
+- 34 g takeoff weight with legs and 37 g with guards;
 - ~10 min stock flight time;
 - 40 g maximum recommended stock payload;
 - contact pads for onboard charging;
 - open-source software, swarm and ROS support;
 - listed country of origin: Vietnam.
 
-Source: https://store.bitcraze.io/products/crazyflie-2-1-brushless
+Sources:
+
+- https://www.bitcraze.io/products/crazyflie-2-1-brushless/
+- https://store.bitcraze.io/products/crazyflie-2-1-brushless
 
 P0 does not use charging during first recovery testing. The contact interface is a P0.1 concern.
 
@@ -73,9 +76,10 @@ The interface is intentionally passive during alignment:
 2. A lightweight probe on top of the drone enters the funnel.
 3. Tapered geometry converts lateral error into probe centering.
 4. A spring collet/keeper provides first capture.
-5. A servo moves a positive mechanical lock.
-6. A physical switch independently confirms capture.
-7. Only after capture confirmation may the flight controller disarm the drone.
+5. A physical seat switch (`S1`) confirms the probe reached the seat.
+6. A servo moves a positive mechanical keeper underneath the probe head.
+7. A second physical switch (`S2`) independently confirms keeper-closed position.
+8. Capture is confirmed only when `S1 AND S2` is true; only then may the flight controller disarm the drone.
 
 No electromagnet is required to keep the aircraft attached.
 
@@ -94,7 +98,7 @@ Initial engineering targets:
 
 These are **targets**, not measured performance.
 
-See [hardware/dock/README.md](../hardware/dock/README.md).
+See [hardware/dock/README.md](../hardware/dock/README.md) and the [P0-A Rev-A bench article](../hardware/dock/p0a-bench.md).
 
 ## Mass budget
 
@@ -104,13 +108,14 @@ Baseline carried mass target:
 
 | Item | Mass |
 | --- | ---: |
-| 2 × stock Crazyflie Brushless | 64.0 g |
+| 2 × guard-equipped Crazyflie Brushless | 74.0 g |
 | 2 × Lighthouse decks | 5.4 g |
+| 2 × drone-side capture probe allocations | ≤16.0 g |
 | One active recovery dock | ≤180 g |
 | Carrier localization + telemetry allocation | ≤50 g |
 | Wiring/mounting reserve | ≤100 g |
-| Total baseline allocation | ≤399.4 g |
-| Rated-payload reserve | ≥600.6 g |
+| Total baseline allocation | ≤425.4 g |
+| Rated-payload reserve | ≥574.6 g |
 
 That reserve is deliberate. The prototype should not be engineered against its last gram.
 
@@ -125,11 +130,15 @@ Carrier dock is rigidly mounted to a bench.
 Pass:
 
 - 50 manual insertion/removal cycles without structural failure;
-- capture confirmation is unambiguous;
-- positive lock cannot release from simple vibration or probe side-load;
-- manual emergency release works every time.
+- complete dock mass ≤180 g and complete probe mass ≤8 g;
+- capture confirmation is unambiguous and requires independent seat + keeper feedback;
+- positive keeper holds a 5 N axial screening load for 10 s;
+- positive keeper holds a 1 N lateral screening load for 10 s in ±X and ±Y;
+- at least 10 emergency-release trials with zero failures.
 
 No propellers installed.
+
+The screening loads are prototype engineering gates, not certification/airworthiness loads. Full fixture geometry, procedure, and stop conditions are defined in [hardware/dock/p0a-bench.md](../hardware/dock/p0a-bench.md).
 
 ### P0-B — suspended moving dock
 

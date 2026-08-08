@@ -82,12 +82,34 @@ GATES: tuple[Gate, ...] = (
         Stage.BENCH_HIL,
         (
             Criterion("manual_cycles", ">=", 50, "50 manual capture/release cycles"),
+            Criterion("dock_mass_g", "<=", 180, "dock assembly stays within mass budget", "g"),
+            Criterion("probe_mass_g", "<=", 8, "drone-side probe stays within mass budget", "g"),
+            Criterion(
+                "axial_screen_load_held_n",
+                ">=",
+                5.0,
+                "positive keeper holds the P0 axial screening load",
+                "N",
+            ),
+            Criterion(
+                "lateral_screen_load_held_n",
+                ">=",
+                1.0,
+                "positive keeper holds the P0 lateral screening load",
+                "N",
+            ),
             Criterion("structural_failures", "==", 0, "no structural failures"),
             Criterion(
                 "ambiguous_capture_confirmations",
                 "==",
                 0,
                 "capture confirmation is unambiguous",
+            ),
+            Criterion(
+                "emergency_release_trials",
+                ">=",
+                10,
+                "at least 10 emergency-release trials",
             ),
             Criterion(
                 "emergency_release_failures",
@@ -297,4 +319,3 @@ def snapshot() -> dict[str, object]:
 
 if __name__ == "__main__":
     print(json.dumps(snapshot(), indent=2))
-
