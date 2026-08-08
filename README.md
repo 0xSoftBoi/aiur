@@ -31,6 +31,7 @@ P0 does **not** attempt hydrogen lift, outdoor/BVLOS operations, eight full-size
 ## Repository map
 
 - [Prototype specification](docs/prototype-p0.md)
+- [Closed-loop engineering graph](docs/engineering-loop.md)
 - [Docking mechanism](hardware/dock/README.md)
 - [Prototype BOM](hardware/bom.csv)
 - [Mass and capture-envelope model](aiur/p0.py)
