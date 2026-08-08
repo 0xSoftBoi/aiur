@@ -91,7 +91,7 @@ Video is useful corroboration, but telemetry is the primary gate evidence.
 
 | Gate | Article | Promotion evidence | Stop / fail condition |
 | --- | --- | --- | --- |
-| P0-A | dock on rigid bench; props removed | ≥50 manual cycles; dock ≤180 g; probe ≤8 g; hold 5 N axial + 1 N lateral screening loads; dual-sensor capture truth; ≥10 emergency releases with zero failures | any structural damage, ambiguous capture, load-test release, or failed emergency release |
+| P0-A | dock on rigid bench; props removed | ≥15 run-in cycles with a settled force trend; ≥600 derived life-test cycles; dock ≤180 g; probe ≤8 g; hold 5 N axial + 1 N lateral screening loads; keeper close/open force margin ≥2.0 at minimum voltage; dual-sensor capture truth; ≥10 unloaded **and** ≥10 loaded emergency releases with zero failures; every required electrical fault mode inserted with its required safe response | any structural damage, ambiguous capture, load-test release, failed emergency release, or an inserted fault that did not produce its required response |
 | P0-B | moving suspended dock + live aircraft | ≥9/10 captures; max closing speed ≤0.20 m/s; zero prop/funnel contacts; safety abort has zero failures | contact, overspeed, failed abort, or missing telemetry |
 | P0-C | tethered helium carrier | ≥9/10 captures; zero envelope strikes; zero abort failures; no full-payload control loss | envelope strike, abort failure, loss of carrier control, or incomplete evidence |
 | P0-D | tethered carrier + two aircraft | complete sequential release/recovery; positive separation; zero simultaneous dock approaches; zero envelope strikes | separation violation, simultaneous approach, or envelope strike |

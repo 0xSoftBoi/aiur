@@ -82,4 +82,4 @@ Do not power an actuator until A0 produces:
 - photographs of the closed load path and keeper guides;
 - a disposition for any hand-work performed on load-bearing geometry.
 
-A1 then freezes the actuator linkage, passive first-capture insert, switch brackets, and wiring revision. Only the complete A1 article can run the 50-cycle/5 N/1 N P0-A procedure.
+A1 then freezes the actuator linkage, passive first-capture insert, switch brackets, and wiring revision. Only the complete A1 article can run the run-in/600-cycle/5 N/1 N P0-A procedure.

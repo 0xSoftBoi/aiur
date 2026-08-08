@@ -11,7 +11,7 @@ import io
 import json
 import unittest
 
-from aiur.loop_graph import evaluate_gate
+from aiur.loop_graph import evaluate_gate, gate_by_id
 from aiur.sim import campaign
 from aiur.sim.engine import EpisodeOutcome, run_episode
 from aiur.sim.events import EventKind
@@ -211,28 +211,20 @@ class LoopGraphRegressionTests(unittest.TestCase):
     """The SIL-gate refactor must not break the hardware-gate evaluator."""
 
     def test_evaluate_gate_still_passes_p0a_with_complete_metrics(self) -> None:
-        verdict = evaluate_gate(
-            "P0-A",
-            {
-                "manual_cycles": 50,
-                "dock_mass_g": 170,
-                "probe_mass_g": 7,
-                "axial_screen_load_held_n": 6.0,
-                "lateral_screen_load_held_n": 1.5,
-                "structural_failures": 0,
-                "ambiguous_capture_confirmations": 0,
-                "emergency_release_trials": 12,
-                "emergency_release_failures": 0,
-                "propellers_installed": 0,
-            },
-        )
+        # Built from the gate definition so a new criterion cannot silently
+        # turn this regression test into an assertion about a stale gate.
+        metrics: dict[str, float | int] = {
+            criterion.metric: criterion.threshold
+            for criterion in gate_by_id("P0-A").criteria
+        }
+        verdict = evaluate_gate("P0-A", metrics)
         self.assertEqual(verdict.gate_id, "P0-A")
-        self.assertTrue(verdict.passed)
+        self.assertTrue(verdict.passed, verdict)
         self.assertEqual(verdict.missing_metrics, ())
         self.assertEqual(verdict.failed_criteria, ())
 
     def test_evaluate_gate_still_fails_p0a_on_missing_evidence(self) -> None:
-        verdict = evaluate_gate("P0-A", {"manual_cycles": 50})
+        verdict = evaluate_gate("P0-A", {"life_test_cycles": 600})
         self.assertFalse(verdict.passed)
         self.assertIn("dock_mass_g", verdict.missing_metrics)
 
