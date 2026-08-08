@@ -71,8 +71,14 @@ Every test run has an immutable configuration identity and enough information to
 - configuration/calibration hash;
 - carrier and aircraft identifiers;
 - measured carried mass;
+- battery pack identity and pack cycle count for every pack flown
+  (see the [battery SOP](battery-sop.md)) — a run that behaved oddly must be
+  traceable to the specific pack that powered it;
+- as-built article identity: which physical dock and probe were used, and
+  the [golden-article](../hardware/dock/golden-article.md) comparison result;
 - synchronized monotonic timestamps;
-- operator/observer and test location;
+- operator/observer and test location, including who held abort authority;
+- kill-path pre-session check result;
 - outcome plus abort/failure reason.
 
 The minimum time-aligned recovery telemetry is:
