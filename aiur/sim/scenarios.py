@@ -28,7 +28,12 @@ from .engine import (
     ScriptAction,
     ScriptStep,
 )
-from .faults import sample_fault_plan
+from .faults import (
+    FaultKind,
+    FaultSpec,
+    sample_correlated_fault_plan,
+    sample_fault_plan,
+)
 from .guidance import GuidanceParams, MissionMode
 from .sensors import LIGHTHOUSE_GRADE, PoseSensorParams, scaled_sensor
 from .vec import Vec3
@@ -50,10 +55,28 @@ def _jitter(rng: random.Random, base: Vec3, radius_m: float) -> Vec3:
     )
 
 
+def _fault_plan(
+    rng: random.Random, with_fault: bool, correlated: bool
+) -> tuple[FaultSpec, ...]:
+    """Pick the fault plan for an episode.
+
+    ``correlated`` draws a coupled pair from the common-mode analysis instead
+    of a single fault, because a single-fault campaign structurally cannot
+    find a defect that needs two things to be wrong at once.
+    """
+
+    if correlated:
+        return sample_correlated_fault_plan(rng)
+    if with_fault:
+        return sample_fault_plan(rng)
+    return ()
+
+
 def sil_p0b(
     seed: int,
     *,
     with_fault: bool = False,
+    correlated_fault: bool = False,
     air: AirModelParams = INDOOR_CALM,
     drone_sensor: PoseSensorParams = LIGHTHOUSE_GRADE,
     guidance: GuidanceParams = GuidanceParams(),
@@ -79,7 +102,7 @@ def sil_p0b(
         drone_sensor=drone_sensor,
         guidance=guidance,
         max_duration_s=150.0,
-        fault_plan=sample_fault_plan(rng) if with_fault else (),
+        fault_plan=_fault_plan(rng, with_fault, correlated_fault),
         record_telemetry=record_telemetry,
     )
 
@@ -88,6 +111,7 @@ def sil_p0c(
     seed: int,
     *,
     with_fault: bool = False,
+    correlated_fault: bool = False,
     air: AirModelParams = INDOOR_CALM,
     record_telemetry: bool = False,
 ) -> EpisodeConfig:
@@ -115,7 +139,7 @@ def sil_p0c(
         air=air,
         max_duration_s=240.0,
         tethered=True,
-        fault_plan=sample_fault_plan(rng) if with_fault else (),
+        fault_plan=_fault_plan(rng, with_fault, correlated_fault),
         record_telemetry=record_telemetry,
     )
 
@@ -124,6 +148,7 @@ def sil_p0d(
     seed: int,
     *,
     with_fault: bool = False,
+    correlated_fault: bool = False,
     air: AirModelParams = INDOOR_CALM,
     record_telemetry: bool = False,
 ) -> EpisodeConfig:
@@ -167,7 +192,7 @@ def sil_p0d(
         air=air,
         max_duration_s=300.0,
         tethered=True,
-        fault_plan=sample_fault_plan(rng) if with_fault else (),
+        fault_plan=_fault_plan(rng, with_fault, correlated_fault),
         fault_target_drone=1,
         record_telemetry=record_telemetry,
     )
@@ -183,6 +208,31 @@ def outdoor_gust_case(seed: int, mean_wind_m_s: float) -> EpisodeConfig:
     """
 
     return sil_p0c(seed, air=outdoor_breeze(mean_wind_m_s))
+
+
+def nav_bias_ramp_case(seed: int, ramp_rate_m_s: float) -> EpisodeConfig:
+    """One episode of the nav-bias-ramp-sweep study.
+
+    Characterises accepted residual SIL-005: a relative-navigation bias that
+    grows slowly enough to stay under the jump detector's per-step threshold
+    is invisible to a single-source estimator, and the aircraft flies the
+    error.  The sweep exists to answer the question the prose could not —
+    *how* slow is dangerous — because the outcome is not monotone in ramp
+    rate.  A fast ramp trips the detector and aborts safely; a slow one is
+    caught by nothing and walks the aircraft into the funnel rim.
+    """
+
+    return replace(
+        sil_p0b(seed),
+        fault_plan=(
+            FaultSpec(
+                FaultKind.POSE_BIAS_RAMP,
+                3.0,
+                duration_s=120.0,
+                magnitude=ramp_rate_m_s,
+            ),
+        ),
+    )
 
 
 def degraded_sensor_case(seed: int, noise_scale: float) -> EpisodeConfig:

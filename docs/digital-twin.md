@@ -91,9 +91,13 @@ Exit code 0 is a passing gate. CI runs SIL-B at full size on every push.
 Two sweep studies feed the dual-use concept work in `docs/verticals/`:
 
 ```
-python -m aiur.sim.campaign --scenario outdoor-gust-sweep   --episodes-per-bin 30
+python -m aiur.sim.campaign --scenario outdoor-gust-sweep    --episodes-per-bin 30
 python -m aiur.sim.campaign --scenario degraded-sensor-sweep --episodes-per-bin 30
+python -m aiur.sim.campaign --scenario nav-bias-ramp-sweep   --episodes-per-bin 30
 ```
+
+The third study characterizes an accepted residual rather than a vertical:
+see finding 3 below.
 
 Model findings as of 2026-08-08 (seed 1, 30 episodes/bin; simulation
 results, not vehicle performance):
@@ -127,16 +131,38 @@ Findings the twin has already produced that constrain the hardware program:
    own relative estimate places the probe at the seat. With the gate in
    place, every stuck-switch campaign ends in a safe abort or a genuine
    capture.
-3. **Single-source relative navigation cannot detect a persistent bias.**
-   The jump detector catches step anomalies — including across measurement
-   gaps, where the threshold widens by plausible own-motion so a bias that
-   arises during a dropout is still caught on recovery — and quarantines
-   the approach. But a bias that ramps slowly, or hides under a long gap at
-   transit speed, is invisible from inside one positioning system and can
-   walk the aircraft toward the funnel rim. Residual risk for P0 as
-   instrumented; a second terminal sensing modality (or the funnel's
-   mechanical tolerance) is the mitigation. Carried in the risk register,
-   not waved away.
+3. **Single-source relative navigation cannot detect a persistent bias —
+   and the danger is non-monotone in fault size.** The jump detector
+   catches step anomalies, including across measurement gaps, and
+   quarantines the approach. A bias that ramps slowly is invisible to it,
+   and the aircraft flies the error into the funnel rim.
+
+   This was an analytical claim until the twin gained a ramping-bias fault;
+   a step-only fault model can only ever show the defence working. The
+   `nav-bias-ramp-sweep` study now characterizes it (30 episodes per bin,
+   seed 1; simulation results, not vehicle performance):
+
+   | Ramp rate | Per-step error | Capture | Unsafe episodes |
+   | ---: | ---: | ---: | ---: |
+   | 0 (baseline) | 0.00 mm | 100% | 0 |
+   | 0.005 m/s | 0.10 mm | 0% | 12 |
+   | 0.010 m/s | 0.20 mm | 0% | 7 |
+   | 0.020 m/s | 0.40 mm | 0% | 18 |
+   | 0.050 m/s | 1.00 mm | 0% | 0 |
+   | 0.100 m/s | 2.00 mm | 0% | 0 |
+
+   The unsafe outcomes are propeller/funnel contacts at 134–144 mm lateral
+   against a 90 mm funnel radius. The shape is the finding: **a faster
+   bias is safer**, because it trips the 30 mm jump threshold and aborts,
+   while the slow band is caught by nothing. Any FDIR built only against
+   large faults will pass its own tests and miss this entirely.
+
+   The residual stands (SIL-005): a second terminal sensing modality, or
+   mechanical tolerance wide enough to absorb the error, is the mitigation.
+   The ramp fault is deliberately excluded from the random gate menu —
+   sampling an accepted, characterized residual a few percent of the time
+   fails gates at random without adding information, and invites someone to
+   weaken the criterion. It lives in the sweep, where its numbers are.
 4. **The carrier can overrun its own aircraft.** Under wind, a tethered
    buoyant carrier sweeps through nearby airspace faster than a
    station-holding micro-UAV expects. Guidance needs the hull-proximity

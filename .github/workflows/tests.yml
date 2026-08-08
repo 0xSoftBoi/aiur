@@ -27,3 +27,11 @@ jobs:
         run: python -m aiur.sim.campaign --scenario sil-p0c --episodes 200 --seed 1
       - name: SIL-D gate (digital twin)
         run: python -m aiur.sim.campaign --scenario sil-p0d --episodes 80 --seed 1
+      - name: Requirement closure matrix
+        run: python -m aiur.requirements
+      - name: Hazard log
+        run: python -m aiur.hazards
+      - name: Capture-chain tolerance stack
+        run: python -m aiur.tolerance
+      - name: Practice-adoption register
+        run: python -m aiur.adoption_loop

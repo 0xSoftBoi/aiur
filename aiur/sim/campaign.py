@@ -41,6 +41,7 @@ from .events import EventKind
 from .gates import evaluate_sil_gate
 from .scenarios import (
     degraded_sensor_case,
+    nav_bias_ramp_case,
     outdoor_gust_case,
     sil_p0b,
     sil_p0c,
@@ -56,6 +57,11 @@ GATE_SCENARIOS: dict[str, tuple[Callable[..., EpisodeConfig], str]] = {
 #: Sweep studies referenced by the vertical concept docs (docs/verticals/).
 OUTDOOR_GUST_BINS_M_S: tuple[float, ...] = (0.0, 0.5, 1.0, 1.5, 2.0, 3.0)
 SENSOR_NOISE_SCALES: tuple[float, ...] = (1.0, 3.0, 10.0, 30.0)
+
+#: Ramp rates for the nav-bias-ramp study.  Chosen to straddle the jump
+#: detector's per-step threshold: the slow end is invisible to it, the fast
+#: end trips it, and the interesting answer is in between.
+NAV_BIAS_RAMP_RATES_M_S: tuple[float, ...] = (0.0, 0.005, 0.01, 0.02, 0.05, 0.10)
 
 
 @dataclass(frozen=True)
@@ -84,6 +90,7 @@ def run_campaign(
     episodes: int = 200,
     seed: int = 1,
     fault_fraction: float = 0.25,
+    correlated_fraction: float = 0.4,
 ) -> CampaignResult:
     """Run one gate campaign and reduce it to a SIL gate verdict."""
 
@@ -93,21 +100,41 @@ def run_campaign(
         raise ValueError("episodes must be positive")
     if not 0.0 <= fault_fraction < 1.0:
         raise ValueError("fault fraction must be in [0, 1)")
+    if not 0.0 <= correlated_fraction <= 1.0:
+        raise ValueError("correlated fraction must be in [0, 1]")
 
     builder, gate_id = GATE_SCENARIOS[scenario]
     # int(x + 0.5) instead of round(): banker's rounding at bin edges can
     # silently produce zero fault episodes in small campaigns.
     fault_count = int(episodes * fault_fraction + 0.5)
     nominal_count = episodes - fault_count
+    # A slice of the fault budget goes to coupled pairs from the common-mode
+    # analysis.  Single-fault sampling structurally cannot reach a defect that
+    # needs two things wrong at once, and the twin's own worst finding is
+    # exactly that shape.
+    correlated_count = int(fault_count * correlated_fraction + 0.5)
+    single_fault_end = episodes - correlated_count
 
     nominal_results: list[EpisodeResult] = []
     fault_results: list[EpisodeResult] = []
+    correlated_results: list[EpisodeResult] = []
     for index in range(episodes):
         episode_seed = seed + index
-        with_fault = index >= nominal_count
-        config = builder(episode_seed, with_fault=with_fault)
+        correlated = index >= single_fault_end
+        with_fault = index >= nominal_count and not correlated
+        config = builder(
+            episode_seed, with_fault=with_fault, correlated_fault=correlated
+        )
         result = run_episode(config, episode_seed)
-        (fault_results if with_fault else nominal_results).append(result)
+        if correlated:
+            correlated_results.append(result)
+        elif with_fault:
+            fault_results.append(result)
+        else:
+            nominal_results.append(result)
+    # Coupled pairs are fault episodes for every purpose except the sampler
+    # that produced them.
+    fault_results = fault_results + correlated_results
 
     every = nominal_results + fault_results
     nominal_successes = sum(
@@ -242,6 +269,16 @@ def run_sweep(
         domain_limit_text = (
             "the twin is declared for indoor still air with zero mean flow"
         )
+    elif study == "nav-bias-ramp-sweep":
+        bins = NAV_BIAS_RAMP_RATES_M_S
+        case = nav_bias_ramp_case
+        bin_label = "ramp_rate_m_s"
+        domain_limit = 0.0
+        domain_limit_text = (
+            "the twin is declared for an unbiased relative-navigation "
+            "solution; every non-zero ramp is outside it by construction, "
+            "which is the point of the study"
+        )
     elif study == "degraded-sensor-sweep":
         bins = SENSOR_NOISE_SCALES
         case = degraded_sensor_case
@@ -313,7 +350,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--scenario",
         required=True,
-        choices=sorted(GATE_SCENARIOS) + ["outdoor-gust-sweep", "degraded-sensor-sweep"],
+        choices=sorted(GATE_SCENARIOS)
+        + ["outdoor-gust-sweep", "degraded-sensor-sweep", "nav-bias-ramp-sweep"],
     )
     parser.add_argument("--episodes", type=int, default=200)
     parser.add_argument("--episodes-per-bin", type=int, default=30)

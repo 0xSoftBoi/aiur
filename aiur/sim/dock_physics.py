@@ -108,6 +108,21 @@ class DockAssembly:
         self._probe_above_keeper = False
         self._prev_keeper_truth = False
 
+    def reset_controller(self) -> None:
+        """Model a controller brownout: the logic restarts, the mechanism does not.
+
+        Everything physical — probe position, servo travel, switch state —
+        survives, because a power blip does not move hardware.  Only the
+        controller's own state is lost, which is precisely the condition under
+        which it must re-derive what it is holding from the switches alone.
+        """
+
+        self.controller = type(self.controller)(
+            lock_timeout_s=self.controller.lock_timeout_s,
+            release_timeout_s=self.controller.release_timeout_s,
+        )
+        self._was_confirmed = False
+
     # -- mechanical truth -------------------------------------------------
 
     def _probe_tip(self, drone: DroneBody) -> Vec3:
