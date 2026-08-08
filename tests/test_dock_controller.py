@@ -129,6 +129,31 @@ class DockControllerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             controller.step(0.9, DockInputs(False, False))
 
+    def test_seat_switch_lost_on_weight_transfer_faults_every_capture(self) -> None:
+        """Pin the failure mode behind requirement P0-DOCK-010.
+
+        The controller is correct here: losing S1 after capture is genuine
+        sensor disagreement and failing locked is the safe response.  The
+        defect this test documents is mechanical.  A seat switch actuated by
+        maintained force rather than probe position opens as soon as the
+        aircraft disarms and its weight transfers from thrust to the keeper
+        tines — the docked aircraft weighs about 0.47 N against a switch
+        operating force of 0.74 N or more — so a force-actuated S1 would turn
+        every successful capture into FAULT_LOCKED.  If this test ever starts
+        failing because the controller was relaxed, the fix was applied to the
+        wrong layer.
+        """
+
+        controller = DockController()
+        self._capture(controller)
+
+        out = controller.step(0.5, DockInputs(seat_switch=False, keeper_closed_switch=True))
+
+        self.assertEqual(out.state, DockState.FAULT_LOCKED)
+        self.assertEqual(out.fault_reason, "capture_sensor_disagreement")
+        self.assertFalse(out.capture_confirmed)
+        self.assertEqual(out.keeper_command, KeeperCommand.CLOSE)
+
 
 if __name__ == "__main__":
     unittest.main()

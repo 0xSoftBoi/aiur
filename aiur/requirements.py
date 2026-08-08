@@ -190,6 +190,21 @@ REQUIREMENTS: tuple[Requirement, ...] = (
         "prop_funnel_contacts",
     ),
     Requirement(
+        "P0-DOCK-010",
+        "S1 seat-switch actuation mode: position versus maintained force",
+        "S1 stays actuated once the probe is seated and the aircraft's weight "
+        "has transferred to the keeper, i.e. S1 is actuated by probe position "
+        "with sufficient over-travel, not by maintained contact force",
+        "an S1 that opens on weight transfer must be treated as a hardware "
+        "defect, not tuned around in software",
+        "P0-A cycling: S1 state trace across the disarm and hang-off "
+        "transition, plus measured actuation force and over-travel",
+        VerificationMethod.TEST,
+        Stage.BENCH_HIL,
+        "P0-A",
+        "ambiguous_capture_confirmations",
+    ),
+    Requirement(
         "P0-FLEET-001",
         "completion of a sequential two-aircraft release/recovery cycle",
         ">= 1 complete sequence, one aircraft at a time",
