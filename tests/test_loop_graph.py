@@ -20,6 +20,46 @@ class EngineeringLoopTests(unittest.TestCase):
             },
         )
 
+    def test_p0_a_nominal_bench_evidence_passes(self) -> None:
+        verdict = evaluate_gate(
+            "P0-A",
+            {
+                "manual_cycles": 50,
+                "dock_mass_g": 176,
+                "probe_mass_g": 6.8,
+                "axial_screen_load_held_n": 5.2,
+                "lateral_screen_load_held_n": 1.1,
+                "structural_failures": 0,
+                "ambiguous_capture_confirmations": 0,
+                "emergency_release_trials": 10,
+                "emergency_release_failures": 0,
+                "propellers_installed": 0,
+            },
+        )
+        self.assertTrue(verdict.passed)
+
+    def test_p0_a_rejects_understrength_latch(self) -> None:
+        verdict = evaluate_gate(
+            "P0-A",
+            {
+                "manual_cycles": 50,
+                "dock_mass_g": 176,
+                "probe_mass_g": 6.8,
+                "axial_screen_load_held_n": 4.9,
+                "lateral_screen_load_held_n": 1.1,
+                "structural_failures": 0,
+                "ambiguous_capture_confirmations": 0,
+                "emergency_release_trials": 10,
+                "emergency_release_failures": 0,
+                "propellers_installed": 0,
+            },
+        )
+        self.assertFalse(verdict.passed)
+        self.assertIn(
+            "positive keeper holds the P0 axial screening load",
+            verdict.failed_criteria,
+        )
+
     def test_p0_b_nominal_evidence_passes(self) -> None:
         verdict = evaluate_gate(
             "P0-B",
@@ -62,4 +102,3 @@ class EngineeringLoopTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
