@@ -44,12 +44,13 @@ Published reference figures:
 - 40 g maximum recommended stock payload;
 - contact pads for onboard charging;
 - open-source software, swarm and ROS support;
-- listed country of origin: Vietnam.
+- Bitcraze publishes both `(CN)` and `(VN)` SKU variants; P0 procurement requires the VN variant with COO/lot verified at order.
 
 Sources:
 
 - https://www.bitcraze.io/products/crazyflie-2-1-brushless/
 - https://store.bitcraze.io/products/crazyflie-2-1-brushless
+- https://github.com/bitcraze/hardware/releases
 
 P0 does not use charging during first recovery testing. The contact interface is a P0.1 concern.
 

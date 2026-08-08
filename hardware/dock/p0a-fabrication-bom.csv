@@ -1,0 +1,11 @@
+stage,subsystem,item,vendor,part_number,quantity,carried,nominal_mass_g_each,origin_policy,source,notes
+P0-A0,structure,Rev-A funnel print,Aiur,p0a_funnel.stl,1,yes,,Print locally; record material source,hardware/dock/cad/README.md,"PETG starting material or PA12 alternative; actual mass is measured"
+P0-A0,retention,Rev-A sliding keeper,Aiur,p0a_keeper.stl,1,yes,,Print locally; record material source,hardware/dock/cad/README.md,"Guides and mechanical stop react load; actuator is not the structural load path"
+P0-A0,probe,Rev-A rounded probe head,Aiur,p0a_probe_head.stl,1,yes,,Print locally; record material source,hardware/dock/cad/README.md,"Bench coupon component; complete flight probe remains <=8 g"
+P0-A0,probe,3 mm GFRP/CFRP mast,Dual source,,1,yes,,Qualify at least two non-PRC sources before flight lot,,"Cut length from physical fit; flight base and sacrificial feature are not frozen"
+P0-A1,actuator,DYNAMIXEL XL330-M288-T,ROBOTIS,902-0163-000,1,yes,18,Official ROBOTIS listing states Korea,https://en.robotis.com/shop_en/item.php?it_id=902-0163-000,"3.7-6.0 V; 5 V recommended; actuator feedback does not replace S2"
+P0-A1,sensing,SPDT ultra-subminiature snap-action switch,Dual source,,2,yes,,No China sole-source; record manufacturer part number + COO/lot on build sheet,,"One each for S1 seat and S2 physical keeper position; generic footprint until alternates are qualified"
+P0-A1,controller,OpenRB-150,ROBOTIS,,1,no,,Bench controller; verify COO/lot at PO,https://emanual.robotis.com/docs/en/parts/controller/openrb-150/,"Ground equipment; dedicated TTL DYNAMIXEL ports; do not power actuator from USB-only current budget"
+P0-A1,power,Current-limited 5 V >=3 A bench supply,Dual source,,1,no,,Ground equipment; source locally,,"Feed actuator/controller power per OpenRB manual; current limit before first motion"
+P0-A1,retention,Passive first-capture insert / collet,Aiur,TBD,1,yes,,Design and dual-source material after A0 fit,hardware/dock/p0a-bench.md,"Must not become primary retention path; exact compliance comes from physical fit"
+P0-A1,hardware,M3 fasteners + keeper guides,Dual source,,1,yes,,Commodity; qualify non-PRC alternate for flight lot,,"Use metal inserts/washers where print bearing stress requires them; weigh complete assembly"

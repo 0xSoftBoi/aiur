@@ -34,9 +34,12 @@ P0 does **not** attempt hydrogen lift, outdoor/BVLOS operations, eight full-size
 - [Closed-loop engineering graph](docs/engineering-loop.md)
 - [Docking mechanism](hardware/dock/README.md)
 - [P0-A Rev-A bench article](hardware/dock/p0a-bench.md)
+- [P0-A fabrication + electrical packet](hardware/dock/p0a-fabrication.md)
+- [Reproducible Rev-A CAD](hardware/dock/cad/README.md)
 - [Prototype BOM](hardware/bom.csv)
 - [Mass and capture-envelope model](aiur/p0.py)
 - [Fail-safe dock controller](aiur/dock_controller.py)
+- [P0-A evidence reducer](aiur/p0a_evidence.py)
 - [Engineering tests](tests/test_p0.py)
 
 ## Design rule

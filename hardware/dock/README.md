@@ -12,6 +12,8 @@ The current dimensioned first article is [P0-A Rev A](p0a-bench.md):
 
 ![P0-A Rev-A dimensioned cross-section](p0a-rev-a.svg)
 
+The makeable Rev-A geometry, sourcing, and bench electrical interface are in the [fabrication packet](p0a-fabrication.md) and [reproducible CAD pack](cad/README.md).
+
 ## Carrier-side assembly
 
 P0 targets:
