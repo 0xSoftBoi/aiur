@@ -1,0 +1,24 @@
+name: engineering-tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "agent/**"
+
+permissions:
+  contents: read
+
+jobs:
+  p0-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run engineering tests
+        run: python -m unittest discover -s tests -v
+      - name: Print P0 budget
+        run: python -m aiur.p0
