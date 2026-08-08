@@ -50,6 +50,14 @@ a:focus-visible {
   margin-inline: auto;
 }
 
+#system,
+#evidence,
+#carrier,
+#program,
+#releases {
+  scroll-margin-top: 90px;
+}
+
 h1,
 h2,
 h3,
@@ -203,6 +211,11 @@ h2 em {
   color: rgba(241, 242, 237, 0.28);
   font: 600 8px/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace;
   letter-spacing: 0.12em;
+}
+
+.scene[data-renderer="unavailable"] .scene-hud,
+.scene[data-renderer="unavailable"] .scene-fallback {
+  display: none;
 }
 
 .metric-fallback {
@@ -472,8 +485,6 @@ h2 em {
   z-index: 4;
   color: var(--ink);
   background: var(--paper);
-  content-visibility: auto;
-  contain-intrinsic-size: 1100px;
 }
 
 .paper-section h2 em {
@@ -559,8 +570,6 @@ h2 em {
   background:
     radial-gradient(circle at 76% 60%, rgba(255, 100, 40, 0.05), transparent 28rem),
     #0a0b0b;
-  content-visibility: auto;
-  contain-intrinsic-size: 1100px;
 }
 
 .evidence-layout {
@@ -792,8 +801,6 @@ h2 em {
   min-height: 108svh;
   padding: 54px 0 100px;
   background: #0a0b0b;
-  content-visibility: auto;
-  contain-intrinsic-size: 1050px;
 }
 
 .release-heading {
