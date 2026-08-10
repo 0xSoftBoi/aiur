@@ -50,6 +50,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: ${{ matrix.gate }} gate
+        # shell: bash gives -eo pipefail. Without it the pipeline reports
+        # tee's exit status, so a FAILING gate would upload its report and
+        # pass the job — a nightly gate that cannot go red is worse than no
+        # nightly gate at all.
+        shell: bash
         run: |
           python -m aiur.sim.campaign \
             --scenario ${{ matrix.scenario }} \
@@ -84,6 +89,7 @@ jobs:
       # reproducible, and so a change that moves them is visible the next day
       # rather than whenever someone next runs a sweep by hand.
       - name: ${{ matrix.study }}
+        shell: bash
         run: |
           python -m aiur.sim.campaign \
             --scenario ${{ matrix.study }} \

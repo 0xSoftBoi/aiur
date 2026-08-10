@@ -8,22 +8,42 @@ P0-A proves the mechanical and electrical truth of the recovery interface before
 
 ![P0-A Rev-A dimensioned cross-section](p0a-rev-a.svg)
 
-## Rev-A starting geometry
+## Rev-B geometry
 
-These dimensions are a first article for fit testing. They are not production interface control dimensions.
+Build Rev-B. These dimensions are a first article for fit testing, not
+production interface control dimensions, but they are not arbitrary either:
+the four marked **Rev-B** were derived together in
+[`aiur/tolerance.py`](../../aiur/tolerance.py) and changing any one of them
+in isolation reopens a stack that Rev-A failed. Regenerate parts from
+[`cad/generate_rev_a.py`](cad/generate_rev_a.py), which holds these as
+`REV_B` and prints them into the manifest.
 
-| Feature | Rev-A target | Why |
+| Feature | Target | Why |
 | --- | ---: | --- |
 | Funnel mouth | Ø180 mm | Existing P0 capture-envelope target |
-| Funnel throat | Ø16 mm | Guides a Ø12 mm probe head into the keeper |
+| Funnel throat | Ø16 mm | Guides the Ø12 mm probe belt into the keeper |
 | Funnel depth | 65 mm | Keeps the funnel shallow enough to preserve rotor-plane standoff |
 | Funnel wall | 1.2 mm nominal | Printable starting section; weigh the real part |
-| Probe head | Ø12 mm rounded | Large enough for a positive under-head keeper |
-| Probe neck | Ø3 mm nominal | Keeper acts on the neck, not friction on the head |
+| Probe belt | Ø12 mm rounded | What the funnel taper guides; never touches the keeper |
+| **Probe seat** | **Ø9 mm** (Rev-B) | The lower cylinder the keeper actually bears on. Rev-A used Ø6 and the retention ledge vanished at worst case |
+| Probe mast | Ø3 mm nominal | Keeper slot surrounds the mast; the ledge does the retaining, not friction |
+| **Keeper slot** | **5.2 mm** (Rev-B) | Clears the mast at worst case. Rev-A's 4.2 mm could bind |
+| **Keeper tine reach** | **5.0 mm** (Rev-B) | Past the dock axis. Sets the stroke needed to release; still fully bears the Ø9 seat |
+| **Keeper open travel** | **13.0 mm** (Rev-B) | Rev-A commanded 11.0 mm while its geometry needed 13.62 mm and could not release at all |
+| Keeper thickness | 2.5 mm | Bearing face under the seat |
 | Probe tip above prop plane | 110 mm nominal | Creates vertical separation between funnel lip and rotors |
 | Dock-side assembly | ≤180 g | Existing carrier mass allocation |
 | Drone-side probe assembly | ≤8 g | Existing aircraft-side allocation |
-| Bench adapter | 4 × M3 on 40 mm square | Rev-A fixture interface only; not the final carrier rail ICD |
+| Bench adapter | 4 × M3 on 40 mm square | Bench fixture interface only; not the final carrier rail ICD |
+
+Two diameters on the probe head do different jobs and are easy to conflate.
+The **belt** is the widest point and is what the funnel guides. The **seat**
+is the lower cylinder, and it is the only part the keeper touches. Growing
+the seat is what bought the retention margin; the belt did not change, so
+the funnel interface is unaffected.
+
+Rev-A remains constructible from the same generator (`REV_A`) so its
+failures stay reproducible. Do not build it.
 
 The probe base must contain a deliberately sacrificial feature so a bad side-load damages a replaceable probe part before the Crazyflie PCB. The breakaway load is **TBD by physical test**; do not invent a production value from CAD.
 

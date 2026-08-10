@@ -8,7 +8,7 @@ The fabrication pack closes only dimensions we can justify before hardware arriv
 
 ## Mechanical stack
 
-The generated parts are in [`cad/generated/`](cad/generated/) and regenerate from [`cad/generate_rev_a.py`](cad/generate_rev_a.py). The keeper is a sliding fork: its slot surrounds the Ø3 mm probe mast and its tines sit beneath the Ø12 mm head. Rigid guides and a closed end-stop react retention load. The servo translates the keeper but does not carry the 5 N screening load through its geartrain.
+The generated parts are in [`cad/generated/`](cad/generated/) and regenerate from [`cad/generate_rev_a.py`](cad/generate_rev_a.py), which builds **Rev-B** (`CURRENT`); the manifest names the revision it produced, so a printed part can always be traced back to its geometry. The keeper is a sliding fork: its 5.2 mm slot surrounds the Ø3 mm probe mast and its tines bear beneath the **Ø9 mm seat** — the head's lower cylinder, not the Ø12 mm belt, which is a funnel-guidance diameter the keeper never touches. Rigid guides and a closed end-stop react retention load. The servo translates the keeper but does not carry the 5 N screening load through its geartrain.
 
 Closed geometry is mechanically stable. Do not count commanded servo position, motor torque, or motor current as retention evidence.
 
