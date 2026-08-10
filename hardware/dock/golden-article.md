@@ -1,14 +1,14 @@
 # Golden article
 
 Status: rule in force from the first P0-A pass; no article has been built yet  
-Scope: CARRIER-P0 dock and probe articles, Rev-A onward  
+Scope: CARRIER-P0 dock and probe articles, Rev-B onward  
 Executable form: [`aiur/tolerance.py`](../../aiur/tolerance.py), [`as-built-template.csv`](as-built-template.csv)
 
 A P0-A pass is evidence about one physical article, not about a drawing. The
-Rev-A CAD is deterministic; the parts that come off the printer are not. Two
+The CAD is deterministic; the parts that come off the printer are not. Two
 articles from the same STL and the same slicer profile differ by more than the
-capture chain's smallest clearance — the keeper ledge is 0.8 mm at nominal and
-the assumed printed tolerance is 0.15 mm per surface. So the article that closes
+capture chain's smallest clearance — the keeper ledge is 1.8 mm at nominal on
+Rev-B and the assumed printed tolerance is 0.15 mm per surface. So the article that closes
 P0-A becomes the reference, and every later article is measured against it before
 it is allowed to carry gate evidence.
 
@@ -17,12 +17,20 @@ second dock prints, works once, and inherits the 600 derived life-test cycles
 (`aiur.loop_graph.DERIVED_LIFE_TEST_CYCLES`) that the first article earned. It
 has earned none of them.
 
-The rule has no article to freeze yet. `python -m aiur.tolerance` currently
-reports three open findings against Rev-A — the keeper/mast slot clearance, the
-keeper/head retention ledge, and the keeper release travel — and the third is
-negative at nominal, so no Rev-A article can pass P0-A as drawn. The freeze
-procedure below is written now because it has to be in force *before* the first
-article that closes the gate, not written afterwards about it.
+The rule has no article to freeze yet, and nothing has been printed. What
+has changed is why: Rev-A carried three open stack findings — the
+keeper/mast slot clearance, the keeper/head retention ledge, and the keeper
+release travel, the last negative at nominal — so no Rev-A article could
+pass P0-A as drawn. Rev-B closes all four stacks, and
+`python -m aiur.tolerance` now reports zero open findings and a passing
+chain; the superseded failures are kept in `RESOLVED_FINDINGS` as the record
+of why four dimensions moved together.
+
+So the geometry is no longer the blocker. The remaining one is the keeper
+drive: Rev-B's 13.0 mm stroke has no designed linkage
+([keeper-drive.md](keeper-drive.md)). The freeze procedure below is written
+now because it has to be in force *before* the first article that closes the
+gate, not written afterwards about it.
 
 ## What gets frozen on a P0-A pass
 
@@ -53,12 +61,12 @@ committed as data.
 | Column | Meaning |
 | --- | --- |
 | `run_id` | Same identity as the P0-A evidence set the article belongs to |
-| `article_rev` | Design revision, e.g. `Rev-A` |
+| `article_rev` | Design revision, e.g. `Rev-B` |
 | `article_serial` | Which physical article of that revision; the golden-article rule needs article identity, not revision identity |
 | `git_commit` | Commit the CAD and the stack were generated from |
 | `part` | `funnel`, `keeper`, `probe_head`, `mast`, or `assembly` |
 | `feature` | One of the `AS_BUILT_FEATURES` names in `aiur.tolerance` |
-| `nominal_mm` | Rev-A nominal for that feature, from the same table |
+| `nominal_mm` | Current-revision nominal for that feature, from `aiur.tolerance.AS_BUILT_FEATURES`, which is checked against the CAD in CI. A sheet pinned to a superseded revision fails good hardware |
 | `measured_mm` | What the instrument read |
 | `instrument` | Instrument and technique, not just "caliper" |
 | `operator` | Who measured |
@@ -82,7 +90,7 @@ into the radial terms the stack uses, so nobody halves a number by hand.
 | `seated_probe_lateral_offset` | assembly | dial indicator on the seated mast, worst of two orthogonal axes | slot/mast clearance, keeper head overlap |
 
 The last row is an assembly measurement, not a part measurement. It is the one
-number the Rev-A CAD does not define, and it drives two of the three critical
+number the CAD does not define, and it drives two of the three critical
 stacks.
 
 ## Comparing a later article
@@ -111,14 +119,16 @@ uncertainty.
 
 That is the point of the as-built record, and it is also its limit:
 measurement can rescue a stack that fails on assumed tolerance, and it cannot
-rescue one that fails on geometry. `keeper_release_clearance` is negative at
-nominal and stays negative for every article of Rev-A.
+rescue one that fails on geometry. Rev-A's `keeper_release_clearance` was
+negative at nominal, so no amount of careful measurement could have produced
+a Rev-A article that released a captured aircraft — that took a geometry
+change.
 
 ## Deviation classes
 
 | Class | Trigger | Cost |
 | --- | --- | --- |
-| A — acceptance screen | Every feature inside its Rev-A tolerance, every critical stack's as-built worst case above its minimum, same printer, process, slicer profile, and material lot as the golden article | As-built set, stack re-run, and a five-cycle functional check against the golden article's insertion and release force band. No new gate evidence needed |
+| A — acceptance screen | Every feature inside its current-revision tolerance, every critical stack's as-built worst case above its minimum, same printer, process, slicer profile, and material lot as the golden article | As-built set, stack re-run, and a five-cycle functional check against the golden article's insertion and release force band. No new gate evidence needed |
 | B — screened deviation | Material lot change, printer change, slicer profile change, or any repair or rework of a load-path part, with every feature still inside tolerance | Class A, plus a run-in before the article is used for gate evidence and an explicit note in the P0-A evidence packet naming what changed |
 | C — re-qualification | Any critical stack's as-built worst case at or below its minimum; any feature outside its tolerance; any geometry, material, or fastener change; a new revision | New article revision and a fresh P0-A run set. The new article becomes the golden article only if it passes |
 
@@ -162,5 +172,5 @@ drawer.
   process capability; the as-built sets accumulate toward that, and until they
   do, the tolerances in `aiur/tolerance.py` stay labelled as engineering targets.
 - It is not a substitute for the stack. An article that measures well can still
-  sit inside a stack that fails at worst case, which is exactly the state Rev-A
-  is in today.
+  sit inside a stack that fails at worst case, which is exactly the state
+  Rev-A was in.

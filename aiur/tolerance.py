@@ -810,7 +810,7 @@ AS_BUILT_FEATURES: tuple[AsBuiltFeature, ...] = (
     AsBuiltFeature(
         feature="probe_head_seat_diameter",
         part="probe_head",
-        nominal_mm=6.0,
+        nominal_mm=9.0,
         dimension="probe_head_seat_radius",
         scale=0.5,
         instrument="digital caliper on the lower cylinder",
@@ -834,7 +834,7 @@ AS_BUILT_FEATURES: tuple[AsBuiltFeature, ...] = (
     AsBuiltFeature(
         feature="keeper_slot_width",
         part="keeper",
-        nominal_mm=4.2,
+        nominal_mm=5.2,
         dimension="keeper_slot_half_width",
         scale=0.5,
         instrument="pin gauge at the slot mouth and at the round end",
@@ -842,7 +842,7 @@ AS_BUILT_FEATURES: tuple[AsBuiltFeature, ...] = (
     AsBuiltFeature(
         feature="keeper_tine_reach",
         part="keeper",
-        nominal_mm=8.0,
+        nominal_mm=5.0,
         dimension="keeper_tine_reach",
         scale=1.0,
         instrument="digital caliper from the slot round-end centre to the tine tip",
@@ -850,7 +850,7 @@ AS_BUILT_FEATURES: tuple[AsBuiltFeature, ...] = (
     AsBuiltFeature(
         feature="keeper_open_travel",
         part="keeper",
-        nominal_mm=11.0,
+        nominal_mm=13.0,
         dimension="keeper_open_travel",
         scale=1.0,
         instrument="dial indicator between the closed and open stops",

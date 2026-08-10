@@ -79,6 +79,57 @@ class ToleranceModelTests(unittest.TestCase):
             with self.subTest(dimension=name):
                 self.assertAlmostEqual(found[name], nominal, places=9)
 
+    def test_as_built_nominals_track_the_current_cad_revision(self) -> None:
+        """The measurement sheet must describe the part that gets printed.
+
+        This is the operator-facing table behind
+        hardware/dock/as-built-template.csv.  When it drifted to a superseded
+        revision, a technician measuring a *correct* Rev-B seat recorded a
+        3.0 mm deviation and the golden-article rules escalated a good
+        article to re-qualification.  Stale nominals here fail good hardware,
+        which is worse than failing loudly.
+        """
+
+        expected = {
+            "funnel_throat_diameter": CURRENT.funnel_throat_diameter_mm,
+            "probe_head_max_diameter": CURRENT.probe_head_diameter_mm,
+            "probe_head_seat_diameter": CURRENT.probe_head_seat_diameter_mm,
+            "probe_head_bore_diameter": CURRENT.probe_head_bore_diameter_mm,
+            "probe_mast_diameter": CURRENT.probe_mast_diameter_mm,
+            "keeper_slot_width": CURRENT.keeper_slot_width_mm,
+            "keeper_tine_reach": CURRENT.keeper_tine_reach_mm,
+            "keeper_open_travel": CURRENT.keeper_open_travel_mm,
+        }
+        found = {f.feature: f.nominal_mm for f in AS_BUILT_FEATURES}
+        for feature, nominal in expected.items():
+            with self.subTest(feature=feature):
+                self.assertIn(feature, found)
+                self.assertAlmostEqual(found[feature], nominal, places=9)
+
+    def test_every_as_built_feature_is_checked_by_the_guard_above(self) -> None:
+        """A new measurement row must not escape the revision check.
+
+        One row legitimately has no CAD counterpart: the seated lateral
+        offset is an assembly outcome measured on the built article, not a
+        feature anyone prints.  It is exempted by name so the exemption is a
+        decision rather than an omission.
+        """
+
+        guarded = {
+            "funnel_throat_diameter",
+            "probe_head_max_diameter",
+            "probe_head_seat_diameter",
+            "probe_head_bore_diameter",
+            "probe_mast_diameter",
+            "keeper_slot_width",
+            "keeper_tine_reach",
+            "keeper_open_travel",
+        }
+        assembly_only = {"seated_probe_lateral_offset"}
+        self.assertEqual(
+            {f.feature for f in AS_BUILT_FEATURES}, guarded | assembly_only
+        )
+
     def test_sign_convention_matches_hand_computation(self) -> None:
         self.assertAlmostEqual(nominal_mm(HAND_STACK), 6.0, places=9)
         # Closing direction: outer at minimum (-0.10) and inner at maximum (+0.30).

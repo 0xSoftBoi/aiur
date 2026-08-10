@@ -383,9 +383,18 @@ def validate_mesh(mesh: Mesh) -> None:
         raise ValueError(f"{mesh.name}: non-positive volume")
 
 
-def write_binary_stl(mesh: Mesh, path: Path) -> None:
+def write_binary_stl(mesh: Mesh, path: Path, revision: str = "") -> None:
+    """Write an STL whose header names the revision that produced it.
+
+    The header used to be a hardcoded REV-A regardless of the geometry
+    inside it, and both revisions wrote the same filenames, so nothing on
+    disk distinguished a superseded keeper from a current one.  A slicer
+    shows the header; a technician holding two prints cannot see a dataclass.
+    """
+
     validate_mesh(mesh)
-    header = f"AIUR CARRIER-P0 P0-A REV-A {mesh.name}".encode("ascii")[:80].ljust(80, b" ")
+    label = f"AIUR CARRIER-P0 P0-A {revision or 'UNSPECIFIED'} {mesh.name}"
+    header = label.encode("ascii")[:80].ljust(80, b" ")
     payload = bytearray(header)
     payload.extend(struct.pack("<I", len(mesh.triangles)))
     for a, b, c in mesh.triangles:
@@ -412,6 +421,9 @@ def _mesh_manifest(mesh: Mesh) -> dict[str, object]:
 
 def drill_template_svg(design: DockRevision = CURRENT) -> str:
     half_pattern = design.flange_hole_square_mm / 2.0
+    revision = design.name.upper()
+    throat_radius = design.funnel_throat_diameter_mm / 2.0
+    hole_radius = design.flange_hole_diameter_mm / 2.0
     holes = "\n".join(
         f'  <circle cx="{50 + x:g}" cy="{50 + y:g}" r="1.6" class="drill"/>'
         for x, y in (
@@ -431,10 +443,10 @@ def drill_template_svg(design: DockRevision = CURRENT) -> str:
   <line x1="15" y1="50" x2="85" y2="50" class="axis"/>
   <line x1="50" y1="15" x2="50" y2="85" class="axis"/>
   <circle cx="50" cy="50" r="35" class="cut"/>
-  <circle cx="50" cy="50" r="8" class="cut"/>
+  <circle cx="50" cy="50" r="{throat_radius:g}" class="cut"/>
 {holes}
-  <text x="4" y="7" class="text">P0-A REV-A — M3 DRILL TEMPLATE — PRINT 100%</text>
-  <text x="4" y="12" class="text">4 x Ø3.2 on 40 mm square; center throat Ø16</text>
+  <text x="4" y="7" class="text">P0-A {revision} — M3 DRILL TEMPLATE — PRINT 100%</text>
+  <text x="4" y="12" class="text">4 x Ø{design.flange_hole_diameter_mm:g} on {design.flange_hole_square_mm:g} mm square; center throat Ø{design.funnel_throat_diameter_mm:g}</text>
   <line x1="25" y1="92" x2="75" y2="92" class="cut"/>
   <line x1="25" y1="90.5" x2="25" y2="93.5" class="cut"/>
   <line x1="75" y1="90.5" x2="75" y2="93.5" class="cut"/>
@@ -444,11 +456,22 @@ def drill_template_svg(design: DockRevision = CURRENT) -> str:
 
 
 def generate_outputs(output_dir: Path, design: DockRevision = CURRENT) -> dict[str, object]:
+    """Write the fabrication artifacts for one revision.
+
+    Every filename carries the revision slug.  Two revisions writing the
+    same names into the same directory is how a superseded keeper ends up on
+    a print bed: the geometry differs, the file does not, and nothing warns
+    anyone.
+    """
+
     output_dir.mkdir(parents=True, exist_ok=True)
+    slug = design.name.lower().replace("-", "_").replace(" ", "_")
     part_meshes = meshes(design)
     for mesh in part_meshes:
-        write_binary_stl(mesh, output_dir / f"{mesh.name}.stl")
-    (output_dir / "p0a_drill_template.svg").write_text(
+        write_binary_stl(
+            mesh, output_dir / f"{mesh.name}_{slug}.stl", design.name.upper()
+        )
+    (output_dir / f"p0a_drill_template_{slug}.svg").write_text(
         drill_template_svg(design), encoding="utf-8"
     )
 
@@ -468,7 +491,7 @@ def generate_outputs(output_dir: Path, design: DockRevision = CURRENT) -> dict[s
             "The probe head is a coupon component; the Crazyflie flight-probe base is not frozen.",
         ],
     }
-    (output_dir / "p0a_rev_a_manifest.json").write_text(
+    (output_dir / f"p0a_{slug}_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return manifest

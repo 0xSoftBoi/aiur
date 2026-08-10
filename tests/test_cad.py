@@ -69,17 +69,42 @@ class DockCadTests(unittest.TestCase):
         self.assertLessEqual(manifest["printed_petg_mass_estimate_g"], 110.0)
 
     def test_generator_writes_deterministic_binary_stls_and_manifest(self) -> None:
+        slug = CURRENT.name.lower().replace("-", "_")
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
             manifest = generate_outputs(output)
             for mesh in meshes():
-                data = (output / f"{mesh.name}.stl").read_bytes()
+                data = (output / f"{mesh.name}_{slug}.stl").read_bytes()
                 self.assertEqual(struct.unpack("<I", data[80:84])[0], len(mesh.triangles))
                 self.assertEqual(len(data), 84 + 50 * len(mesh.triangles))
+                # The header must name the revision that produced the mesh, or
+                # two revisions are indistinguishable on a print bed.
+                self.assertIn(CURRENT.name.upper(), data[:80].decode("ascii"))
 
-            on_disk = json.loads((output / "p0a_rev_a_manifest.json").read_text())
+            on_disk = json.loads((output / f"p0a_{slug}_manifest.json").read_text())
             self.assertEqual(on_disk, manifest)
-            self.assertIn("50 mm CHECK", (output / "p0a_drill_template.svg").read_text())
+            self.assertIn(
+                "50 mm CHECK", (output / f"p0a_drill_template_{slug}.svg").read_text()
+            )
+
+    def test_two_revisions_cannot_overwrite_each_other(self) -> None:
+        """A superseded part must not be able to masquerade as the current one.
+
+        Rev-A and Rev-B produce genuinely different keepers and probe heads.
+        While both wrote the same filenames with the same hardcoded REV-A
+        header, nothing on disk — not the name, not the slicer-visible
+        header — distinguished them.
+        """
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            generate_outputs(output, REV_A)
+            generate_outputs(output, CURRENT)
+            names = {path.name for path in output.iterdir()}
+
+        for mesh in ("p0a_keeper", "p0a_probe_head"):
+            self.assertIn(f"{mesh}_rev_a.stl", names)
+            self.assertIn(f"{mesh}_rev_b.stl", names)
 
 
 if __name__ == "__main__":
