@@ -269,9 +269,13 @@ class ScreenVerdict:
     enforce the absolute zeros: no strike, no contact, no unsafe fault
     outcome, at any sample size.
 
-    The criteria are derived from the gate definition rather than listed here,
-    so a new zero-tolerance criterion is picked up automatically instead of
-    being silently absent from the screen.
+    The criteria come from the gate definition's own ``safety`` flags, so a
+    new safety criterion is picked up automatically instead of being silently
+    absent from the screen.  The flag is declared rather than inferred from
+    the operator: an earlier version selected ``== 0`` criteria and therefore
+    skipped ``max_contact_closing_m_s <= 0.20``, whose violation is a genuine
+    contact above the closing-speed limit but does not raise an unsafe event
+    unless it also exceeds the bounce threshold.
     """
 
     scenario: str
@@ -292,9 +296,7 @@ def screen_verdict(campaign: CampaignResult) -> ScreenVerdict:
 
     gate = sil_gate_by_id(campaign.gate_id)
     zero_criteria = [
-        criterion
-        for criterion in gate.criteria
-        if criterion.operator == "==" and criterion.threshold == 0
+        criterion for criterion in gate.criteria if criterion.safety
     ]
     observed: dict[str, float | int] = {}
     violations: list[str] = []

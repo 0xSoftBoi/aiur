@@ -1,8 +1,11 @@
+import contextlib
+import io
 import json
 import math
 import unittest
 from pathlib import Path
 
+from aiur.tolerance import main as tolerance_main
 from aiur.tolerance import (
     AS_BUILT_COLUMNS,
     AS_BUILT_FEATURES,
@@ -450,3 +453,65 @@ class SnapshotTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CliExitCodeTests(unittest.TestCase):
+    """CI reads the exit code, not the JSON."""
+
+    def test_current_geometry_exits_zero(self) -> None:
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = tolerance_main()
+        self.assertEqual(code, 0)
+        self.assertTrue(json.loads(buffer.getvalue())["verdict"]["passed"])
+
+    def test_a_failing_critical_stack_would_exit_nonzero(self) -> None:
+        """A recorded finding makes a failure honest, not mergeable.
+
+        Returning 0 whenever the registry was merely self-consistent would
+        have let the Rev-A release defect — a keeper that cannot release a
+        captured aircraft — sit green in CI for as long as someone kept the
+        finding record tidy.
+        """
+
+        import aiur.tolerance as module
+
+        original = module.chain_verdict
+        module.chain_verdict = lambda *a, **k: module.ChainVerdict(
+            passed=False,
+            critical_failures=("keeper_release_clearance",),
+            advisory_failures=(),
+        )
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                code = tolerance_main()
+        finally:
+            module.chain_verdict = original
+        self.assertEqual(code, 1)
+
+
+class StackMinimumsTests(unittest.TestCase):
+    def test_minimums_are_pinned(self) -> None:
+        """Lowering a minimum until a stack passes must be a visible act.
+
+        Every other guard here compares the stack against the CAD. Nothing
+        compared the *minimums* against anything, so the cheapest way to make
+        a failing capture chain green was to relax the number it is judged
+        against — the same criterion-weakening the SIL screen exists to
+        avoid. Changing one of these now means changing this test too.
+        """
+
+        self.assertEqual(
+            {stack.name: stack.minimum_mm for stack in STACKS},
+            {
+                "probe_head_entry_clearance": 0.5,
+                "keeper_slot_mast_clearance": 0.1,
+                "keeper_head_overlap": 0.5,
+                "keeper_release_clearance": 0.5,
+            },
+        )
+
+    def test_every_critical_stack_has_a_stated_rationale(self) -> None:
+        for stack in STACKS:
+            with self.subTest(stack=stack.name):
+                self.assertTrue(stack.minimum_rationale.strip())

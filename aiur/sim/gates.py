@@ -46,16 +46,24 @@ SIL_GATES: tuple[Gate, ...] = (
                 0.20,
                 "no funnel contact above the P0 closing-speed limit",
                 "m/s",
+                safety=True,
             ),
-            Criterion("prop_funnel_contacts", "==", 0, "no propeller/funnel contact"),
-            Criterion("overspeed_contacts", "==", 0, "no overspeed probe contact"),
-            Criterion("envelope_strikes", "==", 0, "no gas-envelope strikes"),
+            Criterion(
+                "prop_funnel_contacts", "==", 0, "no propeller/funnel contact", safety=True
+            ),
+            Criterion(
+                "overspeed_contacts", "==", 0, "no overspeed probe contact", safety=True
+            ),
+            Criterion(
+                "envelope_strikes", "==", 0, "no gas-envelope strikes", safety=True
+            ),
             Criterion("fault_episodes", ">=", 50, "at least 50 fault-injection episodes"),
             Criterion(
                 "unsafe_fault_outcomes",
                 "==",
                 0,
                 "every injected fault ends in a safe abort, capture, or landing",
+                safety=True,
             ),
         ),
     ),
@@ -78,16 +86,24 @@ SIL_GATES: tuple[Gate, ...] = (
                 0.20,
                 "no funnel contact above the P0 closing-speed limit",
                 "m/s",
+                safety=True,
             ),
-            Criterion("prop_funnel_contacts", "==", 0, "no propeller/funnel contact"),
-            Criterion("overspeed_contacts", "==", 0, "no overspeed probe contact"),
-            Criterion("envelope_strikes", "==", 0, "no gas-envelope strikes"),
+            Criterion(
+                "prop_funnel_contacts", "==", 0, "no propeller/funnel contact", safety=True
+            ),
+            Criterion(
+                "overspeed_contacts", "==", 0, "no overspeed probe contact", safety=True
+            ),
+            Criterion(
+                "envelope_strikes", "==", 0, "no gas-envelope strikes", safety=True
+            ),
             Criterion("fault_episodes", ">=", 50, "at least 50 fault-injection episodes"),
             Criterion(
                 "unsafe_fault_outcomes",
                 "==",
                 0,
                 "every injected fault ends in a safe abort, capture, or landing",
+                safety=True,
             ),
         ),
     ),
@@ -104,21 +120,33 @@ SIL_GATES: tuple[Gate, ...] = (
                 "at least 90% complete sequences over fault-free episodes",
                 "%",
             ),
-            Criterion("separation_violations", "==", 0, "positive separation is never lost"),
+            Criterion(
+                "separation_violations",
+                "==",
+                0,
+                "positive separation is never lost",
+                safety=True,
+            ),
             Criterion(
                 "simultaneous_dock_approaches",
                 "==",
                 0,
                 "never two aircraft approaching the dock",
+                safety=True,
             ),
-            Criterion("prop_funnel_contacts", "==", 0, "no propeller/funnel contact"),
-            Criterion("envelope_strikes", "==", 0, "no gas-envelope strikes"),
+            Criterion(
+                "prop_funnel_contacts", "==", 0, "no propeller/funnel contact", safety=True
+            ),
+            Criterion(
+                "envelope_strikes", "==", 0, "no gas-envelope strikes", safety=True
+            ),
             Criterion("fault_episodes", ">=", 10, "at least 10 fault-injection episodes"),
             Criterion(
                 "unsafe_fault_outcomes",
                 "==",
                 0,
                 "every injected fault ends in a safe abort, capture, or landing",
+                safety=True,
             ),
         ),
     ),

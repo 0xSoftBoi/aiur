@@ -53,6 +53,18 @@ class Criterion:
     threshold: float
     description: str
     unit: str = "count"
+    #: True when violating this criterion means something was damaged, struck,
+    #: dropped, or contacted — as opposed to a rate or quota that only means
+    #: the evidence is thin.  Safety criteria hold at any sample size, so the
+    #: pre-merge screen enforces exactly these.
+    #:
+    #: It is a declared property rather than one inferred from the operator.
+    #: Inferring "== 0" missed max_contact_closing_m_s <= 0.20, whose
+    #: violation is a real contact above the closing-speed limit but which
+    #: does not raise an unsafe event unless it also exceeds the bounce
+    #: threshold — so the screen silently skipped the one criterion that
+    #: catches a too-fast capture.
+    safety: bool = False
 
     def passes(self, value: float | int | bool) -> bool:
         if not isinstance(value, (int, float, bool)):

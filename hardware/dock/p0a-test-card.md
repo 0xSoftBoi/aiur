@@ -115,7 +115,7 @@ the work, and a session may end at any step boundary.
 | 5 | Restore power. Command the keeper open with no probe present | keeper visibly at its open stop; `S2` = false; controller state `open` | | |
 | 6 | Insert the probe with capture disabled | keeper stays open; `S1` = true, `S2` = false; **no** capture reported | | |
 | 7 | Enable capture with the probe seated | controller commands close; capture **not** claimed on `S1` alone | | |
-| 8 | Keeper reaches its closed stop | `S1` and `S2` both true; capture confirmed; keeper tines under the Ø12 mm head, 4.2 mm slot around the Ø3 mm mast | | |
+| 8 | Keeper reaches its closed stop | `S1` and `S2` both true; capture confirmed; keeper tines under the **Ø9 mm seat** (not the Ø12 mm belt, which the keeper never touches), 5.2 mm slot around the Ø3 mm mast | | |
 | 9 | Pre-cycle screens: 5 N axial for 10 s, then 1 N for 10 s in each of +X, −X, +Y, −Y | no release, no visible damage; five `pre_cycle` rows in the load CSV with `retained` = 1 | | |
 | 10 | Run-in cycling, `phase` = `run_in`, ≥ 15 cycles, logging `insertion_force_n` and `release_force_n` every cycle | per-cycle force trend levels off across the back half of run-in; if it is still trending, extend run-in — do not start life cycles on a moving baseline | | |
 | 11 | Life cycling, `phase` = `life`, to ≥ 600 cumulative cycles across sessions | every cycle logged; capture reported only with `S1` AND `S2`; forces stay on the run-in baseline | | |

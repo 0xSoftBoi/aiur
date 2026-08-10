@@ -1012,9 +1012,22 @@ def snapshot() -> dict[str, object]:
 def main() -> int:
     report = snapshot()
     print(json.dumps(report, indent=2))
-    # Recorded findings are a known state, not a broken build; an unrecorded
-    # stack failure or a stale finding is.
-    return 0 if report["valid"] else 1
+    # Two different failures, both of which must be non-zero.
+    #
+    # A registry error — an unrecorded stack failure, or a finding that
+    # outlived its fix — means the record and the arithmetic disagree, and
+    # nothing downstream can be trusted.
+    #
+    # A failing *critical* stack means the built article could drop or trap
+    # an aircraft.  Recording a finding for it makes the failure honest; it
+    # does not make it mergeable, and returning 0 here would have let the
+    # exact Rev-A release defect sit green in CI for as long as someone kept
+    # the paperwork tidy.  Advisory failures stay green with a finding
+    # recorded, because they prevent a capture rather than endanger one.
+    verdict = chain_verdict()
+    if not report["valid"] or verdict.critical_failures:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
