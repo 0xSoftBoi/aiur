@@ -13,7 +13,7 @@
   <circle cx="70" cy="30" r="1.6" class="drill"/>
   <circle cx="70" cy="70" r="1.6" class="drill"/>
   <circle cx="30" cy="70" r="1.6" class="drill"/>
-  <text x="4" y="7" class="text">P0-A REV-A — M3 DRILL TEMPLATE — PRINT 100%</text>
+  <text x="4" y="7" class="text">P0-A REV-B — M3 DRILL TEMPLATE — PRINT 100%</text>
   <text x="4" y="12" class="text">4 x Ø3.2 on 40 mm square; center throat Ø16</text>
   <line x1="25" y1="92" x2="75" y2="92" class="cut"/>
   <line x1="25" y1="90.5" x2="25" y2="93.5" class="cut"/>

@@ -1,5 +1,14 @@
 name: engineering-tests
 
+# Pre-merge checks, kept fast enough to run on every push.  The SIL *gates*
+# are deliberately not here: they need 200 seeded episodes and a 50-episode
+# fault quota for their rate statistics to mean anything, and lowering those
+# thresholds so a short run passes would hollow out the gate rather than
+# speed it up.  What runs here instead is a safety screen over a smaller
+# campaign, which enforces the absolute zeros — no strike, no contact, no
+# unsafe fault outcome — at any sample size.  The full gates run nightly in
+# sil-gates.yml, and a merge is not evidence of a gate pass.
+
 on:
   pull_request:
   push:
@@ -21,3 +30,36 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Print P0 budget
         run: python -m aiur.p0
+      - name: Requirement closure matrix
+        run: python -m aiur.requirements
+      - name: Hazard log
+        run: python -m aiur.hazards
+      - name: Capture-chain tolerance stack
+        run: python -m aiur.tolerance
+      - name: Practice-adoption register
+        run: python -m aiur.adoption_loop
+
+  sil-screen:
+    name: SIL safety screen (not a gate)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scenario: sil-p0b
+            episodes: 40
+          - scenario: sil-p0c
+            episodes: 40
+          - scenario: sil-p0d
+            episodes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Screen ${{ matrix.scenario }}
+        run: |
+          python -m aiur.sim.campaign \
+            --scenario ${{ matrix.scenario }} \
+            --episodes ${{ matrix.episodes }} \
+            --seed 1 --screen

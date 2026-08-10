@@ -49,6 +49,18 @@ class DockController:
     Pre-capture faults fail open so a vehicle can abort.  Once a capture has
     been confirmed, sensor disagreement fails locked so software does not drop
     a docked aircraft.  Emergency release always has authority to command open.
+
+    An unexpectedly closed keeper is read against the seat rather than against
+    history.  A controller that finds the keeper closed while it believes the
+    dock is open cannot know whether it is looking at a stuck mechanism or at
+    an aircraft it was holding before it restarted, and the two mistakes do
+    not cost the same: assuming "empty" drops a docked aircraft, while
+    assuming "holding" only asks an operator to command a release.  So the
+    seat decides.  Closed keeper over an occupied seat fails locked; closed
+    keeper over an empty seat fails open, because nothing can be dropped.
+    This is the same fail-locked principle the running machine already applies
+    after capture, extended to the case where the machine has lost its memory.
+    Without it, a brownout during a docked cruise commands the keeper open.
     """
 
     def __init__(
@@ -117,7 +129,23 @@ class DockController:
             return self._output(inputs)
 
         if self.state is DockState.OPEN:
-            if inputs.keeper_closed_switch:
+            if inputs.keeper_closed_switch and inputs.seat_switch:
+                # A closed keeper over an occupied seat may be holding an
+                # aircraft, and this controller has no record of closing it —
+                # the signature of a restart mid-cruise.  Hold.  The rule is
+                # deliberately about what the switches say rather than about
+                # how many steps have elapsed: a first-observation trigger is
+                # defeated by a single stale sample or by any input that
+                # short-circuits ahead of it, and a protection that can be
+                # skipped by sample ordering is not a protection.
+                self._transition(
+                    DockState.FAULT_LOCKED,
+                    now_s,
+                    "keeper_closed_over_occupied_seat",
+                )
+            elif inputs.keeper_closed_switch:
+                # Closed keeper, empty seat: nothing can be held, so this is a
+                # genuine mechanism anomaly and failing open is still right.
                 self._transition(
                     DockState.FAULT_OPEN,
                     now_s,

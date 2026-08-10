@@ -1,6 +1,10 @@
 {
-  "article": "CARRIER-P0 P0-A Rev-A",
+  "article": "CARRIER-P0 P0-A Rev-B",
   "design": {
+    "crank_radius_mm": 6.5,
+    "drive_pin_diameter_mm": 3.0,
+    "drive_pin_edge_margin_mm": 3.0,
+    "drive_plate_thickness_mm": 3.0,
     "flange_hole_diameter_mm": 3.2,
     "flange_hole_square_mm": 40.0,
     "funnel_depth_mm": 65.0,
@@ -10,14 +14,19 @@
     "funnel_mouth_wall_mm": 1.2,
     "funnel_throat_diameter_mm": 16.0,
     "funnel_total_height_mm": 73.0,
-    "keeper_length_mm": 28.0,
-    "keeper_nominal_open_travel_mm": 11.0,
-    "keeper_slot_width_mm": 4.2,
+    "keeper_back_reach_mm": 20.0,
+    "keeper_open_travel_mm": 13.0,
+    "keeper_pin_x_mm": -14.0,
+    "keeper_slot_width_mm": 5.2,
     "keeper_thickness_mm": 2.5,
+    "keeper_tine_reach_mm": 5.0,
     "keeper_width_mm": 18.0,
     "lathe_segments": 64,
+    "link_length_mm": 19.5,
+    "name": "Rev-B",
     "probe_head_bore_diameter_mm": 3.2,
     "probe_head_diameter_mm": 12.0,
+    "probe_head_seat_diameter_mm": 9.0,
     "probe_mast_diameter_mm": 3.0,
     "probe_tip_height_above_prop_plane_mm": 110.0
   },
@@ -27,6 +36,25 @@
     "The probe head is a coupon component; the Crazyflie flight-probe base is not frozen."
   ],
   "parts": {
+    "p0a_crank": {
+      "bounds_mm": {
+        "max": [
+          7.75,
+          4.5,
+          3.0
+        ],
+        "min": [
+          -7.75,
+          -4.5,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "solid_petg_mass_estimate_g": 0.46,
+      "triangles": 132,
+      "volume_cm3": 0.365
+    },
     "p0a_funnel": {
       "bounds_mm": {
         "max": [
@@ -49,7 +77,7 @@
     "p0a_keeper": {
       "bounds_mm": {
         "max": [
-          8.0,
+          5.0,
           9.0,
           2.5
         ],
@@ -61,9 +89,28 @@
       },
       "degenerate_faces": 0,
       "nonmanifold_edges": 0,
-      "solid_petg_mass_estimate_g": 1.47,
+      "solid_petg_mass_estimate_g": 1.31,
       "triangles": 56,
-      "volume_cm3": 1.159
+      "volume_cm3": 1.034
+    },
+    "p0a_link": {
+      "bounds_mm": {
+        "max": [
+          14.25,
+          4.5,
+          3.0
+        ],
+        "min": [
+          -14.25,
+          -4.5,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "solid_petg_mass_estimate_g": 0.91,
+      "triangles": 132,
+      "volume_cm3": 0.716
     },
     "p0a_probe_head": {
       "bounds_mm": {
@@ -80,12 +127,12 @@
       },
       "degenerate_faces": 0,
       "nonmanifold_edges": 0,
-      "solid_petg_mass_estimate_g": 0.87,
+      "solid_petg_mass_estimate_g": 1.03,
       "triangles": 1280,
-      "volume_cm3": 0.687
+      "volume_cm3": 0.809
     }
   },
-  "printed_petg_mass_estimate_g": 54.92,
+  "printed_petg_mass_estimate_g": 56.29,
   "status": "bench screening geometry; not flight qualified",
   "units": "mm"
 }

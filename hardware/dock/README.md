@@ -8,11 +8,28 @@ It is mounted to the carrier's structural payload rail. **No recovery load is re
 
 The control system should not need millimeter-perfect coincidence in free flight. The hardware absorbs the last part of the alignment problem.
 
-The current dimensioned first article is [P0-A Rev A](p0a-bench.md):
+The current dimensioned first article is [P0-A Rev-B](p0a-bench.md):
 
-![P0-A Rev-A dimensioned cross-section](p0a-rev-a.svg)
+![P0-A dimensioned cross-section](cad/generated/p0a_cross_section_rev_b.svg)
 
-The makeable Rev-A geometry, sourcing, and bench electrical interface are in the [fabrication packet](p0a-fabrication.md) and [reproducible CAD pack](cad/README.md).
+The drawing is generated from the same parameters as the parts, so a
+dimension on it cannot disagree with the geometry that gets printed. The
+hand-drawn predecessor did exactly that: it still showed a Ø6 seat and a
+4.2 mm slot after Rev-B moved both, and nothing could detect it.
+
+Build path, in order:
+
+1. [Fabrication packet](p0a-fabrication.md) — sourcing and electrical interface
+2. [Reproducible CAD pack](cad/README.md) — regenerates the printed parts
+3. [Keeper drive](keeper-drive.md) — slider-crank delivering the 13 mm stroke; guides and bracket are bench-set
+4. [Assembly](assembly.md) — order of operations and the three adjustments that decide whether it works
+5. [Electrical evidence packet](../../docs/electrical-evidence.md) — first power-on
+6. [Bench procedure](p0a-bench.md) and its [test card](p0a-test-card.md) — running the gate
+
+Rev-A is superseded. It failed three critical tolerance stacks and its
+keeper could not retract far enough to release a captured aircraft; it
+remains constructible from the same generator only so those failures stay
+reproducible.
 
 ## Carrier-side assembly
 
@@ -21,14 +38,13 @@ P0 targets:
 - 180 mm funnel entrance diameter;
 - compliant structural mounting;
 - low-friction polymer funnel surface;
-- spring-loaded terminal collet;
-- independent servo keeper;
+- independent servo keeper on a slider-crank drive;
 - `S1` physical probe-seat switch;
 - `S2` physical keeper-closed switch independent of the servo command;
 - total dock mass ≤180 g;
 - no exposed sharp edge within the drone approach volume.
 
-The servo is not the primary alignment mechanism. The funnel and collet should hold the probe before the keeper closes. Capture truth is `S1 AND S2`; a commanded servo position is never sufficient evidence.
+The servo is not the alignment mechanism: the funnel converts lateral error into probe centring before the keeper moves at all. The spring collet that used to sit between them is deleted — see the [deletion review](../../docs/dock-deletion-review.md) — so the keeper owns retention outright. Capture truth is `S1 AND S2`; a commanded servo position is never sufficient evidence.
 
 ## Drone-side probe
 

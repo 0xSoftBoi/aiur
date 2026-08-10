@@ -1,0 +1,105 @@
+name: sil-gates
+
+# The full SIL gate ladder plus the sweep studies, at the sample sizes the
+# gates actually require.  Nightly rather than per-push because the campaigns
+# take minutes, and because the alternative — shrinking them until they fit a
+# pre-merge budget — would leave a gate that passes without evidence.
+#
+# A red run here means the twin found something the pre-merge screen is too
+# small to see.  Treat it as a finding against the branch that introduced it,
+# not as a flaky job: the campaigns are seeded and deterministic, so the same
+# seed reproduces the same episode exactly.
+
+on:
+  schedule:
+    # 03:17 UTC — off the hour, so this does not queue behind every other
+    # project's midnight cron.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Campaign seed (change it to sample a different slice)"
+        required: false
+        default: "1"
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: ${{ matrix.gate }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Every gate reports, even after one fails: which gates fail is the
+      # diagnosis.
+      fail-fast: false
+      matrix:
+        include:
+          - gate: SIL-B
+            scenario: sil-p0b
+            episodes: 200
+          - gate: SIL-C
+            scenario: sil-p0c
+            episodes: 200
+          - gate: SIL-D
+            scenario: sil-p0d
+            episodes: 80
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ${{ matrix.gate }} gate
+        # shell: bash gives -eo pipefail. Without it the pipeline reports
+        # tee's exit status, so a FAILING gate would upload its report and
+        # pass the job — a nightly gate that cannot go red is worse than no
+        # nightly gate at all.
+        shell: bash
+        run: |
+          python -m aiur.sim.campaign \
+            --scenario ${{ matrix.scenario }} \
+            --episodes ${{ matrix.episodes }} \
+            --seed ${{ github.event.inputs.seed || '1' }} \
+            | tee ${{ matrix.scenario }}-report.json
+      - name: Upload gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.scenario }}-report
+          path: ${{ matrix.scenario }}-report.json
+          retention-days: 30
+
+  studies:
+    name: ${{ matrix.study }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        study:
+          - outdoor-gust-sweep
+          - degraded-sensor-sweep
+          - nav-bias-ramp-sweep
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Studies characterise behaviour and always exit 0; they are not gates.
+      # They run here so the numbers quoted in docs/digital-twin.md stay
+      # reproducible, and so a change that moves them is visible the next day
+      # rather than whenever someone next runs a sweep by hand.
+      - name: ${{ matrix.study }}
+        shell: bash
+        run: |
+          python -m aiur.sim.campaign \
+            --scenario ${{ matrix.study }} \
+            --episodes-per-bin 30 \
+            --seed ${{ github.event.inputs.seed || '1' }} \
+            | tee ${{ matrix.study }}.json
+      - name: Upload study
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.study }}
+          path: ${{ matrix.study }}.json
+          retention-days: 30

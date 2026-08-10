@@ -130,12 +130,16 @@ Carrier dock is rigidly mounted to a bench.
 
 Pass:
 
-- 50 manual insertion/removal cycles without structural failure;
+- at least 15 run-in cycles whose per-cycle insertion/release force levels off;
+- 600 life-test cycles without structural failure (derived: ~300 expected cycles through P0-D × a 2.0 life factor);
+- keeper close and open force margin ≥2.0 against worst-case resistance at minimum supply voltage;
 - complete dock mass ≤180 g and complete probe mass ≤8 g;
 - capture confirmation is unambiguous and requires independent seat + keeper feedback;
 - positive keeper holds a 5 N axial screening load for 10 s;
 - positive keeper holds a 1 N lateral screening load for 10 s in ±X and ±Y;
-- at least 10 emergency-release trials with zero failures.
+- at least 10 unloaded emergency-release trials with zero failures;
+- at least 10 emergency-release trials **under the 5 N axial screening load** with zero failures;
+- every required electrical fault mode inserted on hardware, each producing its pre-declared safe response.
 
 No propellers installed.
 

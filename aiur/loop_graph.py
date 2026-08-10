@@ -53,6 +53,18 @@ class Criterion:
     threshold: float
     description: str
     unit: str = "count"
+    #: True when violating this criterion means something was damaged, struck,
+    #: dropped, or contacted — as opposed to a rate or quota that only means
+    #: the evidence is thin.  Safety criteria hold at any sample size, so the
+    #: pre-merge screen enforces exactly these.
+    #:
+    #: It is a declared property rather than one inferred from the operator.
+    #: Inferring "== 0" missed max_contact_closing_m_s <= 0.20, whose
+    #: violation is a real contact above the closing-speed limit but which
+    #: does not raise an unsafe event unless it also exceeds the bounce
+    #: threshold — so the screen silently skipped the one criterion that
+    #: catches a too-fast capture.
+    safety: bool = False
 
     def passes(self, value: float | int | bool) -> bool:
         if not isinstance(value, (int, float, bool)):
@@ -75,13 +87,101 @@ class Gate:
     criteria: tuple[Criterion, ...]
 
 
+#: Expected capture/release cycles the Rev-A article must survive to carry the
+#: program through P0-D, itemized so the life-test requirement is derived
+#: rather than a round number:
+#:
+#:   bench development, fit, and rehearsal   ~50
+#:   P0-B run sets (10 attempts x sets+retry) ~100
+#:   P0-C run sets                            ~100
+#:   P0-D sequences (two aircraft)            ~40
+#:   contingency for re-runs after changes    ~10
+#:                                            ----
+#:   expected operational cycles              ~300
+#:
+#: Mechanism practice multiplies expected cycles by a life factor before
+#: declaring a design life-tested.  A factor of 2.0 is the low end of that
+#: range and is used here because the article is room-temperature, ground-
+#: accessible, and cheap to reprint; the resulting requirement is 600 cycles.
+#: This derivation is an engineering target until P0-B/P0-C actual cycle
+#: counts replace the estimates.
+EXPECTED_OPERATIONAL_CYCLES = 300
+LIFE_TEST_FACTOR = 2.0
+DERIVED_LIFE_TEST_CYCLES = int(EXPECTED_OPERATIONAL_CYCLES * LIFE_TEST_FACTOR)
+
+#: Force-margin factor required of the keeper drive against worst-case
+#: measured resistance at minimum supply voltage.  Mechanism practice
+#: requires the actuator to demonstrate at least twice the force needed;
+#: an actuator that merely "worked once" has no demonstrated margin.
+KEEPER_FORCE_MARGIN_FACTOR = 2.0
+
+#: Electrical fault modes the bench fault-insertion unit must exercise, each
+#: paired with a required response written before the trial.  The set mirrors
+#: the twin's fault menu so a hardware trial and its simulated counterpart can
+#: be compared directly.  The gate criterion counts this list rather than a
+#: literal, because the two drifted apart the first time a mode was added.
+REQUIRED_FAULT_MODES: tuple[str, ...] = (
+    "S1_OPEN",
+    "S1_SHORT",
+    "S2_OPEN",
+    "S2_SHORT",
+    "S1_S2_BOTH_OPEN",
+    "SERVO_POWER_LOSS",
+    "SERVO_STALL",
+    "CONTROLLER_RESET_DURING_LOCK",
+    # Distinct from the mode above: resetting during LOCKING risks nothing,
+    # because nothing is retained yet.  Resetting while an aircraft hangs from
+    # the keeper is the case that can drop it, and it is what a brownout
+    # during a docked cruise actually produces.
+    "CONTROLLER_RESET_WHILE_CAPTURED",
+)
+
+#: The physical kill path (carrier propulsion disable + release inhibit) is
+#: held to a higher standard than the autonomy it protects: it must be
+#: demonstrated end-to-end before every session and must still work with the
+#: autonomy computer powered off, because "the computer is confused" is
+#: exactly the case it exists for.  Applied to every gate that flies an
+#: aircraft; P0-A has no propulsion to kill.
+KILL_PATH_CRITERIA: tuple[Criterion, ...] = (
+    Criterion(
+        "kill_path_preflight_checks",
+        ">=",
+        1,
+        "kill path demonstrated end-to-end before the run set",
+    ),
+    Criterion("kill_path_failures", "==", 0, "kill path never fails when commanded"),
+    Criterion(
+        "kill_path_verified_with_autonomy_off",
+        "==",
+        1,
+        "kill path demonstrated with the autonomy computer powered off",
+    ),
+)
+
 GATES: tuple[Gate, ...] = (
     Gate(
         "P0-A",
         "bench capture",
         Stage.BENCH_HIL,
         (
-            Criterion("manual_cycles", ">=", 50, "50 manual capture/release cycles"),
+            Criterion(
+                "run_in_cycles",
+                ">=",
+                15,
+                "run-in completed before life-test cycling begins",
+            ),
+            Criterion(
+                "run_in_force_trend_stabilized",
+                "==",
+                1,
+                "per-cycle insertion/release force leveled off during run-in",
+            ),
+            Criterion(
+                "life_test_cycles",
+                ">=",
+                DERIVED_LIFE_TEST_CYCLES,
+                "derived life test: expected cycles through P0-D x life factor",
+            ),
             Criterion("dock_mass_g", "<=", 180, "dock assembly stays within mass budget", "g"),
             Criterion("probe_mass_g", "<=", 8, "drone-side probe stays within mass budget", "g"),
             Criterion(
@@ -98,6 +198,18 @@ GATES: tuple[Gate, ...] = (
                 "positive keeper holds the P0 lateral screening load",
                 "N",
             ),
+            Criterion(
+                "keeper_close_force_margin",
+                ">=",
+                KEEPER_FORCE_MARGIN_FACTOR,
+                "keeper closes with demonstrated force margin at minimum voltage",
+            ),
+            Criterion(
+                "keeper_open_force_margin",
+                ">=",
+                KEEPER_FORCE_MARGIN_FACTOR,
+                "keeper opens with demonstrated force margin at minimum voltage",
+            ),
             Criterion("structural_failures", "==", 0, "no structural failures"),
             Criterion(
                 "ambiguous_capture_confirmations",
@@ -109,13 +221,37 @@ GATES: tuple[Gate, ...] = (
                 "emergency_release_trials",
                 ">=",
                 10,
-                "at least 10 emergency-release trials",
+                "at least 10 unloaded emergency-release trials",
             ),
             Criterion(
                 "emergency_release_failures",
                 "==",
                 0,
-                "manual emergency release always works",
+                "manual emergency release always works unloaded",
+            ),
+            Criterion(
+                "loaded_emergency_release_trials",
+                ">=",
+                10,
+                "at least 10 emergency releases under the axial screening load",
+            ),
+            Criterion(
+                "loaded_emergency_release_failures",
+                "==",
+                0,
+                "emergency release works while the mechanism is loaded",
+            ),
+            Criterion(
+                "fault_insertion_trials",
+                ">=",
+                len(REQUIRED_FAULT_MODES),
+                "every insertable electrical fault mode exercised on hardware",
+            ),
+            Criterion(
+                "fault_insertion_unsafe_responses",
+                "==",
+                0,
+                "every inserted fault produced its required safe response",
             ),
             Criterion("propellers_installed", "==", 0, "propellers are removed"),
         ),
@@ -141,6 +277,19 @@ GATES: tuple[Gate, ...] = (
                 0,
                 "every commanded safety abort succeeds",
             ),
+            Criterion(
+                "fault_insertion_trials",
+                ">=",
+                5,
+                "hardware fault insertion exercised with a live aircraft",
+            ),
+            Criterion(
+                "fault_insertion_unsafe_responses",
+                "==",
+                0,
+                "every inserted fault produced its required safe response",
+            ),
+            *KILL_PATH_CRITERIA,
         ),
     ),
     Gate(
@@ -165,6 +314,7 @@ GATES: tuple[Gate, ...] = (
                 0,
                 "no carrier control loss with the complete P0 payload",
             ),
+            *KILL_PATH_CRITERIA,
         ),
     ),
     Gate(
@@ -186,6 +336,7 @@ GATES: tuple[Gate, ...] = (
                 "never allow simultaneous approach to the active dock",
             ),
             Criterion("envelope_strikes", "==", 0, "no gas-envelope strikes"),
+            *KILL_PATH_CRITERIA,
         ),
     ),
 )
@@ -210,12 +361,22 @@ def evaluate_gate(
     gate_id: str,
     metrics: Mapping[str, float | int | bool],
 ) -> GateVerdict:
-    """Evaluate one gate from measured metrics.
+    """Evaluate one P0 hardware gate from measured metrics."""
 
-    Missing evidence is a failed gate, never an implicit pass.
+    return evaluate_gate_definition(gate_by_id(gate_id), metrics)
+
+
+def evaluate_gate_definition(
+    gate: Gate,
+    metrics: Mapping[str, float | int | bool],
+) -> GateVerdict:
+    """Evaluate any gate definition from measured metrics.
+
+    Shared by the hardware gates above and the SIL gates in ``aiur.sim``:
+    both must go through the same rule that missing evidence is a failed
+    gate, never an implicit pass.
     """
 
-    gate = gate_by_id(gate_id)
     missing: list[str] = []
     failed: list[str] = []
 
@@ -227,7 +388,7 @@ def evaluate_gate(
             failed.append(criterion.description)
 
     return GateVerdict(
-        gate_id=gate_id,
+        gate_id=gate.gate_id,
         passed=not missing and not failed,
         missing_metrics=tuple(missing),
         failed_criteria=tuple(failed),
