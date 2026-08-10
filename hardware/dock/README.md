@@ -8,11 +8,29 @@ It is mounted to the carrier's structural payload rail. **No recovery load is re
 
 The control system should not need millimeter-perfect coincidence in free flight. The hardware absorbs the last part of the alignment problem.
 
-The current dimensioned first article is [P0-A Rev A](p0a-bench.md):
+The current dimensioned first article is [P0-A Rev-B](p0a-bench.md):
 
-![P0-A Rev-A dimensioned cross-section](p0a-rev-a.svg)
+![P0-A dimensioned cross-section](p0a-rev-a.svg)
 
-The makeable Rev-A geometry, sourcing, and bench electrical interface are in the [fabrication packet](p0a-fabrication.md) and [reproducible CAD pack](cad/README.md).
+The cross-section above predates Rev-B. Its funnel, throat, belt, and mast
+dimensions are unchanged and still correct; it does not yet show the Ø9
+probe seat, the 5.2 mm keeper slot, the 5.0 mm tine reach, or the 13.0 mm
+stroke. Build from the geometry table in [p0a-bench.md](p0a-bench.md) and
+the generated CAD, not from this drawing.
+
+Build path, in order:
+
+1. [Fabrication packet](p0a-fabrication.md) — sourcing and electrical interface
+2. [Reproducible CAD pack](cad/README.md) — regenerates the printed parts
+3. [Keeper drive](keeper-drive.md) — **open**: the 13 mm stroke linkage is not designed yet
+4. [Assembly](assembly.md) — order of operations and the three adjustments that decide whether it works
+5. [Electrical evidence packet](../../docs/electrical-evidence.md) — first power-on
+6. [Bench procedure](p0a-bench.md) and its [test card](p0a-test-card.md) — running the gate
+
+Rev-A is superseded. It failed three critical tolerance stacks and its
+keeper could not retract far enough to release a captured aircraft; it
+remains constructible from the same generator only so those failures stay
+reproducible.
 
 ## Carrier-side assembly
 
