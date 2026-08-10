@@ -10,13 +10,12 @@ The control system should not need millimeter-perfect coincidence in free flight
 
 The current dimensioned first article is [P0-A Rev-B](p0a-bench.md):
 
-![P0-A dimensioned cross-section](p0a-rev-a.svg)
+![P0-A dimensioned cross-section](cad/generated/p0a_cross_section_rev_b.svg)
 
-The cross-section above predates Rev-B. Its funnel, throat, belt, and mast
-dimensions are unchanged and still correct; it does not yet show the Ø9
-probe seat, the 5.2 mm keeper slot, the 5.0 mm tine reach, or the 13.0 mm
-stroke. Build from the geometry table in [p0a-bench.md](p0a-bench.md) and
-the generated CAD, not from this drawing.
+The drawing is generated from the same parameters as the parts, so a
+dimension on it cannot disagree with the geometry that gets printed. The
+hand-drawn predecessor did exactly that: it still showed a Ø6 seat and a
+4.2 mm slot after Rev-B moved both, and nothing could detect it.
 
 Build path, in order:
 

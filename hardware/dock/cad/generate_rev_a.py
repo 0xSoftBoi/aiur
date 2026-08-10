@@ -603,6 +603,98 @@ def linkage_drill_template_svg(design: DockRevision = CURRENT) -> str:
 """
 
 
+def cross_section_svg(design: DockRevision = CURRENT) -> str:
+    """Dimensioned cross-section, generated from the revision parameters.
+
+    The previous drawing was drawn by hand and went stale the moment Rev-B
+    moved four dimensions: it still showed a Ø6 seat and a 4.2 mm slot while
+    the generator emitted Ø9 and 5.2 mm, and nothing could detect that.  A
+    drawing is a build document, so it is derived like every other one.
+
+    Two panels because one scale cannot serve both: the funnel is 180 mm
+    across and the features that decide capture are a few millimetres.
+    """
+
+    rev = design.name.upper()
+    # --- panel 1: general arrangement, 1.6 px/mm -------------------------
+    ga = 1.6
+    mouth_r = design.funnel_mouth_diameter_mm / 2.0 * ga
+    depth = design.funnel_depth_mm * ga
+    throat_r = design.funnel_throat_diameter_mm / 2.0 * ga
+    cx, cy = 300.0, 250.0
+    standoff = design.probe_tip_height_above_prop_plane_mm * ga
+
+    # --- panel 2: capture detail, 14 px/mm -------------------------------
+    d = 14.0
+    dx, dy = 720.0, 250.0
+    belt_r = design.probe_head_diameter_mm / 2.0 * d
+    seat_r = design.probe_head_seat_diameter_mm / 2.0 * d
+    mast_r = design.probe_mast_diameter_mm / 2.0 * d
+    slot_r = design.keeper_slot_width_mm / 2.0 * d
+    tine = design.keeper_tine_reach_mm * d
+    thick = design.keeper_thickness_mm * d
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#263238"/>
+    </marker>
+    <style>
+      .t{{font:700 20px system-ui,sans-serif;fill:#111827}}
+      .s{{font:500 12px system-ui,sans-serif;fill:#4b5563}}
+      .l{{font:600 12px system-ui,sans-serif;fill:#111827}}
+      .part{{stroke:#111827;stroke-width:2.5;fill:none;stroke-linejoin:round}}
+      .keeper{{stroke:#1d4ed8;stroke-width:3;fill:#dbeafe}}
+      .probe{{stroke:#b45309;stroke-width:3;fill:#fef3c7}}
+      .seat{{stroke:#b45309;stroke-width:3;fill:#fde68a}}
+      .dim{{stroke:#263238;stroke-width:1.2;fill:none;marker-start:url(#a);marker-end:url(#a)}}
+      .ext{{stroke:#9ca3af;stroke-width:1;stroke-dasharray:4 3}}
+      .ax{{stroke:#9ca3af;stroke-width:1;stroke-dasharray:8 3 2 3}}
+      .rotor{{stroke:#dc2626;stroke-width:2;stroke-dasharray:7 5}}
+    </style>
+  </defs>
+  <rect width="1000" height="560" fill="#fff"/>
+  <text x="36" y="34" class="t">CARRIER-P0 — P0-A {rev} DOCK CROSS-SECTION</text>
+  <text x="36" y="54" class="s">GENERATED FROM generate_rev_a.py — DIMENSIONS IN mm — SCREENING ARTICLE, PHYSICAL FIT OWNS FINAL GEOMETRY</text>
+
+  <text x="36" y="88" class="l">GENERAL ARRANGEMENT</text>
+  <line x1="{cx:g}" y1="110" x2="{cx:g}" y2="470" class="ax"/>
+  <path d="M{cx - mouth_r:g} {cy + depth:g} L{cx - throat_r:g} {cy:g} L{cx + throat_r:g} {cy:g} L{cx + mouth_r:g} {cy + depth:g}" class="part"/>
+  <line x1="{cx - mouth_r:g}" y1="{cy + depth:g}" x2="{cx + mouth_r:g}" y2="{cy + depth:g}" class="ext"/>
+  <line x1="{cx - mouth_r:g}" y1="{cy + depth + 34:g}" x2="{cx + mouth_r:g}" y2="{cy + depth + 34:g}" class="dim"/>
+  <text x="{cx - 34:g}" y="{cy + depth + 28:g}" class="l">&#216;{design.funnel_mouth_diameter_mm:g}</text>
+  <line x1="{cx + mouth_r + 26:g}" y1="{cy:g}" x2="{cx + mouth_r + 26:g}" y2="{cy + depth:g}" class="dim"/>
+  <text x="{cx + mouth_r + 32:g}" y="{cy + depth / 2:g}" class="l">{design.funnel_depth_mm:g} deep</text>
+  <line x1="{cx - throat_r - 60:g}" y1="{cy:g}" x2="{cx - throat_r:g}" y2="{cy:g}" class="ext"/>
+  <text x="{cx - throat_r - 116:g}" y="{cy - 6:g}" class="l">throat &#216;{design.funnel_throat_diameter_mm:g}</text>
+  <line x1="{cx - mouth_r - 10:g}" y1="{cy + depth + standoff:g}" x2="{cx + mouth_r + 10:g}" y2="{cy + depth + standoff:g}" class="rotor"/>
+  <text x="{cx + mouth_r - 46:g}" y="{cy + depth + standoff + 18:g}" class="l">rotor plane</text>
+  <line x1="{cx - mouth_r - 30:g}" y1="{cy + depth:g}" x2="{cx - mouth_r - 30:g}" y2="{cy + depth + standoff:g}" class="dim"/>
+  <text x="{cx - mouth_r - 128:g}" y="{cy + depth + standoff / 2:g}" class="l">{design.probe_tip_height_above_prop_plane_mm:g} standoff</text>
+  <text x="36" y="500" class="s">Probe tip standoff keeps the rotor plane clear of the funnel lip; the aircraft never enters the mouth.</text>
+
+  <text x="560" y="88" class="l">CAPTURE DETAIL — the keeper bears on the SEAT, never on the belt</text>
+  <line x1="{dx:g}" y1="110" x2="{dx:g}" y2="430" class="ax"/>
+  <rect x="{dx - belt_r:g}" y="150" width="{2 * belt_r:g}" height="46" rx="8" class="probe"/>
+  <text x="{dx + belt_r + 10:g}" y="176" class="l">belt &#216;{design.probe_head_diameter_mm:g} — funnel guides this</text>
+  <rect x="{dx - seat_r:g}" y="196" width="{2 * seat_r:g}" height="34" class="seat"/>
+  <text x="{dx + belt_r + 10:g}" y="218" class="l">seat &#216;{design.probe_head_seat_diameter_mm:g} — keeper bears here</text>
+  <rect x="{dx - mast_r:g}" y="230" width="{2 * mast_r:g}" height="120" class="probe"/>
+  <text x="{dx + belt_r + 10:g}" y="300" class="l">mast &#216;{design.probe_mast_diameter_mm:g}</text>
+  <rect x="{dx - slot_r - tine:g}" y="230" width="{tine - slot_r + 0.0:g}" height="{thick:g}" class="keeper"/>
+  <rect x="{dx + slot_r:g}" y="230" width="{tine - slot_r:g}" height="{thick:g}" class="keeper"/>
+  <text x="{dx - slot_r - tine - 150:g}" y="{230 + thick / 2 + 4:g}" class="l">keeper tines</text>
+  <line x1="{dx - slot_r:g}" y1="370" x2="{dx + slot_r:g}" y2="370" class="dim"/>
+  <text x="{dx - 22:g}" y="390" class="l">slot {design.keeper_slot_width_mm:g}</text>
+  <line x1="{dx + slot_r:g}" y1="{230 + thick + 26:g}" x2="{dx + tine:g}" y2="{230 + thick + 26:g}" class="dim"/>
+  <text x="{dx + slot_r + 4:g}" y="{230 + thick + 44:g}" class="l">tine reach {design.keeper_tine_reach_mm:g}</text>
+  <text x="560" y="470" class="s">Open travel {design.keeper_open_travel_mm:g} mm; the tines must clear the belt, needing {design.exact_release_travel_mm():.2f} mm.</text>
+  <text x="560" y="490" class="s">Drive: in-line slider-crank, crank {design.crank_radius_mm:g} mm, link {design.link_length_mm:g} mm, stroke = 2 x crank.</text>
+  <text x="560" y="510" class="s">Retention ledge is (seat &#8722; slot)/2 per side. Pin holes are drilled after print.</text>
+</svg>
+"""
+
+
 def generate_outputs(output_dir: Path, design: DockRevision = CURRENT) -> dict[str, object]:
     """Write the fabrication artifacts for one revision.
 
@@ -624,6 +716,9 @@ def generate_outputs(output_dir: Path, design: DockRevision = CURRENT) -> dict[s
     )
     (output_dir / f"p0a_linkage_template_{slug}.svg").write_text(
         linkage_drill_template_svg(design), encoding="utf-8"
+    )
+    (output_dir / f"p0a_cross_section_{slug}.svg").write_text(
+        cross_section_svg(design), encoding="utf-8"
     )
 
     part_data = {mesh.name: _mesh_manifest(mesh) for mesh in part_meshes}

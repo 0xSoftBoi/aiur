@@ -3,11 +3,14 @@ import struct
 import tempfile
 import unittest
 from pathlib import Path
+from xml.etree import ElementTree
 
 from hardware.dock.cad.generate_rev_a import (
     CURRENT,
     REV_A,
     crank_mesh,
+    cross_section_svg,
+    drill_template_svg,
     funnel_mesh,
     generate_outputs,
     link_mesh,
@@ -176,3 +179,48 @@ class KeeperDriveTests(unittest.TestCase):
         self.assertIn("50 mm CHECK", svg)
         self.assertIn(f'cx="{20 + CURRENT.crank_radius_mm:g}"', svg)
         self.assertIn(f'cx="{20 + CURRENT.link_length_mm:g}"', svg)
+
+
+class DrawingTests(unittest.TestCase):
+    """A drawing is a build document, so it is derived like every other one.
+
+    The hand-drawn cross-section still showed a Ø6 seat and a 4.2 mm slot
+    after Rev-B moved both, and nothing in the repository could tell.
+    """
+
+    def _texts(self, svg: str) -> str:
+        root = ElementTree.fromstring(svg)
+        return " ".join(e.text or "" for e in root.iter() if e.tag.endswith("text"))
+
+    def test_every_svg_is_well_formed(self) -> None:
+        for name, svg in (
+            ("cross_section", cross_section_svg()),
+            ("flange_template", drill_template_svg()),
+            ("linkage_template", linkage_drill_template_svg()),
+        ):
+            with self.subTest(drawing=name):
+                ElementTree.fromstring(svg)
+
+    def test_cross_section_callouts_track_the_revision(self) -> None:
+        text = self._texts(cross_section_svg())
+        self.assertIn(CURRENT.name.upper(), text)
+        for value in (
+            CURRENT.funnel_mouth_diameter_mm,
+            CURRENT.funnel_throat_diameter_mm,
+            CURRENT.probe_head_diameter_mm,
+            CURRENT.probe_head_seat_diameter_mm,
+            CURRENT.keeper_slot_width_mm,
+            CURRENT.keeper_open_travel_mm,
+        ):
+            with self.subTest(value=value):
+                self.assertIn(f"{value:g}", text)
+
+    def test_cross_section_would_not_show_a_superseded_dimension(self) -> None:
+        """Rev-A's seat and slot must not appear on a Rev-B drawing."""
+
+        text = self._texts(cross_section_svg())
+        self.assertNotIn(f"seat Ø{REV_A.probe_head_seat_diameter_mm:g}", text)
+        self.assertNotIn(f"slot {REV_A.keeper_slot_width_mm:g}", text)
+        # ...and the Rev-A drawing does show them, so the check has teeth.
+        rev_a_text = self._texts(cross_section_svg(REV_A))
+        self.assertIn(f"seat Ø{REV_A.probe_head_seat_diameter_mm:g}", rev_a_text)

@@ -15,6 +15,8 @@ The generator emits:
 - `p0a_probe_head_rev_b.stl` — rounded coupon head: Ø12 mm belt (what the funnel guides), **Ø9 mm seat** (the only surface the keeper bears on), Ø3.2 mm bore for a Ø3 mm mast;
 - `p0a_keeper_rev_b.stl` — 2.5 mm sliding fork with a **5.2 mm** slot around the nominal Ø3 mm mast, tines reaching 5.0 mm past the dock axis. The slot was widened from Rev-A's 4.2 mm and must not be reworked back toward it: it sets both the mast clearance and, with the seat, the retention ledge;
 - `p0a_drill_template_rev_b.svg` — 1:1 four-hole M3 template on a 40 mm square;
+- `p0a_cross_section_rev_b.svg` — dimensioned cross-section, every callout derived from the revision parameters;
+- `p0a_linkage_template_rev_b.svg` — 1:1 pin-hole template for the crank and link, with a 50 mm check line;
 - `p0a_rev_b_manifest.json` — dimensions, mesh checks, volume, and a solid-PETG mass estimate.
 
 Every emitted STL is checked for degenerate faces and non-manifold edges before it is written.

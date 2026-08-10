@@ -6,12 +6,7 @@ Flight condition: **propellers removed**
 
 P0-A proves the mechanical and electrical truth of the recovery interface before any live approach. The result is not “the latch worked once.” The result is a repeatable evidence packet showing that the probe can enter, the keeper can positively retain it, capture indication cannot lie trivially, and an operator can release it every time.
 
-![P0-A dimensioned cross-section](p0a-rev-a.svg)
-
-The drawing predates Rev-B: its funnel, throat, belt, and mast dimensions
-are unchanged and correct, but it does not show the Ø9 seat, the 5.2 mm
-slot, the 5.0 mm tine reach, or the 13.0 mm stroke. Build from the table
-below.
+![P0-A dimensioned cross-section](cad/generated/p0a_cross_section_rev_b.svg)
 
 ## Rev-B geometry
 
