@@ -28,10 +28,13 @@ Two conventions make the arithmetic auditable:
 captured aircraft) or defeats release (the dock traps one).  A non-critical
 stack failure prevents capture, which is a benign abort.
 
-Rev-A currently fails all three critical stacks.  Those failures are recorded in
-``OPEN_FINDINGS`` and :func:`validate_stacks` requires the record to stay in
-sync, so a finding cannot be silenced by loosening a minimum and a *new* failure
-cannot hide behind an old one.
+Rev-A failed all three critical stacks — it could bind on the mast, its
+retention ledge vanished at worst case, and its keeper could not retract far
+enough to release a captured aircraft at all.  Rev-B moves four coupled
+dimensions and closes every stack with margin; ``RESOLVED_FINDINGS`` keeps the
+reason on the record.  :func:`validate_stacks` requires the finding record to
+stay in sync in both directions, so a failure cannot be silenced by loosening a
+minimum and a stale finding cannot outlive its own fix.
 """
 
 from __future__ import annotations
@@ -129,9 +132,11 @@ ASSUMPTIONS: tuple[Assumption, ...] = (
         "mast and the keeper slot centreline at the keeper plane: funnel "
         "throat concentricity, keeper-carrier registration through M3 "
         "clearance holes, guide cross-travel play, and residual probe "
-        "centring. Rev-A CAD contains no centring feature at the keeper plane "
-        "(the terminal collet in hardware/dock/README.md is not modelled), so "
-        "this tolerance is assumed, not demonstrated — see OPEN_FINDINGS.",
+        "centring. The CAD contains no centring feature at the keeper plane (the "
+        "terminal collet in hardware/dock/README.md is not modelled), so this "
+        "tolerance is assumed, not demonstrated. It is the dominant unknown in "
+        "two stacks, which is why Rev-B was sized to tolerate roughly twice "
+        "it — measure it at A0 before trusting either margin.",
     ),
     Assumption(
         "caliper_uncertainty",
@@ -266,10 +271,11 @@ PROBE_HEAD_MAX_RADIUS = printed_radius(
 )
 PROBE_HEAD_SEAT_RADIUS = printed_radius(
     "probe_head_seat_radius",
-    6.0,
-    "probe_head_mesh() profile points (3.0, 0.0)-(3.0, 2.0): the head's lower "
-    "cylinder is Ø6, so the keeper bears on a Ø6 underside face. The Ø12 belt "
-    "is a funnel-guidance diameter and never touches the keeper",
+    9.0,
+    "generate_rev_a.REV_B.probe_head_seat_diameter_mm = 9.0; the head's lower "
+    "cylinder is what the keeper bears on, and the Ø12 belt above it is a "
+    "funnel-guidance diameter that never touches the keeper. Rev-A used Ø6, "
+    "which left a 0.8 mm nominal ledge that the stack consumed entirely",
     internal=False,
 )
 PROBE_HEAD_BORE_RADIUS = printed_radius(
@@ -285,25 +291,33 @@ PROBE_MAST_RADIUS = rod_radius(
 )
 KEEPER_SLOT_HALF_WIDTH = printed_radius(
     "keeper_slot_half_width",
-    4.2,
-    "generate_rev_a.RevA.keeper_slot_width_mm = 4.2",
+    5.2,
+    "generate_rev_a.REV_B.keeper_slot_width_mm = 5.2; widened from Rev-A's 4.2 "
+    "so the slot clears the mast at worst case. The widening costs retention "
+    "ledge, which is why the seat diameter moved with it",
     internal=True,
 )
 KEEPER_TINE_REACH = printed_length(
     "keeper_tine_reach",
-    8.0,
-    "keeper_mesh() polygon right edge x = +8.0 mm, measured from the slot "
-    "round-end centre, which sits on the dock axis when the keeper is closed",
+    5.0,
+    "generate_rev_a.REV_B.keeper_tine_reach_mm = 5.0, the keeper_mesh() polygon "
+    "right edge measured from the slot round-end centre, which sits on the dock "
+    "axis when the keeper is closed. Shortened from Rev-A's 8.0: every "
+    "millimetre of reach is a millimetre of stroke the servo must deliver to "
+    "release, and 5.0 still fully bears the Ø9 seat",
 )
 KEEPER_OPEN_TRAVEL = Dimension(
     "keeper_open_travel",
-    11.0,
+    13.0,
     ACTUATED_TRAVEL_TOLERANCE_MM,
     ACTUATED_TRAVEL_TOLERANCE_MM,
     "servo-driven linkage",
-    "generate_rev_a.RevA.keeper_nominal_open_travel_mm = 11.0, delivered by "
-    "the XL330-M288-T through a horn and link; the value is declared in CAD "
-    "but no generated geometry consumes it",
+    "generate_rev_a.REV_B.keeper_open_travel_mm = 13.0, delivered by the "
+    "XL330-M288-T through a horn and link. Rev-A declared 11.0 while its "
+    "geometry needed 13.62; the CAD now derives the requirement from the "
+    "tine reach and head diameter so the two cannot drift apart again. The "
+    "longer stroke is a linkage requirement to verify at A0, not a free "
+    "parameter",
 )
 SEATED_PROBE_LATERAL_OFFSET = lateral_offset(
     "seated_probe_lateral_offset",
@@ -623,113 +637,66 @@ class OpenFinding:
     options: tuple[str, ...]
 
 
-OPEN_FINDINGS: tuple[OpenFinding, ...] = (
-    OpenFinding(
+@dataclass(frozen=True)
+class ResolvedFinding:
+    """A stack that used to fail, kept so the reason for a revision survives.
+
+    Deleting these when the numbers changed would leave the new geometry
+    looking arbitrary.  They are the argument for why Rev-B exists.
+    """
+
+    stack: str
+    revision: str
+    was: str
+    resolution: str
+
+
+#: Rev-A failures, resolved by the Rev-B geometry.  Kept as the record of why
+#: four dimensions moved at once.
+RESOLVED_FINDINGS: tuple[ResolvedFinding, ...] = (
+    ResolvedFinding(
         stack="keeper_slot_mast_clearance",
-        summary=(
-            "The 4.2 mm slot on a Ø3 mast has 0.6 mm of clearance per side at "
-            "nominal, which the assumed printed tolerance and lateral offset "
-            "consume entirely. Worst case is an interference fit: the keeper "
-            "can bind on the mast instead of closing."
-        ),
-        driver=(
-            "Assumption-sensitive. The stack turns positive if the seated "
-            "lateral offset is held tight; it passes on the statistical stack "
-            "and fails on the arithmetic one, which is the signature of a fit "
-            "that needs either a datum or a measurement, not a new number."
-        ),
-        options=(
-            "give the keeper plane a real lateral datum (the terminal collet "
-            "named in hardware/dock/README.md is not in the Rev-A CAD)",
-            "widen the slot, which trades directly against keeper_head_overlap",
-            "measure a printed article and re-run the stack with as_built()",
-        ),
+        revision="Rev-B",
+        was="A 4.2 mm slot on a Ø3 mast left 0.6 mm of clearance per side at "
+        "nominal, which the printed tolerance and the assumed seated lateral "
+        "offset consumed entirely: worst case was an interference fit, so the "
+        "keeper could bind on the mast instead of closing.",
+        resolution="Slot widened to 5.2 mm, giving +0.475 mm at worst case "
+        "against a 0.10 mm minimum. The widening costs retention ledge, which "
+        "is why the seat diameter moved in the same revision.",
     ),
-    OpenFinding(
+    ResolvedFinding(
         stack="keeper_head_overlap",
-        summary=(
-            "The retention ledge is set by the head's Ø6 lower cylinder "
-            "against the 4.2 mm slot, not by the Ø12 belt: 0.9 mm per side "
-            "before the head-to-mast float, 0.8 mm after it. Worst case is "
-            "line-to-line — the ledge disappears — and the RSS stack is still "
-            "below the required minimum."
-        ),
-        driver=(
-            "Not assumption-sensitive. Deleting the lateral-offset "
-            "contributor entirely still leaves the worst case below the "
-            "0.5 mm minimum, so the ledge is undersized in the geometry "
-            "itself rather than in the assumed tolerances."
-        ),
-        options=(
-            "enlarge the head's seat face from Ø6 toward Ø8, which buys "
-            "1 mm of ledge per side without touching the Ø12 guide belt",
-            "narrow the keeper slot, which trades against "
-            "keeper_slot_mast_clearance",
-            "bond or pin the head to the mast to delete the bore float",
-        ),
+        revision="Rev-B",
+        was="The retention ledge was set by the head's Ø6 lower cylinder "
+        "against the 4.2 mm slot — 0.9 mm per side, 0.8 mm after the "
+        "head-to-mast float. Worst case was line-to-line: the ledge "
+        "disappeared and the dock would drop a captured aircraft.",
+        resolution="Seat grown to Ø9 while the slot went to 5.2 mm, giving "
+        "+0.975 mm at worst case against a 0.50 mm minimum. Seat and slot are "
+        "coupled and were sized together rather than one at a time.",
     ),
-    OpenFinding(
+    ResolvedFinding(
         stack="keeper_release_clearance",
-        summary=(
-            "The declared 11.0 mm open travel is inconsistent with the "
-            "generated keeper polygon. The tines reach 8.0 mm past the dock "
-            "axis, so clearing the Ø12 belt needs 14.0 mm on the linear stack "
-            "and EXACT_RELEASE_TRAVEL_MM on the exact fork geometry. Rev-A is "
-            "negative at nominal: the keeper uncovers the mast but not the "
-            "head, and the aircraft cannot be released."
-        ),
-        driver=(
-            "Geometry, not tolerance. The nominal itself is negative; the "
-            "tolerances only decide how negative."
-        ),
-        options=(
-            "shorten the tines so the tips reach ~4.5 mm past the axis, which "
-            "makes 11.0 mm of travel sufficient and does not touch the ledge, "
-            "since the ledge is set by the slot width",
-            "increase the commanded stroke past the exact requirement and "
-            "re-check the XL330-M288-T horn geometry and dock envelope",
-            "state which of the two numbers is the design intent and make CAD "
-            "consume keeper_nominal_open_travel_mm so they cannot drift again",
-        ),
-    ),
-    OpenFinding(
-        stack="keeper_release_clearance",
-        summary=(
-            "Root cause of both keeper failures: Rev-A CAD contains no "
-            "assembly, so the keeper's engagement height against the probe "
-            "head profile is undefined — and both critical stacks are "
-            "functions of it. The head is Ø6 up to 2.0 mm, then flares to "
-            "Ø12 by 6.0 mm. Retention wants the keeper high on the flare; "
-            "release wants it low. Neither number was ever written down, "
-            "which is exactly how the declared 11.0 mm travel and the "
-            "geometry it must clear came to disagree."
-        ),
-        driver=(
-            "Coupled requirements, not two independent defects. Sweeping the "
-            "keeper top face over the head profile: at h<=2.0 mm the keeper "
-            "bears on the Ø6 cylinder, giving 0.90 mm of nominal ledge and "
-            "needing 10.14 mm of travel — the only band where 11.0 mm "
-            "releases, and it leaves 0.86 mm of travel margin against an "
-            "assumed +/-0.4 mm stroke tolerance while the ledge erodes to "
-            "line-to-line on the worst-case stack. At h>=2.5 mm the ledge "
-            "improves but required travel exceeds 11.0 mm and the aircraft "
-            "cannot be released at all. No height gives both a retention "
-            "ledge and a release stroke with margin, so this is a geometry "
-            "change, not an assembly instruction."
-        ),
-        options=(
-            "grow the head's lower seat diameter (Ø6 -> Ø8) so a low keeper "
-            "gets ledge without the flare's release penalty — fixes both "
-            "stacks at one dimension and keeps the 11.0 mm stroke",
-            "define the keeper engagement height explicitly in CAD as an "
-            "assembly datum, and make both stacks read it, so the coupling "
-            "is visible the next time either number moves",
-            "treat release stroke as a safety-path requirement with its own "
-            "margin factor, since loaded and unloaded emergency release are "
-            "both P0-A gate criteria",
-        ),
+        revision="Rev-B",
+        was="Negative at nominal, not merely at worst case. The tines reached "
+        "8.0 mm past the dock axis, so clearing the Ø12 belt needed 13.62 mm "
+        "of stroke against the 11.0 mm declared in CAD — a number no generated "
+        "geometry consumed, which is how the two drifted apart. The keeper "
+        "uncovered the mast but not the head, so a captured aircraft could not "
+        "be released, and emergency release is a P0-A gate criterion.",
+        resolution="Tines shortened to 5.0 mm and stroke lengthened to "
+        "13.0 mm: +1.150 mm at worst case, and 2.59 mm of margin on the exact "
+        "fork geometry. CAD now derives the requirement from the tine reach "
+        "and head diameter (DockRevision.exact_release_travel_mm) so the "
+        "commanded stroke cannot silently disagree with it again.",
     ),
 )
+
+#: Empty: every capture-chain stack closes at worst case on the current
+#: revision.  :func:`validate_stacks` errors if a stack fails without a record
+#: here, and equally if a record survives its own fix.
+OPEN_FINDINGS: tuple[OpenFinding, ...] = ()
 
 
 def validate_stacks(

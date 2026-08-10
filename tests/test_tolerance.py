@@ -34,7 +34,7 @@ from aiur.tolerance import (
     validate_stacks,
     worst_case_mm,
 )
-from hardware.dock.cad.generate_rev_a import REV_A
+from hardware.dock.cad.generate_rev_a import CURRENT, REV_A
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -57,14 +57,22 @@ class ToleranceModelTests(unittest.TestCase):
     def test_stack_definitions_are_structurally_valid(self) -> None:
         self.assertEqual(validate_stacks(), ())
 
-    def test_nominals_track_the_rev_a_cad(self) -> None:
+    def test_nominals_track_the_current_cad_revision(self) -> None:
+        """The stack must describe the article that would be built.
+
+        A stack pinned to a superseded revision is worse than no stack: it
+        reports margins for geometry nobody is printing.
+        """
+
         expected = {
-            "funnel_throat_radius": REV_A.funnel_throat_diameter_mm / 2.0,
-            "probe_head_max_radius": REV_A.probe_head_diameter_mm / 2.0,
-            "probe_head_bore_radius": REV_A.probe_head_bore_diameter_mm / 2.0,
-            "probe_mast_radius": REV_A.probe_mast_diameter_mm / 2.0,
-            "keeper_slot_half_width": REV_A.keeper_slot_width_mm / 2.0,
-            "keeper_open_travel": REV_A.keeper_nominal_open_travel_mm,
+            "funnel_throat_radius": CURRENT.funnel_throat_diameter_mm / 2.0,
+            "probe_head_max_radius": CURRENT.probe_head_diameter_mm / 2.0,
+            "probe_head_seat_radius": CURRENT.probe_head_seat_diameter_mm / 2.0,
+            "probe_head_bore_radius": CURRENT.probe_head_bore_diameter_mm / 2.0,
+            "probe_mast_radius": CURRENT.probe_mast_diameter_mm / 2.0,
+            "keeper_slot_half_width": CURRENT.keeper_slot_width_mm / 2.0,
+            "keeper_tine_reach": CURRENT.keeper_tine_reach_mm,
+            "keeper_open_travel": CURRENT.keeper_open_travel_mm,
         }
         found = {dimension.name: dimension.nominal_mm for dimension in DIMENSIONS}
         for name, nominal in expected.items():
@@ -119,31 +127,25 @@ class CaptureChainVerdictTests(unittest.TestCase):
         }
         self.assertEqual(failing, {finding.stack for finding in OPEN_FINDINGS})
 
-    def test_chain_verdict_fails_while_findings_are_open(self) -> None:
+    def test_chain_verdict_closes_on_the_current_revision(self) -> None:
         verdict = chain_verdict()
-        self.assertFalse(verdict.passed)
-        self.assertEqual(
-            set(verdict.critical_failures),
-            {
-                "keeper_slot_mast_clearance",
-                "keeper_head_overlap",
-                "keeper_release_clearance",
-            },
-        )
+        self.assertTrue(verdict.passed, verdict)
+        self.assertEqual(verdict.critical_failures, ())
         self.assertEqual(verdict.advisory_failures, ())
 
-    def test_retention_ledge_is_undersized_in_the_geometry_itself(self) -> None:
-        # Rev-A's ledge is set by the head's Ø6 lower cylinder against the
-        # 4.2 mm slot: 0.9 mm per side, 0.8 mm after the head-to-mast float.
+    def test_retention_ledge_closes_with_margin(self) -> None:
+        # The ledge is set by the head's seat cylinder against the keeper slot.
+        # Rev-A used Ø6 against a 4.2 mm slot and went line-to-line at worst
+        # case; Rev-B's Ø9 seat against a 5.2 mm slot holds the minimum.
         result = evaluate_stack(KEEPER_HEAD_OVERLAP)
         self.assertTrue(result.critical)
-        self.assertAlmostEqual(result.nominal_mm, 0.80, places=9)
-        self.assertAlmostEqual(result.worst_case_mm, -0.025, places=9)
-        self.assertFalse(result.passes_worst_case)
-        self.assertFalse(result.passes_rss)
+        self.assertAlmostEqual(result.nominal_mm, 1.80, places=9)
+        self.assertAlmostEqual(result.worst_case_mm, 0.975, places=9)
+        self.assertTrue(result.passes_worst_case)
+        self.assertTrue(result.passes_rss)
 
-        # Not an artifact of the assumed lateral offset: delete that
-        # contributor entirely and the ledge is still short of the minimum.
+        # The margin does not depend on the assumed lateral datum: delete that
+        # contributor entirely and the ledge only improves.
         without_offset = Stack(
             name="keeper_head_overlap_perfect_datum",
             description="Overlap with a perfect lateral datum.",
@@ -156,14 +158,16 @@ class CaptureChainVerdictTests(unittest.TestCase):
             minimum_rationale=KEEPER_HEAD_OVERLAP.minimum_rationale,
             critical=True,
         )
-        self.assertAlmostEqual(worst_case_mm(without_offset), 0.325, places=9)
-        self.assertFalse(evaluate_stack(without_offset).passes_worst_case)
+        self.assertAlmostEqual(worst_case_mm(without_offset), 1.325, places=9)
+        self.assertTrue(evaluate_stack(without_offset).passes_worst_case)
 
-    def test_slot_clearance_failure_is_driven_by_the_lateral_assumption(self) -> None:
+    def test_slot_clearance_is_still_dominated_by_the_lateral_assumption(self) -> None:
+        # It passes now, but the dominant contributor is still the one number
+        # nobody has measured, so the margin is only as good as that target.
         result = evaluate_stack(SLOT_MAST_CLEARANCE)
-        self.assertAlmostEqual(result.nominal_mm, 0.60, places=9)
-        self.assertAlmostEqual(result.worst_case_mm, -0.025, places=9)
-        self.assertFalse(result.passes_worst_case)
+        self.assertAlmostEqual(result.nominal_mm, 1.10, places=9)
+        self.assertAlmostEqual(result.worst_case_mm, 0.475, places=9)
+        self.assertTrue(result.passes_worst_case)
         self.assertEqual(
             dominant_contributor(SLOT_MAST_CLEARANCE)[0],
             "seated_probe_lateral_offset",
@@ -181,19 +185,32 @@ class CaptureChainVerdictTests(unittest.TestCase):
             minimum_rationale=SLOT_MAST_CLEARANCE.minimum_rationale,
             critical=True,
         )
-        self.assertAlmostEqual(worst_case_mm(without_offset), 0.325, places=9)
+        self.assertAlmostEqual(worst_case_mm(without_offset), 0.825, places=9)
         self.assertTrue(evaluate_stack(without_offset).passes_worst_case)
 
-    def test_keeper_release_clearance_is_negative_at_nominal(self) -> None:
+    def test_keeper_release_clearance_closes_with_margin(self) -> None:
         result = evaluate_stack(stack_by_name("keeper_release_clearance"))
         self.assertTrue(result.critical)
-        # 11.0 mm of declared travel against 8.0 mm of tine reach plus a
-        # 6.0 mm head radius: the keeper uncovers the mast, not the head.
-        self.assertAlmostEqual(result.nominal_mm, -3.0, places=9)
-        self.assertAlmostEqual(result.worst_case_mm, -3.85, places=9)
-        self.assertLess(result.rss_mm, 0.0)
-        self.assertGreater(EXACT_RELEASE_TRAVEL_MM, REV_A.keeper_nominal_open_travel_mm)
-        self.assertAlmostEqual(EXACT_RELEASE_TRAVEL_MM, 13.6205, places=4)
+        # 13.0 mm of stroke against 5.0 mm of tine reach plus a 6.0 mm head
+        # radius: the keeper now uncovers the head, not just the mast.
+        self.assertAlmostEqual(result.nominal_mm, 2.0, places=9)
+        self.assertAlmostEqual(result.worst_case_mm, 1.15, places=9)
+        self.assertTrue(result.passes_worst_case)
+        self.assertGreater(CURRENT.keeper_open_travel_mm, EXACT_RELEASE_TRAVEL_MM)
+
+    def test_rev_a_could_not_release_and_is_kept_as_evidence(self) -> None:
+        """Regression: the defect that forced the revision must stay visible.
+
+        Rev-A's tines reached 8.0 mm past the axis, needing 13.62 mm of stroke
+        against the 11.0 mm its CAD declared — a number no geometry consumed.
+        The keeper uncovered the mast but not the head, so a captured aircraft
+        could not be released, and emergency release is a P0-A gate criterion.
+        If this ever stops failing, someone has quietly changed Rev-A.
+        """
+
+        self.assertGreater(REV_A.release_travel_shortfall_mm(), 0.0)
+        self.assertAlmostEqual(REV_A.exact_release_travel_mm(), 13.6205, places=4)
+        self.assertLess(CURRENT.release_travel_shortfall_mm(), 0.0)
 
 
 class StackValidationTests(unittest.TestCase):
@@ -226,8 +243,10 @@ class StackValidationTests(unittest.TestCase):
                 name="unrecorded_failure",
                 description="A failing stack with no finding written for it.",
                 contributors=KEEPER_HEAD_OVERLAP.contributors,
-                minimum_mm=KEEPER_HEAD_OVERLAP.minimum_mm,
-                minimum_rationale=KEEPER_HEAD_OVERLAP.minimum_rationale,
+                # A minimum the real geometry cannot meet, so the stack fails
+                # by construction rather than by depending on the live numbers.
+                minimum_mm=KEEPER_HEAD_OVERLAP.minimum_mm + 10.0,
+                minimum_rationale="deliberately unreachable, for this test",
                 critical=True,
             ),
         )
@@ -283,8 +302,8 @@ class StackValidationTests(unittest.TestCase):
 
 class AsBuiltRecordTests(unittest.TestCase):
     MEASURED = {
-        "probe_head_seat_diameter": 6.20,
-        "keeper_slot_width": 4.05,
+        "probe_head_seat_diameter": 9.20,
+        "keeper_slot_width": 5.05,
         "probe_head_bore_diameter": 3.05,
         "probe_mast_diameter": 3.00,
         "seated_probe_lateral_offset": 0.08,
@@ -292,24 +311,28 @@ class AsBuiltRecordTests(unittest.TestCase):
 
     def test_measurements_convert_to_stack_dimensions(self) -> None:
         values = measured_dimensions(self.MEASURED)
-        self.assertAlmostEqual(values["probe_head_seat_radius"], 3.10, places=9)
-        self.assertAlmostEqual(values["keeper_slot_half_width"], 2.025, places=9)
+        self.assertAlmostEqual(values["probe_head_seat_radius"], 4.60, places=9)
+        self.assertAlmostEqual(values["keeper_slot_half_width"], 2.525, places=9)
         # The head-to-mast float is derived from the measured bore and mast.
         self.assertAlmostEqual(values["probe_head_to_mast_float"], 0.025, places=9)
 
-    def test_a_measured_article_can_close_a_stack_the_prediction_cannot(self) -> None:
+    def test_a_measured_article_beats_the_predicted_stack(self) -> None:
         article = as_built(KEEPER_HEAD_OVERLAP, measured_dimensions(self.MEASURED))
         result = evaluate_stack(article)
-        # 3.10 seat - 2.025 slot - 0.025 float - 0.08 offset.
-        self.assertAlmostEqual(result.nominal_mm, 0.97, places=9)
+        # 4.60 seat - 2.525 slot - 0.025 float - 0.08 offset.
+        self.assertAlmostEqual(result.nominal_mm, 1.97, places=9)
         # Four contributors at one caliper resolution each, except the derived
         # head-to-mast float, which carries two readings' worth.
         self.assertAlmostEqual(
-            result.worst_case_mm, 0.97 - 5 * CALIPER_UNCERTAINTY_MM, places=9
+            result.worst_case_mm, 1.97 - 5 * CALIPER_UNCERTAINTY_MM, places=9
         )
         self.assertTrue(result.passes_worst_case)
-        # The predicted stack for the same geometry does not close.
-        self.assertFalse(evaluate_stack(KEEPER_HEAD_OVERLAP).passes_worst_case)
+        # Measuring the article buys real margin over the prediction: the
+        # predicted stack must carry every assumed process tolerance, while a
+        # measured one carries only caliper resolution.
+        self.assertGreater(
+            result.worst_case_mm, evaluate_stack(KEEPER_HEAD_OVERLAP).worst_case_mm
+        )
 
     def test_derived_fits_carry_both_measurements_uncertainty(self) -> None:
         article = as_built(KEEPER_HEAD_OVERLAP, measured_dimensions(self.MEASURED))
@@ -326,11 +349,15 @@ class AsBuiltRecordTests(unittest.TestCase):
         )
 
     def test_unmeasured_dimensions_keep_their_predicted_tolerance(self) -> None:
-        partial = as_built(KEEPER_HEAD_OVERLAP, {"probe_head_seat_radius": 3.00})
-        # Only one contributor tightened, so the stack cannot improve past the
-        # prediction by more than that contributor's tolerance.
-        self.assertGreater(worst_case_mm(partial), worst_case_mm(KEEPER_HEAD_OVERLAP))
-        self.assertLess(worst_case_mm(partial), 0.5)
+        # Measure the seat undersize; every other contributor keeps its
+        # predicted band, so the stack cannot improve past the prediction by
+        # more than that one contributor's tolerance.
+        partial = as_built(KEEPER_HEAD_OVERLAP, {"probe_head_seat_radius": 4.30})
+        predicted = worst_case_mm(KEEPER_HEAD_OVERLAP)
+        self.assertLess(worst_case_mm(partial), predicted)
+        self.assertGreater(
+            worst_case_mm(partial), predicted - 0.20 - CALIPER_UNCERTAINTY_MM
+        )
 
     def test_unknown_measurements_are_rejected(self) -> None:
         with self.assertRaises(KeyError):
@@ -361,7 +388,7 @@ class SnapshotTests(unittest.TestCase):
     def test_snapshot_is_json_serialisable_and_reports_the_findings(self) -> None:
         payload = json.loads(json.dumps(snapshot()))
         self.assertTrue(payload["valid"])
-        self.assertFalse(payload["verdict"]["passed"])
+        self.assertTrue(payload["verdict"]["passed"])
         self.assertEqual(len(payload["stacks"]), len(STACKS))
         self.assertEqual(len(payload["open_findings"]), len(OPEN_FINDINGS))
         self.assertEqual(payload["as_built_columns"], list(AS_BUILT_COLUMNS))

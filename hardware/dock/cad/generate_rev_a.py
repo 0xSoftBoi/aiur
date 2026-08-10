@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate deterministic CARRIER-P0 P0-A Rev-A fabrication geometry.
+"""Generate deterministic CARRIER-P0 P0-A fabrication geometry.
 
 The source geometry is deliberately dependency-free so a clean checkout can
 regenerate the manufacturing artifacts without a CAD kernel.  Dimensions are
@@ -24,7 +24,20 @@ Vec2 = tuple[float, float]
 
 
 @dataclass(frozen=True)
-class RevA:
+class DockRevision:
+    """One complete parameter set for the capture chain.
+
+    Every dimension the tolerance stack reasons about is a field here, and
+    nothing that matters is a literal inside a mesh function.  Rev-A had the
+    probe seat diameter and the keeper tine reach buried in the geometry while
+    ``keeper_open_travel_mm`` was declared and consumed by nothing, which is
+    how the commanded stroke and the geometry it has to clear came to disagree
+    by 2.6 mm without anything noticing.
+    """
+
+    #: Revision label; appears in the generated manifest so a printed part
+    #: can always be traced back to the geometry that produced it.
+    name: str = "Rev-A"
     funnel_mouth_diameter_mm: float = 180.0
     funnel_throat_diameter_mm: float = 16.0
     funnel_depth_mm: float = 65.0
@@ -35,18 +48,77 @@ class RevA:
     flange_hole_diameter_mm: float = 3.2
     flange_hole_square_mm: float = 40.0
     probe_head_diameter_mm: float = 12.0
+    #: Lower cylinder the keeper actually bears on.  The Ø12 belt above it is
+    #: what the funnel guides; this is what retains.
+    probe_head_seat_diameter_mm: float = 6.0
     probe_mast_diameter_mm: float = 3.0
     probe_head_bore_diameter_mm: float = 3.2
     probe_tip_height_above_prop_plane_mm: float = 110.0
-    keeper_length_mm: float = 28.0
+    #: How far the keeper body extends behind the dock axis, carrying the
+    #: guides and the actuator link.
+    keeper_back_reach_mm: float = 20.0
     keeper_width_mm: float = 18.0
     keeper_thickness_mm: float = 2.5
     keeper_slot_width_mm: float = 4.2
-    keeper_nominal_open_travel_mm: float = 11.0
+    #: How far the fork tines reach past the dock axis.  Sets the stroke the
+    #: keeper needs to clear the head on release.
+    keeper_tine_reach_mm: float = 8.0
+    keeper_open_travel_mm: float = 11.0
     lathe_segments: int = 64
 
+    @property
+    def keeper_length_mm(self) -> float:
+        """Overall keeper length, derived rather than declared.
 
-REV_A = RevA()
+        Rev-A declared 28 mm alongside a tine reach of 8 mm and a back reach
+        of 20 mm; the moment either moved, the declared length was wrong. It
+        is now the sum, so it cannot disagree with the geometry.
+        """
+
+        return self.keeper_back_reach_mm + self.keeper_tine_reach_mm
+
+    def exact_release_travel_mm(self) -> float:
+        """Stroke needed for the tines to clear the widest part of the head.
+
+        The tine material nearest the axis sits at the slot half-width, so it
+        is clear of a circle of radius ``r`` once it has retracted past
+        ``sqrt(r^2 - slot_half^2)`` beyond its own reach.
+        """
+
+        slot_half = self.keeper_slot_width_mm / 2.0
+        head = self.probe_head_diameter_mm / 2.0
+        if head <= slot_half:
+            return self.keeper_tine_reach_mm
+        return self.keeper_tine_reach_mm + math.sqrt(head * head - slot_half * slot_half)
+
+    def release_travel_shortfall_mm(self) -> float:
+        """Positive when the commanded stroke cannot clear the head."""
+
+        return self.exact_release_travel_mm() - self.keeper_open_travel_mm
+
+
+#: The article the P0-A gate was originally written against.  Kept so its
+#: geometry stays reproducible and so the tolerance stack can still show why
+#: it was superseded; it is not the article to build.  Three of its four
+#: critical stacks do not close and its keeper cannot clear the probe head.
+REV_A = DockRevision()
+
+#: Rev-B closes every capture-chain stack with margin.  Four dimensions move,
+#: and they move together because the constraints are coupled: the slot has to
+#: grow to clear the mast, which costs retention ledge, so the seat grows with
+#: it; and the tines shorten while the stroke lengthens so release stops being
+#: negative at nominal.  Derived and checked in aiur/tolerance.py.
+REV_B = DockRevision(
+    name="Rev-B",
+    probe_head_seat_diameter_mm=9.0,
+    keeper_slot_width_mm=5.2,
+    keeper_tine_reach_mm=5.0,
+    keeper_open_travel_mm=13.0,
+)
+
+#: Backwards-compatible alias for callers that predate the revision split.
+RevA = DockRevision
+CURRENT = REV_B
 PETG_DENSITY_G_CM3 = 1.27
 
 
@@ -219,7 +291,7 @@ def extrude_polygon(name: str, points: Sequence[Vec2], thickness: float) -> Mesh
     return Mesh(name, triangles)
 
 
-def funnel_mesh(design: RevA = REV_A) -> Mesh:
+def funnel_mesh(design: DockRevision = CURRENT) -> Mesh:
     """Funnel shell, integral drill-after-print flange, and short throat."""
 
     profile = [
@@ -236,29 +308,45 @@ def funnel_mesh(design: RevA = REV_A) -> Mesh:
     return lathe("p0a_funnel", profile, design.lathe_segments)
 
 
-def probe_head_mesh(design: RevA = REV_A) -> Mesh:
-    """Rounded bench probe head with a 3.2 mm through-bore for a 3 mm mast."""
+def probe_head_mesh(design: DockRevision = CURRENT) -> Mesh:
+    """Rounded bench probe head with a through-bore for the mast.
 
+    Two radii do different jobs and are therefore separate parameters: the
+    seat cylinder from the base to 2 mm is what the keeper bears on, and the
+    belt above it is what the funnel taper guides.  The flare between them is
+    interpolated so the seat can grow without redrawing the profile by hand.
+    """
+
+    seat = design.probe_head_seat_diameter_mm / 2.0
+    belt = design.probe_head_diameter_mm / 2.0
+    bore = design.probe_head_bore_diameter_mm / 2.0
+    # Flare from the seat up to the belt, then the rounded crown.
     profile = [
-        (3.0, 0.0),
-        (3.0, 2.0),
-        (4.8, 3.0),
-        (5.7, 4.5),
-        (6.0, 6.0),
-        (5.8, 7.5),
-        (5.0, 9.0),
-        (3.7, 10.2),
-        (1.6, 10.2),
-        (1.6, 0.0),
+        (seat, 0.0),
+        (seat, 2.0),
+        (seat + 0.60 * (belt - seat), 3.0),
+        (seat + 0.90 * (belt - seat), 4.5),
+        (belt, 6.0),
+        (belt - 0.20, 7.5),
+        (belt - 1.00, 9.0),
+        (belt - 2.30, 10.2),
+        (bore, 10.2),
+        (bore, 0.0),
     ]
     return lathe("p0a_probe_head", profile, design.lathe_segments)
 
 
-def keeper_mesh(design: RevA = REV_A) -> Mesh:
-    """Sliding fork keeper; load is reacted through guides, not the actuator."""
+def keeper_mesh(design: DockRevision = CURRENT) -> Mesh:
+    """Sliding fork keeper; load is reacted through guides, not the actuator.
 
-    left = -20.0
-    right = 8.0
+    The tine reach is a parameter because it, not the slot, sets the stroke
+    the servo must deliver to release: the tines have to retract clear of the
+    widest part of the head, and every millimetre of reach is a millimetre of
+    stroke.
+    """
+
+    left = -design.keeper_back_reach_mm
+    right = design.keeper_tine_reach_mm
     half_width = design.keeper_width_mm / 2.0
     slot_radius = design.keeper_slot_width_mm / 2.0
     points: list[Vec2] = [
@@ -280,7 +368,7 @@ def keeper_mesh(design: RevA = REV_A) -> Mesh:
     return extrude_polygon("p0a_keeper", points, design.keeper_thickness_mm)
 
 
-def meshes(design: RevA = REV_A) -> tuple[Mesh, ...]:
+def meshes(design: DockRevision = CURRENT) -> tuple[Mesh, ...]:
     return funnel_mesh(design), probe_head_mesh(design), keeper_mesh(design)
 
 
@@ -322,7 +410,7 @@ def _mesh_manifest(mesh: Mesh) -> dict[str, object]:
     }
 
 
-def drill_template_svg(design: RevA = REV_A) -> str:
+def drill_template_svg(design: DockRevision = CURRENT) -> str:
     half_pattern = design.flange_hole_square_mm / 2.0
     holes = "\n".join(
         f'  <circle cx="{50 + x:g}" cy="{50 + y:g}" r="1.6" class="drill"/>'
@@ -355,7 +443,7 @@ def drill_template_svg(design: RevA = REV_A) -> str:
 '''
 
 
-def generate_outputs(output_dir: Path, design: RevA = REV_A) -> dict[str, object]:
+def generate_outputs(output_dir: Path, design: DockRevision = CURRENT) -> dict[str, object]:
     output_dir.mkdir(parents=True, exist_ok=True)
     part_meshes = meshes(design)
     for mesh in part_meshes:
@@ -366,7 +454,7 @@ def generate_outputs(output_dir: Path, design: RevA = REV_A) -> dict[str, object
 
     part_data = {mesh.name: _mesh_manifest(mesh) for mesh in part_meshes}
     manifest = {
-        "article": "CARRIER-P0 P0-A Rev-A",
+        "article": f"CARRIER-P0 P0-A {design.name}",
         "units": "mm",
         "status": "bench screening geometry; not flight qualified",
         "design": asdict(design),
