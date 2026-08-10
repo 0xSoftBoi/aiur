@@ -1,4 +1,4 @@
-# P0-A Rev-A bench article
+# P0-A bench article
 
 Status: build definition, not measured hardware  
 Gate: P0-A — bench capture  
@@ -6,7 +6,12 @@ Flight condition: **propellers removed**
 
 P0-A proves the mechanical and electrical truth of the recovery interface before any live approach. The result is not “the latch worked once.” The result is a repeatable evidence packet showing that the probe can enter, the keeper can positively retain it, capture indication cannot lie trivially, and an operator can release it every time.
 
-![P0-A Rev-A dimensioned cross-section](p0a-rev-a.svg)
+![P0-A dimensioned cross-section](p0a-rev-a.svg)
+
+The drawing predates Rev-B: its funnel, throat, belt, and mast dimensions
+are unchanged and correct, but it does not show the Ø9 seat, the 5.2 mm
+slot, the 5.0 mm tine reach, or the 13.0 mm stroke. Build from the table
+below.
 
 ## Rev-B geometry
 
@@ -63,19 +68,27 @@ With a 65 mm funnel depth and 110 mm probe-tip standoff, the centered seated geo
 
 ## Mechanical stack
 
-The carrier-side mechanism has five jobs, in order:
+The carrier-side mechanism has four jobs, in order:
 
 1. Funnel converts lateral error into probe centering.
-2. Spring collet provides passive first capture.
-3. `S1` independently detects that the probe is physically seated.
-4. Servo moves a positive keeper underneath the probe head.
-5. `S2` independently detects the keeper's closed position.
+2. `S1` independently detects that the probe is physically seated.
+3. Servo moves a positive keeper underneath the probe head's Ø9 seat.
+4. `S2` independently detects the keeper's closed position.
+
+The spring collet that used to sit between steps 1 and 2 is **deleted**. A
+passive backstop would need 0.468 N to hold the docked aircraft while
+staying under 0.074 N so it does not fight an abort — 6.3× apart, so no
+single spring is both. Its useful function was registration, and that
+merges into the throat and slot geometry. See the
+[deletion review](../../docs/dock-deletion-review.md); reinstate only if A0
+measures free-probe wander above 0.60 mm, which is what the Rev-B 5.2 mm
+slot tolerates.
 
 `capture_confirmed = S1 AND S2`.
 
 Servo command is **not** keeper feedback. `S2` must sense the mechanism itself with a limit switch or equivalent physical position sensor.
 
-The spring collet prevents an instantaneous bounce-out while the keeper moves, but the positive keeper owns retention after capture. An electromagnet is not part of the primary load path.
+The positive keeper owns retention outright; nothing passive backs it up, which is why the keeper's own force margin and its stroke are both gate criteria rather than nice-to-haves. An electromagnet is not part of the primary load path.
 
 ## Controller behavior
 
@@ -159,7 +172,7 @@ and fails on the vehicle when the battery sags or the funnel is dirty.
 12. Complete **600 life-test cycles** logged as `phase=life`. Every 25th cycle is an emergency-release trial; alternate them between unloaded and **loaded with the 5 N axial screening load applied**, giving ≥10 of each.
 13. Run the [fault-insertion](p0a-fabrication.md) sequence: exercise every required fault mode (`S1_OPEN`, `S1_SHORT`, `S2_OPEN`, `S2_SHORT`, `S1_S2_BOTH_OPEN`, `SERVO_POWER_LOSS`, `SERVO_STALL`, `CONTROLLER_RESET_DURING_LOCK`, `CONTROLLER_RESET_WHILE_CAPTURED`), writing the required response **before** each trial and recording what actually happened.
 14. Repeat the 5 N axial and 1 N four-direction lateral screening loads after life cycling.
-15. Inspect the funnel, probe base, collet, keeper, fasteners, switches, wiring, and mount for cracks, looseness, permanent deformation, or intermittent indication.
+15. Inspect the funnel, probe base, keeper, fasteners, switches, wiring, and mount for cracks, looseness, permanent deformation, or intermittent indication.
 16. Reduce the raw run: `python -m aiur.p0a_evidence --article ... --cycles ... --loads ... --faults ...`.
 17. On pass, freeze the article as the [golden article](golden-article.md).
 
