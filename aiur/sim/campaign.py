@@ -22,6 +22,13 @@ Run from the command line::
 
 Gate scenarios exit 0 only when the SIL gate passes; sweep studies always
 exit 0 — they are engineering studies, not gates.
+
+``--screen`` runs the same campaign but judges only the gate's absolute-zero
+criteria.  It exists so short pre-merge runs can say something true: the
+gates require 200 seeded episodes and a 50-episode fault quota so their rate
+statistics mean something, and the answer to "that is slow on every push" is
+a weaker, honestly-labelled check — not a gate with its thresholds lowered
+until a 40-episode run passes.
 """
 
 from __future__ import annotations
@@ -38,7 +45,7 @@ from .credibility import (
 )
 from .engine import EpisodeConfig, EpisodeOutcome, EpisodeResult, run_episode
 from .events import EventKind
-from .gates import evaluate_sil_gate
+from .gates import evaluate_sil_gate, sil_gate_by_id
 from .scenarios import (
     degraded_sensor_case,
     nav_bias_ramp_case,
@@ -250,6 +257,66 @@ def run_campaign(
     )
 
 
+@dataclass(frozen=True)
+class ScreenVerdict:
+    """Safety-only outcome of a short campaign.
+
+    A screen is deliberately **not** a gate.  The SIL gates require 200 seeded
+    episodes and a 50-episode fault quota precisely so their rate statistics
+    mean something, and a 40-episode run cannot support that — the honest
+    response is to report a different, weaker thing rather than to lower the
+    gate's thresholds until a short run passes.  What a short run *can* do is
+    enforce the absolute zeros: no strike, no contact, no unsafe fault
+    outcome, at any sample size.
+
+    The criteria are derived from the gate definition rather than listed here,
+    so a new zero-tolerance criterion is picked up automatically instead of
+    being silently absent from the screen.
+    """
+
+    scenario: str
+    gate_id: str
+    episodes: int
+    #: Metric name -> observed value, for every absolute-zero gate criterion.
+    safety_metrics: dict[str, float | int]
+    violations: tuple[str, ...]
+    unsafe_details: tuple[str, ...]
+
+    @property
+    def passed(self) -> bool:
+        return not self.violations
+
+
+def screen_verdict(campaign: CampaignResult) -> ScreenVerdict:
+    """Reduce a campaign to its absolute-zero safety criteria only."""
+
+    gate = sil_gate_by_id(campaign.gate_id)
+    zero_criteria = [
+        criterion
+        for criterion in gate.criteria
+        if criterion.operator == "==" and criterion.threshold == 0
+    ]
+    observed: dict[str, float | int] = {}
+    violations: list[str] = []
+    for criterion in zero_criteria:
+        value = campaign.metrics.get(criterion.metric)
+        if value is None:
+            violations.append(f"{criterion.metric}: not reported by the reducer")
+            continue
+        observed[criterion.metric] = value
+        if not criterion.passes(value):
+            violations.append(f"{criterion.description} (observed {value})")
+
+    return ScreenVerdict(
+        scenario=campaign.scenario,
+        gate_id=campaign.gate_id,
+        episodes=campaign.episodes,
+        safety_metrics=observed,
+        violations=tuple(violations),
+        unsafe_details=campaign.unsafe_details,
+    )
+
+
 def run_sweep(
     study: str,
     *,
@@ -357,6 +424,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--episodes-per-bin", type=int, default=30)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--fault-fraction", type=float, default=0.25)
+    parser.add_argument(
+        "--screen",
+        action="store_true",
+        help="safety screen instead of a gate: judge only the absolute-zero "
+        "criteria, so a short run reports something true rather than failing "
+        "a quota it cannot meet. Never reports a gate pass.",
+    )
     args = parser.parse_args(argv)
 
     # Bad arguments must exit 2 via argparse, never share exit code 1 with
@@ -369,6 +443,18 @@ def main(argv: list[str] | None = None) -> int:
                 seed=args.seed,
                 fault_fraction=args.fault_fraction,
             )
+            if args.screen:
+                screen = screen_verdict(campaign)
+                payload = asdict(screen)
+                payload["note"] = (
+                    "SAFETY SCREEN, NOT A GATE. Absolute-zero criteria only, "
+                    f"over {screen.episodes} episodes. The {screen.gate_id} "
+                    "gate additionally requires its full episode and fault "
+                    "quotas and its capture-rate threshold; a passing screen "
+                    "says nothing about those."
+                )
+                print(json.dumps(payload, indent=2, sort_keys=True))
+                return 0 if screen.passed else 1
             print(json.dumps(asdict(campaign), indent=2, sort_keys=True))
             return 0 if campaign.verdict_passed else 1
 

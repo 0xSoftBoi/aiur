@@ -84,7 +84,30 @@ python -m aiur.sim.campaign --scenario sil-p0c --episodes 200 --seed 1
 python -m aiur.sim.campaign --scenario sil-p0d --episodes 80  --seed 1
 ```
 
-Exit code 0 is a passing gate. CI runs SIL-B at full size on every push.
+Exit code 0 is a passing gate.
+
+### Where the gates run
+
+The gates need their full sample sizes to mean anything — 200 seeded
+episodes and a 50-episode fault quota — which takes minutes. Rather than
+shrink them until they fit a pre-merge budget, CI is split:
+
+| Check | When | What it proves |
+| --- | --- | --- |
+| unit suite + registries | every push and PR | the models, evaluators, and registries are self-consistent |
+| `--screen` over 40/40/20 episodes | every push and PR | the absolute zeros hold: no strike, no contact, no unsafe fault outcome |
+| full SIL-B/C/D gates | nightly, and on demand | the gates themselves, at the sample size their statistics require |
+| sweep studies | nightly | the numbers quoted in this document stay reproducible |
+
+The screen derives its criteria from the gate definition — every criterion
+of the form `== 0` — so a newly added zero-tolerance criterion is picked up
+automatically rather than being quietly absent from the pre-merge check. It
+never reports a gate pass, and says so in its own output. **A green PR is
+not evidence of a gate pass**; the nightly run is.
+
+A red nightly is a finding against whatever merged that day, not a flaky
+job: campaigns are seeded and deterministic, so the reported seed reproduces
+the episode exactly.
 
 ## Vertical concept studies
 

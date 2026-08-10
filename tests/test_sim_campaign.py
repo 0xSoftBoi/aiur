@@ -10,12 +10,15 @@ import contextlib
 import io
 import json
 import unittest
+from dataclasses import replace
 
 from aiur.loop_graph import evaluate_gate, gate_by_id
 from aiur.sim import campaign
 from aiur.sim.engine import EpisodeOutcome, run_episode
 from aiur.sim.events import EventKind
-from aiur.sim.gates import evaluate_sil_gate, validate_sil_gates
+from aiur.sim.campaign import run_campaign, screen_verdict
+from aiur.sim.campaign import main as campaign_main
+from aiur.sim.gates import evaluate_sil_gate, sil_gate_by_id, validate_sil_gates
 from aiur.sim.scenarios import sil_p0b, sil_p0c, sil_p0d
 
 P0B_SEED = 7
@@ -231,3 +234,60 @@ class LoopGraphRegressionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SafetyScreenTests(unittest.TestCase):
+    """The pre-merge screen must stay weaker than the gate, and say so."""
+
+    def test_screen_judges_only_the_absolute_zero_criteria(self) -> None:
+        campaign = run_campaign("sil-p0b", episodes=6, seed=5, fault_fraction=0.34)
+        screen = screen_verdict(campaign)
+
+        # The gate fails this campaign on its episode and fault quotas...
+        self.assertFalse(campaign.verdict_passed)
+        self.assertTrue(
+            any("seeded episodes" in c for c in campaign.verdict["failed_criteria"])
+        )
+        # ...while the screen passes, because nothing unsafe happened. That
+        # difference is the point: a short run cannot support a rate claim, so
+        # it reports a weaker true thing instead of a diluted gate.
+        self.assertTrue(screen.passed, screen.violations)
+
+    def test_screen_covers_every_zero_criterion_of_its_gate(self) -> None:
+        """Derived from the gate, so a new zero-criterion cannot be missed."""
+
+        campaign = run_campaign("sil-p0d", episodes=6, seed=3, fault_fraction=0.34)
+        screen = screen_verdict(campaign)
+        expected = {
+            criterion.metric
+            for criterion in sil_gate_by_id("SIL-D").criteria
+            if criterion.operator == "==" and criterion.threshold == 0
+        }
+        self.assertEqual(set(screen.safety_metrics), expected)
+        self.assertIn("separation_violations", expected)
+        self.assertIn("simultaneous_dock_approaches", expected)
+
+    def test_screen_reports_a_violation_when_a_zero_is_broken(self) -> None:
+        campaign = run_campaign("sil-p0b", episodes=4, seed=2, fault_fraction=0.25)
+        broken = replace(
+            campaign, metrics={**campaign.metrics, "envelope_strikes": 1}
+        )
+        screen = screen_verdict(broken)
+        self.assertFalse(screen.passed)
+        self.assertTrue(any("envelope" in v for v in screen.violations))
+
+    def test_cli_screen_exits_zero_where_the_gate_exits_one(self) -> None:
+        args = ["--scenario", "sil-p0b", "--episodes", "4", "--seed", "2"]
+        gate_out = io.StringIO()
+        with contextlib.redirect_stdout(gate_out):
+            gate_code = campaign_main(args)
+        screen_out = io.StringIO()
+        with contextlib.redirect_stdout(screen_out):
+            screen_code = campaign_main(args + ["--screen"])
+
+        self.assertEqual(gate_code, 1)
+        self.assertEqual(screen_code, 0)
+        payload = json.loads(screen_out.getvalue())
+        # The output must never let a screen be read as a gate pass.
+        self.assertIn("NOT A GATE", payload["note"])
+        self.assertNotIn("verdict_passed", payload)
