@@ -108,6 +108,21 @@ class DockAssembly:
         self._probe_above_keeper = False
         self._prev_keeper_truth = False
 
+    def seed_seated(
+        self, drone: DroneBody, dock_center: Vec3, dock_velocity: Vec3
+    ) -> None:
+        """Place a probe at the seat, for scenarios that start captured.
+
+        Part of the CaptureMechanism interface so the engine's pre-roll does
+        not reach into mechanism internals; it used to set probe_phase and a
+        private field directly, which quietly coupled the engine to this one
+        architecture.
+        """
+
+        self.probe_phase = ProbePhase.SEATED
+        self._prev_rel_z = self.geometry.seat_travel_m
+        self._seat(drone, dock_center, dock_velocity)
+
     def reset_controller(self) -> None:
         """Model a controller brownout: the logic restarts, the mechanism does not.
 

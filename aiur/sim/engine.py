@@ -86,6 +86,11 @@ class EpisodeConfig:
     carrier_params: CarrierParams = CarrierParams()
     rig_params: RigParams = RigParams()
     dock_geometry: DockGeometry = DockGeometry()
+    #: Builds the capture mechanism for an episode.  Defaults to the funnel/
+    #: fork architecture the program is building; alternatives implement
+    #: aiur.sim.mechanism.CaptureMechanism and are compared in the design
+    #: study.  Everything else in the twin is architecture-agnostic.
+    mechanism_factory: Callable[[EpisodeConfig, float], object] | None = None
     guidance: GuidanceParams = GuidanceParams()
     fault_plan: tuple[FaultSpec, ...] = ()
     fault_target_drone: int = 0
@@ -176,7 +181,10 @@ class _EpisodeRunner:
                 else None,
             )
 
-        self.dock = DockAssembly(config.dock_geometry, dt_s=config.dt_s)
+        if config.mechanism_factory is None:
+            self.dock = DockAssembly(config.dock_geometry, dt_s=config.dt_s)
+        else:
+            self.dock = config.mechanism_factory(config, config.dt_s)
         self.dock_sensor = PoseSensor(config.dock_sensor, _child_rng(master), config.dt_s)
 
         # On a carrier platform the guidance stack gets the hull geometry it
@@ -247,16 +255,9 @@ class _EpisodeRunner:
     def _preroll_capture(self, index: int) -> None:
         """Walk the real controller through a legitimate pre-episode capture."""
 
-        from .dock_physics import ProbePhase
-
-        geometry = self.config.dock_geometry
         dock_center = self.platform.dock_center()
         drone = self.drones[index]
-        drone.position = dock_center + Vec3(
-            0.0, 0.0, geometry.seat_travel_m - geometry.probe_height_m
-        )
-        drone.velocity = self.platform.dock_velocity()
-        self.dock.probe_phase = ProbePhase.SEATED
+        self.dock.seed_seated(drone, dock_center, self.platform.dock_velocity())
         self.engaged = index
 
         t = -5.0
