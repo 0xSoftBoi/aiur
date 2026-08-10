@@ -64,6 +64,27 @@ class DockRevision:
     #: keeper needs to clear the head on release.
     keeper_tine_reach_mm: float = 8.0
     keeper_open_travel_mm: float = 11.0
+
+    # --- keeper drive (slider-crank) -------------------------------------
+    #: Crank radius on the servo horn.  An in-line slider-crank gives a
+    #: stroke of exactly 2R, so this is the stroke requirement halved rather
+    #: than a number chosen for packaging.
+    crank_radius_mm: float = 6.5
+    #: Link length between pin centres.  L/R = 3 keeps the maximum obliquity
+    #: near 19.5 deg, which bounds the side load the keeper guides carry to
+    #: about 0.35x the axial force.
+    link_length_mm: float = 19.5
+    #: Pin diameter for both joints; drilled after print, like the funnel
+    #: flange, so no hole is modelled.
+    drive_pin_diameter_mm: float = 3.0
+    #: Where the link attaches to the keeper, along the keeper's own x axis.
+    #: Must sit in the solid back, behind the slot round end.
+    keeper_pin_x_mm: float = -14.0
+    #: Plate thickness for the crank and the link.
+    drive_plate_thickness_mm: float = 3.0
+    #: Material each side of a drilled pin hole.
+    drive_pin_edge_margin_mm: float = 3.0
+
     lathe_segments: int = 64
 
     @property
@@ -76,6 +97,39 @@ class DockRevision:
         """
 
         return self.keeper_back_reach_mm + self.keeper_tine_reach_mm
+
+    @property
+    def drive_stroke_mm(self) -> float:
+        """Stroke an in-line slider-crank delivers: exactly twice the crank."""
+
+        return 2.0 * self.crank_radius_mm
+
+    @property
+    def drive_obliquity_deg(self) -> float:
+        """Worst-case link angle, which sets the side load on the guides."""
+
+        return math.degrees(math.asin(self.crank_radius_mm / self.link_length_mm))
+
+    @property
+    def servo_axis_x_mm(self) -> float:
+        """Servo axis position, with the keeper closed.
+
+        In-line slider-crank: the keeper pin sits at ``L + R`` from the axis
+        at full extension and ``L - R`` when retracted.
+        """
+
+        return self.keeper_pin_x_mm - (self.link_length_mm + self.crank_radius_mm)
+
+    def drive_stroke_shortfall_mm(self) -> float:
+        """Positive when the linkage cannot deliver the commanded stroke.
+
+        The commanded stroke is itself checked against the geometry by
+        ``release_travel_shortfall_mm``; this closes the other half of the
+        chain, from servo rotation to keeper travel.  Rev-A's defect was
+        exactly a number that nothing downstream consumed.
+        """
+
+        return self.keeper_open_travel_mm - self.drive_stroke_mm
 
     def exact_release_travel_mm(self) -> float:
         """Stroke needed for the tines to clear the widest part of the head.
@@ -348,6 +402,13 @@ def keeper_mesh(design: DockRevision = CURRENT) -> Mesh:
     left = -design.keeper_back_reach_mm
     right = design.keeper_tine_reach_mm
     half_width = design.keeper_width_mm / 2.0
+    # The drive pin lands in the solid back; check it stays clear of the slot
+    # and of the back edge rather than trusting the two numbers to agree.
+    boss_margin = design.drive_pin_diameter_mm / 2.0 + design.drive_pin_edge_margin_mm
+    if design.keeper_pin_x_mm + boss_margin > -design.keeper_slot_width_mm / 2.0:
+        raise ValueError("keeper drive pin would break into the slot")
+    if design.keeper_pin_x_mm - boss_margin < left:
+        raise ValueError("keeper drive pin would break out of the back edge")
     slot_radius = design.keeper_slot_width_mm / 2.0
     points: list[Vec2] = [
         (left, -half_width),
@@ -368,8 +429,56 @@ def keeper_mesh(design: DockRevision = CURRENT) -> Mesh:
     return extrude_polygon("p0a_keeper", points, design.keeper_thickness_mm)
 
 
+def _rounded_bar(length: float, half_width: float, segments: int = 16) -> list[Vec2]:
+    """A stadium outline: a bar of `length` between two rounded ends."""
+
+    half = length / 2.0
+    points: list[Vec2] = []
+    for i in range(segments + 1):
+        theta = math.pi * (-0.5 + i / segments)
+        points.append((half + half_width * math.cos(theta), half_width * math.sin(theta)))
+    for i in range(segments + 1):
+        theta = math.pi * (0.5 + i / segments)
+        points.append((-half + half_width * math.cos(theta), half_width * math.sin(theta)))
+    return points
+
+
+def crank_mesh(design: DockRevision = CURRENT) -> Mesh:
+    """Servo-horn crank for the keeper drive.
+
+    Pin holes are drilled after print from the linkage template, the same way
+    the funnel flange holes are: modelling a hole would need boolean geometry
+    this dependency-free generator does not have, and a slot open to an edge
+    would let a pin walk out under 600 life cycles (P0-DRIVE-006).
+    """
+
+    half_width = design.drive_pin_diameter_mm / 2.0 + design.drive_pin_edge_margin_mm
+    return extrude_polygon(
+        "p0a_crank",
+        _rounded_bar(design.crank_radius_mm, half_width),
+        design.drive_plate_thickness_mm,
+    )
+
+
+def link_mesh(design: DockRevision = CURRENT) -> Mesh:
+    """Link between the crank pin and the keeper pin, holes drilled after print."""
+
+    half_width = design.drive_pin_diameter_mm / 2.0 + design.drive_pin_edge_margin_mm
+    return extrude_polygon(
+        "p0a_link",
+        _rounded_bar(design.link_length_mm, half_width),
+        design.drive_plate_thickness_mm,
+    )
+
+
 def meshes(design: DockRevision = CURRENT) -> tuple[Mesh, ...]:
-    return funnel_mesh(design), probe_head_mesh(design), keeper_mesh(design)
+    return (
+        funnel_mesh(design),
+        probe_head_mesh(design),
+        keeper_mesh(design),
+        crank_mesh(design),
+        link_mesh(design),
+    )
 
 
 def validate_mesh(mesh: Mesh) -> None:
@@ -455,6 +564,45 @@ def drill_template_svg(design: DockRevision = CURRENT) -> str:
 '''
 
 
+def linkage_drill_template_svg(design: DockRevision = CURRENT) -> str:
+    """1:1 pin-hole template for the crank and the link.
+
+    The linkage carries no modelled holes: like the funnel flange, they are
+    drilled after print.  Getting the link centres wrong changes the
+    delivered stroke directly, so the template carries a measured check line
+    the way the flange template does.
+    """
+
+    revision = design.name.upper()
+    pin_r = design.drive_pin_diameter_mm / 2.0
+    crank = design.crank_radius_mm
+    link = design.link_length_mm
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="70mm" viewBox="0 0 100 70">
+  <style>
+    .drill{{fill:none;stroke:#d00;stroke-width:.3}}
+    .axis{{stroke:#777;stroke-width:.15;stroke-dasharray:2 1}}
+    .cut{{fill:none;stroke:#000;stroke-width:.25}}
+    .text{{font:3px sans-serif;fill:#000}}
+  </style>
+  <text x="4" y="7" class="text">P0-A {revision} - KEEPER DRIVE PIN TEMPLATE - PRINT 100%</text>
+  <text x="4" y="12" class="text">Pins &#216;{design.drive_pin_diameter_mm:g}; crank {crank:g} mm centres; link {link:g} mm centres</text>
+  <line x1="14" y1="24" x2="{26 + crank:g}" y2="24" class="axis"/>
+  <text x="4" y="25" class="text">CRANK</text>
+  <circle cx="20" cy="24" r="{pin_r:g}" class="drill"/>
+  <circle cx="{20 + crank:g}" cy="24" r="{pin_r:g}" class="drill"/>
+  <line x1="14" y1="40" x2="{26 + link:g}" y2="40" class="axis"/>
+  <text x="4" y="41" class="text">LINK</text>
+  <circle cx="20" cy="40" r="{pin_r:g}" class="drill"/>
+  <circle cx="{20 + link:g}" cy="40" r="{pin_r:g}" class="drill"/>
+  <line x1="20" y1="60" x2="70" y2="60" class="cut"/>
+  <line x1="20" y1="58.5" x2="20" y2="61.5" class="cut"/>
+  <line x1="70" y1="58.5" x2="70" y2="61.5" class="cut"/>
+  <text x="38" y="57" class="text">50 mm CHECK</text>
+  <text x="4" y="67" class="text">Stroke = 2 x crank centres = {design.drive_stroke_mm:g} mm; verify at the keeper with a dial indicator.</text>
+</svg>
+"""
+
+
 def generate_outputs(output_dir: Path, design: DockRevision = CURRENT) -> dict[str, object]:
     """Write the fabrication artifacts for one revision.
 
@@ -473,6 +621,9 @@ def generate_outputs(output_dir: Path, design: DockRevision = CURRENT) -> dict[s
         )
     (output_dir / f"p0a_drill_template_{slug}.svg").write_text(
         drill_template_svg(design), encoding="utf-8"
+    )
+    (output_dir / f"p0a_linkage_template_{slug}.svg").write_text(
+        linkage_drill_template_svg(design), encoding="utf-8"
     )
 
     part_data = {mesh.name: _mesh_manifest(mesh) for mesh in part_meshes}

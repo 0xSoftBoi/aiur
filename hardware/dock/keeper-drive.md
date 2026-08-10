@@ -1,16 +1,33 @@
 # Keeper drive
 
-Status: requirement and trade study; **the drive interface is not in the
-generated CAD**. This is the top open item blocking a P0-A build.
+Status: designed and in the generated CAD; not built
 Applies to: Rev-B keeper, 13.0 mm open travel
 
-Rev-B needs 13.0 mm of linear keeper stroke. The actuator is a rotary servo.
-Nothing in the repository currently converts one into the other: the
-generated keeper is a plain fork with no drive feature, and
-[p0a-fabrication.md](p0a-fabrication.md) says only that the actuator mount
-stays swappable. That gap is deliberate rather than hidden — this document
-records what the stroke demands and what the candidates cost, so the
-remaining work is a bounded design task instead of an unexamined assumption.
+Rev-B needs 13.0 mm of linear keeper stroke from a rotary servo. The
+selected mechanism is an in-line slider-crank, and it is now in
+`generate_rev_a.py` as parameters, meshes, and a pin-hole template:
+
+| Parameter | Value | Why |
+| --- | ---: | --- |
+| Crank radius | 6.5 mm | In-line slider-crank gives stroke = 2R exactly, so this is the requirement halved, not a packaging choice |
+| Link length | 19.5 mm | L/R = 3 bounds obliquity at 19.5°, so the guides carry about 0.35× the axial force sideways |
+| Pin diameter | Ø3 mm | Both joints; drilled after print |
+| Keeper pin | x = −14 mm | In the solid back. `keeper_mesh` **raises** if it would break into the slot or out of the back edge |
+| Servo axis | x = −40 mm | L + R behind the keeper pin at full extension; this is what the dock footprint grows by |
+
+Both halves of the stroke chain are now checked in code, which is the point:
+`drive_stroke_shortfall_mm()` asks whether the linkage can deliver the
+commanded stroke, and `release_travel_shortfall_mm()` asks whether the
+commanded stroke clears the probe head. Rev-A's defect was a stroke number
+that nothing downstream had to honour; a linkage sized by eye would have
+recreated it one level up.
+
+Pin holes are **not modelled**. This generator has no boolean geometry, and
+a slot open to an edge would let a pin walk out under 600 life cycles
+(P0-DRIVE-006). They are drilled after print from
+`p0a_linkage_template_rev_b.svg`, exactly as the funnel flange holes are —
+the template carries a 50 mm check line because getting the link centres
+wrong changes the delivered stroke directly.
 
 ## What the stroke has to be
 
@@ -55,19 +72,20 @@ gains a single pin boss.
 | P0-DRIVE-005 | Close and open force margin ≥ 2.0 against worst-case resistance at minimum supply voltage | Existing P0-A gate criterion; the linkage ratio is what converts servo torque into keeper force, so it is sized here |
 | P0-DRIVE-006 | Pin joints retained so they cannot walk out under cycling | 600 life cycles; a press-fit pin that migrates is a mid-campaign failure |
 
-## What remains to be designed
+## What remains
 
-1. Crank geometry on the servo horn: hole at R = 6.5 mm, retained pin.
-2. Link, ~19.5 mm between pin centres, printed or cut, with clearance fits.
-3. Pin boss on the keeper, placed in the solid back region behind the fork
-   so it does not intrude on the bearing face.
-4. Keeper guides and hard stops on the bracket, setting the 13.0 mm travel.
-5. Bracket geometry locating the servo relative to the funnel flange.
+The crank, the link, and the keeper pin location are generated. Two items
+are still bench work rather than CAD, because both are set by adjustment
+against the built article:
 
-None of these are in `cad/generate_rev_a.py`. Adding them is the next CAD
-task, and the acceptance test is arithmetic that already exists:
-`release_travel_shortfall_mm()` must stay negative for the built article
-with its **measured** stroke substituted, not its commanded one.
+1. **Keeper guides and hard stops** on the bracket, setting the travel. The
+   [assembly procedure](assembly.md) section 3 sets and measures them.
+2. **Bracket geometry** locating the servo axis at x = −40 mm relative to
+   the funnel flange. The dock footprint grows accordingly.
+
+The acceptance test is arithmetic that already exists, run against the
+article rather than the drawing: `release_travel_shortfall_mm()` must stay
+negative with the **measured** stroke substituted, not the commanded one.
 
 ## Force sizing note
 

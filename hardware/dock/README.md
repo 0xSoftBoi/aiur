@@ -22,7 +22,7 @@ Build path, in order:
 
 1. [Fabrication packet](p0a-fabrication.md) — sourcing and electrical interface
 2. [Reproducible CAD pack](cad/README.md) — regenerates the printed parts
-3. [Keeper drive](keeper-drive.md) — **open**: the 13 mm stroke linkage is not designed yet
+3. [Keeper drive](keeper-drive.md) — slider-crank delivering the 13 mm stroke; guides and bracket are bench-set
 4. [Assembly](assembly.md) — order of operations and the three adjustments that decide whether it works
 5. [Electrical evidence packet](../../docs/electrical-evidence.md) — first power-on
 6. [Bench procedure](p0a-bench.md) and its [test card](p0a-test-card.md) — running the gate
@@ -39,14 +39,13 @@ P0 targets:
 - 180 mm funnel entrance diameter;
 - compliant structural mounting;
 - low-friction polymer funnel surface;
-- spring-loaded terminal collet;
-- independent servo keeper;
+- independent servo keeper on a slider-crank drive;
 - `S1` physical probe-seat switch;
 - `S2` physical keeper-closed switch independent of the servo command;
 - total dock mass ≤180 g;
 - no exposed sharp edge within the drone approach volume.
 
-The servo is not the primary alignment mechanism. The funnel and collet should hold the probe before the keeper closes. Capture truth is `S1 AND S2`; a commanded servo position is never sufficient evidence.
+The servo is not the alignment mechanism: the funnel converts lateral error into probe centring before the keeper moves at all. The spring collet that used to sit between them is deleted — see the [deletion review](../../docs/dock-deletion-review.md) — so the keeper owns retention outright. Capture truth is `S1 AND S2`; a commanded servo position is never sufficient evidence.
 
 ## Drone-side probe
 

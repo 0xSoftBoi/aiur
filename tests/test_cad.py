@@ -7,8 +7,11 @@ from pathlib import Path
 from hardware.dock.cad.generate_rev_a import (
     CURRENT,
     REV_A,
+    crank_mesh,
     funnel_mesh,
     generate_outputs,
+    link_mesh,
+    linkage_drill_template_svg,
     keeper_mesh,
     meshes,
     probe_head_mesh,
@@ -109,3 +112,67 @@ class DockCadTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class KeeperDriveTests(unittest.TestCase):
+    """The linkage closes the other half of the stroke chain.
+
+    ``release_travel_shortfall_mm`` checks that the commanded stroke clears
+    the probe head.  Nothing checked that the mechanism can *deliver* the
+    commanded stroke, which is the same declared-but-unconsumed shape that
+    produced the Rev-A defect — a number in the dataclass that no geometry
+    had to honour.
+    """
+
+    def test_linkage_delivers_the_commanded_stroke(self) -> None:
+        self.assertLessEqual(CURRENT.drive_stroke_shortfall_mm(), 0.0)
+        # In-line slider-crank: stroke is exactly twice the crank radius.
+        self.assertAlmostEqual(
+            CURRENT.drive_stroke_mm, 2.0 * CURRENT.crank_radius_mm, places=9
+        )
+
+    def test_both_halves_of_the_stroke_chain_close(self) -> None:
+        # servo rotation -> keeper travel -> head clearance
+        self.assertLessEqual(CURRENT.drive_stroke_shortfall_mm(), 0.0)
+        self.assertLess(CURRENT.release_travel_shortfall_mm(), 0.0)
+
+    def test_obliquity_stays_bounded(self) -> None:
+        """Link angle sets the side load the keeper guides carry."""
+
+        self.assertLess(CURRENT.drive_obliquity_deg, 25.0)
+        self.assertGreater(CURRENT.link_length_mm, CURRENT.crank_radius_mm)
+
+    def test_drive_pin_stays_inside_the_keeper_back(self) -> None:
+        """A pin that breaks into the slot or out of the back edge is a reject.
+
+        keeper_mesh raises rather than generating it, so this is a build-time
+        failure, not something discovered when a printed part splits.
+        """
+
+        margin = CURRENT.drive_pin_diameter_mm / 2.0 + CURRENT.drive_pin_edge_margin_mm
+        self.assertLess(
+            CURRENT.keeper_pin_x_mm + margin, -CURRENT.keeper_slot_width_mm / 2.0
+        )
+        self.assertGreater(
+            CURRENT.keeper_pin_x_mm - margin, -CURRENT.keeper_back_reach_mm
+        )
+
+    def test_a_pin_that_breaks_into_the_slot_is_rejected(self) -> None:
+        import dataclasses
+
+        bad = dataclasses.replace(CURRENT, keeper_pin_x_mm=-1.0)
+        with self.assertRaises(ValueError):
+            keeper_mesh(bad)
+
+    def test_crank_and_link_are_watertight(self) -> None:
+        for mesh in (crank_mesh(), link_mesh()):
+            with self.subTest(mesh=mesh.name):
+                self.assertEqual(mesh.degenerate_faces(), 0)
+                self.assertEqual(mesh.nonmanifold_edges(), 0)
+                self.assertGreater(mesh.volume_mm3(), 0.0)
+
+    def test_linkage_template_carries_the_real_centres(self) -> None:
+        svg = linkage_drill_template_svg()
+        self.assertIn("50 mm CHECK", svg)
+        self.assertIn(f'cx="{20 + CURRENT.crank_radius_mm:g}"', svg)
+        self.assertIn(f'cx="{20 + CURRENT.link_length_mm:g}"', svg)
