@@ -67,6 +67,63 @@ def outdoor_breeze(mean_speed_m_s: float, *, turbulence_fraction: float = 0.25) 
     )
 
 
+@dataclass(frozen=True)
+class CarrierWakeParams:
+    """Position-dependent downwash under the carrier's belly dock.
+
+    The scene-wide :class:`AirModel` is spatially uniform; it cannot express
+    the one air disturbance that has historically decided aerial recovery —
+    the carrier's own wake in the exact volume where capture happens. Every
+    mature programme, from the 1930s Sparrowhawk trapeze through the McDonnell
+    XF-85 Goblin to DARPA Gremlins' nine near-miss contacts, spent its
+    difficulty budget on the mothership's wake, not on the mechanism. A
+    buoyant carrier at sub-metre-per-second closing speed has far less of it
+    than a C-130, which is the strongest argument for the LTA platform — but
+    "less" is not "none", and the twin was silent on it.
+
+    Modelled here as a downward bubble centred on the dock: peak downwash at
+    the throat, falling off as a Gaussian horizontally and below. The drone
+    approaches the funnel from beneath, so this pushes it *away from the seat*
+    at exactly the wrong moment. It is an engineering estimate for an unbuilt
+    vehicle, not a measured field, and it is OFF by default (``downwash_m_s``
+    zero), so every existing episode is byte-identical.
+
+    Not modelled, and flagged rather than faked: the recirculation
+    *turbulence* wake adds on top of the mean downwash (a real second-order
+    effect), and the asymmetry of a carrier under way. This is the mean
+    field only.
+    """
+
+    #: Peak downward air velocity at the dock throat, m/s. Zero disables it.
+    downwash_m_s: float = 0.0
+    #: Horizontal Gaussian falloff scale, m.
+    radius_m: float = 0.30
+    #: Vertical Gaussian falloff scale below the dock, m.
+    vertical_scale_m: float = 0.40
+
+    def __post_init__(self) -> None:
+        if self.downwash_m_s < 0:
+            raise ValueError("downwash must be non-negative")
+        if self.radius_m <= 0 or self.vertical_scale_m <= 0:
+            raise ValueError("wake falloff scales must be positive")
+
+    @property
+    def enabled(self) -> bool:
+        return self.downwash_m_s > 0.0
+
+    def velocity_at(self, drone_position: Vec3, dock_center: Vec3) -> Vec3:
+        """Downwash air velocity the drone sees at its position near the dock."""
+
+        if not self.enabled:
+            return Vec3()
+        dx = drone_position.x - dock_center.x
+        dy = drone_position.y - dock_center.y
+        dz = drone_position.z - dock_center.z
+        radial = math.exp(-(dx * dx + dy * dy) / (2.0 * self.radius_m * self.radius_m))
+        vertical = math.exp(-(dz * dz) / (2.0 * self.vertical_scale_m * self.vertical_scale_m))
+        return Vec3(0.0, 0.0, -self.downwash_m_s * radial * vertical)
+
+
 class AirModel:
     """Stateful seeded air-motion process sampled once per simulation step."""
 

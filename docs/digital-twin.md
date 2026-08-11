@@ -117,10 +117,15 @@ Two sweep studies feed the dual-use concept work in `docs/verticals/`:
 python -m aiur.sim.campaign --scenario outdoor-gust-sweep    --episodes-per-bin 30
 python -m aiur.sim.campaign --scenario degraded-sensor-sweep --episodes-per-bin 30
 python -m aiur.sim.campaign --scenario nav-bias-ramp-sweep   --episodes-per-bin 30
+python -m aiur.sim.campaign --scenario carrier-wake-sweep    --episodes-per-bin 30
 ```
 
-The third study characterizes an accepted residual rather than a vertical:
-see finding 3 below.
+The third study characterizes an accepted residual rather than a vertical;
+the fourth characterizes the carrier's own belly-dock downwash — the air
+disturbance in the exact volume where capture happens, which the survey in
+[prior-art.md](prior-art.md) identifies as the effect that historically
+decided aerial recovery, and which the scene-uniform air model could not
+express until `CarrierWakeParams` was added.
 
 Model findings as of 2026-08-08 (seed 1, 30 episodes/bin; simulation
 results, not vehicle performance):
@@ -136,6 +141,18 @@ results, not vehicle performance):
   ~63% with heavy abort churn at 30× (σ ≈ 90 mm, the scale of the funnel
   radius). Toy-grade or GNSS-grade terminal navigation therefore demands
   either a better relative sensor or a larger capture funnel (SHARED-001).
+- **Carrier wake** (12 episodes/bin, seed 1): capture is 100% through 0.10
+  m/s of belly-dock downwash, then collapses — 75% at 0.15, 50% at 0.20,
+  and 0% at 0.40 m/s. The collapse lands exactly on the terminal
+  approach-speed budget (≤0.10 m/s target, 0.20 m/s ceiling): a drone pushed
+  down faster than it closes cannot reach the seat, which is the same
+  mechanism that beat the XF-85 Goblin and cost DARPA Gremlins nine
+  near-misses. **Crucially, no episode goes unsafe** — the supervisor aborts
+  rather than crashes, so wake costs capture *rate*, not safety. The finding
+  sets a hard requirement: the carrier's dock-region downwash must be held
+  below ~0.1 m/s, which a slow buoyant vehicle can plausibly meet and a
+  prop-wash-heavy one cannot — the executable form of why the platform is
+  buoyant, and a number the P0 bench must confirm against real airflow.
 
 ## Fleet-scale study
 

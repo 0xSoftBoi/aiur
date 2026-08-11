@@ -72,13 +72,19 @@ machine
   an indoor helium airship at <0.2 m/s closing speed has a fraction of that
   disturbance. The thing that beat everyone is the thing our platform has
   least of. This is the strongest external argument for the LTA approach.
-- But **our model does not represent carrier wake at all.** Terminal-traffic
-  interaction models aircraft-on-aircraft; it does not model the carrier's
-  own downwash/recirculation over the belly dock. Given that wake is *the*
-  historical killer, this is the most important unmodelled physics, and it
-  belongs in the twin (or on the P0 bench) before any outdoor claim. The
-  Gremlins pattern — **dock on a stabilised line below and away from the
-  hull, not flush to the belly** — is a design option worth carrying.
+- Carrier wake **was** the most important unmodelled physics, and this survey
+  is what prompted adding it. The twin now carries `CarrierWakeParams` — a
+  downwash bubble on the dock — and the `carrier-wake-sweep` study (see
+  [digital-twin.md](digital-twin.md)) locates the collapse: capture holds to
+  0.10 m/s of downwash and falls to zero by 0.40, exactly on the terminal
+  approach-speed budget, and it does so *safely* (aborts, not crashes). The
+  requirement that falls out — dock-region downwash below ~0.1 m/s — is one a
+  slow buoyant carrier can meet and a C-130 cannot, which is the executable
+  form of why this platform is buoyant. Still to do: the *turbulent*
+  recirculation wake on top of the mean field, and bench correlation against
+  real airflow. The Gremlins pattern — **dock on a stabilised line below and
+  away from the hull, not flush to the belly** — remains a design option
+  worth carrying to keep the aircraft out of the worst of it.
 
 ## 2. Launch and swarm autonomy — comparatively solved
 
@@ -169,11 +175,13 @@ prove.
    and the memo should hold both: **recovery is the hard engineering problem
    and the cheap scaling resource.** Do not let the second sentence retire the
    first.
-2. **Add carrier wake to the risk register.** It is the historical killer of
-   aerial recovery and the twin does not model it. The LTA platform mitigates
-   it (slow, low prop wash) but does not remove it, and the outdoor verticals
-   cannot be believed until it is quantified. Consider the Gremlins
-   below-and-away stabilised-dock pattern.
+2. **Carrier wake is now modelled** (this survey prompted it). The
+   `carrier-wake-sweep` locates the capture collapse at the terminal
+   approach-speed budget and shows it stays safe; the requirement is
+   dock-region downwash below ~0.1 m/s, which the LTA platform can meet.
+   Remaining: turbulent recirculation on top of the mean field, and bench
+   correlation. The Gremlins below-and-away stabilised-dock pattern is the
+   mitigation to carry.
 3. **Autonomy is externally confirmed as the scaling pivot.** OFFSET's one
    operator over ~170 platforms is the verdict's claim, fielded. Fund it.
 4. **The logistics are de-risked by Hive.** The magazine/indexer/charge

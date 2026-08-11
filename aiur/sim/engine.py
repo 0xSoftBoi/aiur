@@ -30,7 +30,7 @@ from .bodies import (
     KinematicRig,
     RigParams,
 )
-from .disturbances import AirModel, AirModelParams, INDOOR_CALM
+from .disturbances import AirModel, AirModelParams, CarrierWakeParams, INDOOR_CALM
 from .dock_physics import DockAssembly, DockCommands, DockGeometry, DockStepResult
 from .events import Event, EventKind, UNSAFE_EVENT_KINDS
 from .faults import FaultInjector, FaultSpec, FaultTargets
@@ -80,6 +80,9 @@ class EpisodeConfig:
     dt_s: float = 0.02
     max_duration_s: float = 180.0
     air: AirModelParams = INDOOR_CALM
+    #: Carrier belly-dock downwash. Off by default (zero downwash), so
+    #: existing episodes are unchanged; the wake-sweep enables it.
+    wake: CarrierWakeParams = CarrierWakeParams()
     drone_sensor: PoseSensorParams = LIGHTHOUSE_GRADE
     dock_sensor: PoseSensorParams = LIGHTHOUSE_GRADE
     drone_params: DroneParams = DroneParams()
@@ -460,7 +463,14 @@ class _EpisodeRunner:
             for index, decision in enumerate(decisions):
                 drone = self.drones[index]
                 if drone.armed:
-                    drone.step(dt, decision.velocity_cmd, air_velocity)
+                    # The drone flies through the carrier's wake near the
+                    # dock; the platform does not fly through its own. With
+                    # wake off, velocity_at returns zero and this is the
+                    # scene-uniform air_velocity exactly as before.
+                    drone_air = air_velocity + self.config.wake.velocity_at(
+                        drone.position, dock_center
+                    )
+                    drone.step(dt, decision.velocity_cmd, drone_air)
 
             engaged_drone = self.drones[self.engaged] if self.engaged is not None else None
             commands = (
