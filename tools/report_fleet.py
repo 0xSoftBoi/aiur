@@ -2,7 +2,59 @@
 import json, sys
 
 
+def render_design_points(report: dict) -> str:
+    out = ["FLEET DESIGN POINTS — the whole carrier, every constraint on"]
+    svc = report["service_model"]
+    out.append(
+        f"service model: p_capture={svc['p_capture']:.3f}, "
+        f"mean head occupancy {sum(svc['occupancy_samples_s'])/len(svc['occupancy_samples_s']):.1f}s, "
+        f"energy: {report['energy_mode']}"
+    )
+    out.append("")
+    for p in report["design_points"]:
+        b, m = p["bill"], p["metrics"]
+        status = "SERVED" if p["converged"] else "NOT CONVERGED"
+        out.append(
+            f"=== {p['target_airborne']} aircraft airborne  [{status}]  "
+            f"(achieved {p['achieved_airborne']:.1f}, {p['iterations']} iterations)"
+        )
+        out.append(f"    binding constraint: {p['binding_constraint']}")
+        out.append("    bill of materials:")
+        out.append(f"      airframes owned         {b['fleet_size']}")
+        out.append(f"      capture heads           {b['capture_heads']}")
+        out.append(f"      magazine slots          {b['magazine_slots']}")
+        out.append(f"      launch lanes            {b['launch_lanes']}")
+        out.append(
+            f"      radios                  {b['radio_channels']} "
+            f"x {b['links_per_channel']} links = {b['radio_channels']*b['links_per_channel']}"
+        )
+        out.append(f"      ballast rate            {b['ballast_rate_g_s']:.0f} g/s")
+        out.append(
+            f"      trim authority          {b['pitch_authority_g_m']}/{b['roll_authority_g_m']} g·m pitch/roll"
+        )
+        if b["energy_mode"] == "swap":
+            out.append(
+                f"      battery pool            {b['spare_packs']} spare packs, "
+                f"{b['charger_channels']} chargers"
+            )
+        out.append(
+            f"      dock mass               {b['dock_mass_g']:.0f} g "
+            f"(heads + {b['magazine_slots']} passive slots)"
+        )
+        out.append(
+            f"    mechanism life: {m['keeper_cycles']} keeper + {m['swap_cycles']} swap "
+            "actuations / 4h (qualify to 2x, per NASA-STD-5017)"
+        )
+        out.append("")
+    out.append("notes:")
+    for note in report["design_points"][0]["notes"]:
+        out.append(f"  - {note}")
+    return "\n".join(out)
+
+
 def render(report: dict) -> str:
+    if report.get("study") == "fleet design point":
+        return render_design_points(report)
     out = []
     svc = report["service_model"]
     base = report["base_params"]

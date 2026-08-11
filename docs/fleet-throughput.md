@@ -317,6 +317,55 @@ system would need instead of unicast control. It says only "you cannot fly
 more than you can talk to", which is the floor of the problem, not its
 ceiling.
 
+## A worked design point: what "hundreds airborne" actually costs
+
+The sections above each size one resource. That is how the effects were
+found, but it is not an answer — the binding constraint walks the chain, so
+the only honest cost is with every constraint on at once. The
+`size_for_airborne` solver does that: it takes a target **airborne** count
+(the number that does something, not the number owned), seeds a
+configuration from the duty cycle, then repairs it against the integrated
+simulation — reading the binding constraint each run reports and buying down
+exactly that resource until the carrier both serves its fleet and holds the
+target overhead.
+
+```
+python -m aiur.sim.fleet --target-airborne 50 100 | python tools/report_fleet.py
+python -m aiur.sim.fleet --target-airborne 50 100 --energy swap | python tools/report_fleet.py
+```
+
+For a Crazyflie-class duty cycle (600 s endurance, 420 s sortie, 3600 s
+recharge), the bill for **100 aircraft airborne** is:
+
+| resource | charge-in-place | battery swap |
+| --- | ---: | ---: |
+| airframes owned | ~965 | ~110 |
+| capture heads | 10 | 10 |
+| magazine slots | ~965 | ~110 |
+| launch lanes | 2 | 2 |
+| radios (×20 links) | 5 | 5 |
+| ballast rate | ~12 g/s | ~12 g/s |
+| charger channels | — | ~1,030 |
+| binding constraint | radio | radio |
+
+The two columns are the whole argument in one table. **Charge-in-place
+turns "100 airborne" into a 965-airframe programme** — the ~10% airborne
+fraction, paid in aircraft. **Battery swap cuts that to ~110 airframes** but
+moves the cost into ~1,030 charger channels and their spare packs: the same
+energy throughput, held in batteries instead of airframes. Which is cheaper
+is the real procurement question, and it is now a number, not a hand-wave.
+
+Radio is the taut constraint at both points because the link budget scales
+linearly with airborne count and the solver sizes it to exactly meet the
+target — so "buy radios for the aircraft you intend to fly" is not a caveat,
+it is line one of the bill. Capture heads, the thing the programme currently
+worries about, are ten either way and never the wall.
+
+The solver leaves terminal-traffic interaction off (independent corridors),
+so its head and airspace counts are lower bounds; and it sizes trim, pitch,
+roll and pack authorities as *requirements the vehicle must meet*, not as
+things known to exist. It is a sizing tool, not a validation.
+
 ## What this does not say
 
 - **Terminal-traffic interaction is an overlay, off by default.** With it

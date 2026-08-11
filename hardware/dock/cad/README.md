@@ -2,6 +2,13 @@
 
 This directory contains the reproducible first fabrication geometry for the CARRIER-P0 recovery dock. It is deliberately simple enough to regenerate with stock Python; the STL files are outputs, not the source of truth.
 
+**Requires Python 3.9 or newer.** The generator uses builtin generic
+subscripting (`tuple[float, float, float]`) and `X | None` annotations, so on
+an older interpreter it fails at import with
+`TypeError: 'type' object is not subscriptable` rather than with a version
+message. macOS still ships 3.8 as `python3` in some environments; check with
+`python3 --version` before printing anything.
+
 Generate and validate the pack from the repository root:
 
 ```bash

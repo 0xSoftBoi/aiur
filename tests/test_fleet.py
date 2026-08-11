@@ -975,6 +975,78 @@ class Calibration(unittest.TestCase):
         self.assertGreater(model.mean_occupancy_s, 0.0)
 
 
+class DesignPointSynthesis(unittest.TestCase):
+    """The integrated answer: size the whole carrier for a target airborne.
+
+    Sizing one resource at a time is how the effects were found; it is not an
+    answer, because the binding constraint walks the chain. These guard the
+    synthesis that turns the pile of overlays into a bill of materials — that
+    it converges, that the bill actually serves the target when simulated,
+    and that the two energy architectures make the trade the memo claims.
+    """
+
+    def _svc(self):
+        # A cheap real-ish service model; the solver only needs a mean
+        # occupancy and a capture probability, so the synthetic one is fine
+        # and keeps the test off the twin.
+        return service(p_capture=1.0, occupancy=20.0)
+
+    def test_converges_and_the_bill_actually_serves_the_target(self):
+        from aiur.sim.fleet import size_for_airborne
+
+        dp = size_for_airborne(50, service=self._svc(), seed=1)
+        self.assertTrue(dp.converged)
+        self.assertGreaterEqual(dp.achieved_airborne, 0.97 * 50)
+        # Rebuild the sized carrier and confirm it independently serves.
+        b = dp.bill
+        rebuilt = simulate_fleet(
+            FleetParams(
+                fleet_size=b["fleet_size"],
+                capture_heads=b["capture_heads"],
+                launch_lanes=b["launch_lanes"],
+                ballast_rate_g_s=b["ballast_rate_g_s"],
+                magazine_span_m=30.0,
+                magazine_width_m=8.0,
+                magazine_columns=4,
+                pitch_authority_g_m=b["pitch_authority_g_m"],
+                roll_authority_g_m=b["roll_authority_g_m"],
+                radio_channels=b["radio_channels"],
+                links_per_channel=b["links_per_channel"],
+            ),
+            self._svc(),
+            seed=1,
+        )
+        self.assertTrue(rebuilt.serves_fleet)
+        self.assertGreaterEqual(rebuilt.mean_airborne, 0.97 * 50)
+
+    def test_more_airborne_needs_more_of_everything(self):
+        from aiur.sim.fleet import size_for_airborne
+
+        small = size_for_airborne(20, service=self._svc(), seed=1)
+        large = size_for_airborne(100, service=self._svc(), seed=1)
+        self.assertGreater(large.bill["fleet_size"], small.bill["fleet_size"])
+        self.assertGreaterEqual(large.bill["capture_heads"], small.bill["capture_heads"])
+        self.assertGreaterEqual(large.bill["radio_channels"], small.bill["radio_channels"])
+
+    def test_swap_buys_airframes_with_batteries(self):
+        # The end-to-end form of the swap trade: for the same target, swap
+        # needs far fewer airframes but a large charger pool.
+        from aiur.sim.fleet import size_for_airborne
+
+        cip = size_for_airborne(50, service=self._svc(), use_swap=False, seed=1)
+        swap = size_for_airborne(50, service=self._svc(), use_swap=True, seed=1)
+        self.assertLess(swap.bill["fleet_size"], cip.bill["fleet_size"] // 2)
+        self.assertIsNone(cip.bill["charger_channels"])
+        self.assertGreater(swap.bill["charger_channels"], 0)
+
+    def test_the_bill_names_a_binding_constraint(self):
+        from aiur.sim.fleet import size_for_airborne
+
+        dp = size_for_airborne(30, service=self._svc(), seed=1)
+        self.assertTrue(dp.binding_constraint)
+        self.assertTrue(dp.notes)
+
+
 class Report(unittest.TestCase):
     def test_report_carries_the_fields_a_decision_reads(self):
         report = run_study(
