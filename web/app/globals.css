@@ -765,7 +765,27 @@ h2 em {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
   border: 1px solid var(--line);
-  background: var(--line);
+  background: #0a0b0b;
+}
+
+/* Separators are drawn per card rather than by showing the grid's background
+   through the gaps: a card mid-reveal would otherwise expose that colour. */
+.app-card {
+  outline: 1px solid var(--line);
+}
+
+/* The grid reveals as one block; its cards stagger inside it. */
+[data-reveal-ready] .app-grid[data-reveal] .app-card {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 560ms cubic-bezier(0.2, 0.7, 0.3, 1) var(--delay, 0ms),
+    transform 560ms cubic-bezier(0.2, 0.7, 0.3, 1) var(--delay, 0ms);
+}
+
+[data-reveal-ready] .app-grid[data-reveal][data-revealed] .app-card {
+  opacity: 1;
+  transform: none;
 }
 
 .app-card {
@@ -1935,9 +1955,8 @@ h2 em {
   right: 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  background: rgba(9, 10, 10, 0.97);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: #090a0a;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
   animation: panel-in 200ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
