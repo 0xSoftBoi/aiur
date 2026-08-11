@@ -468,7 +468,22 @@ wants **autonomy out, not video back**.
 lift, and being a single point of failure. Hundreds airborne over a region
 is not one impossible mothership; it is a **mesh of carriers, each cycling a
 few dozen autonomous aircraft, tiled geographically.** This model sizes one
-node. The region is N nodes, and lift and radio both punish the monolith.
+node; the region is N nodes.
+
+But the mesh is not an *economy* — and the sizer says so. Slice a 200-airborne
+region across nodes of different size and the aggregate airframe count is
+invariant (~1,930 whether it is ten nodes of 20 or two of 100): the duty
+cycle is linear, so distributing the swarm neither creates nor destroys the
+bill. Worse, the per-node quantised resources — radios, capture heads — get
+*mildly dearer* with many small nodes, because each node wastes a fractional
+minimum (20 radios across ten small nodes versus 12 across two large ones).
+So the number of carriers is not chosen for efficiency; there is none to
+find in the aircraft bill. It is chosen for the things this model does not
+carry: what one vehicle can physically lift and power, resilience against
+losing a node, geographic coverage, and inter-node relay and handoff for
+range. Those terms — carrier structure and crew favouring fewer big nodes,
+coverage and relay favouring more small ones — are where the vehicle-count
+decision actually lives.
 
 The sizer confirms this by probing, not by which check fires first. For each
 converged design point it reduces every resource one step and reports the

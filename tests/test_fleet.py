@@ -1124,6 +1124,47 @@ class MixedFleet(unittest.TestCase):
             self.assertTrue(c["converged"])
 
 
+class CarrierMesh(unittest.TestCase):
+    """A region is N carrier nodes; slicing does not make the bill cheaper.
+
+    The verdict says one carrier is the wrong unit. The mesh sizer tests the
+    tempting corollary — that spreading the swarm across more carriers is
+    cheaper — and finds it false: the aggregate airframe count is invariant
+    to slicing, and quantised resources get mildly worse with many small
+    nodes. Slicing is for resilience and coverage, not economy.
+    """
+
+    def _svc(self):
+        return service(p_capture=1.0, occupancy=20.0)
+
+    def test_aggregate_airframes_are_invariant_to_slicing(self):
+        from aiur.sim.fleet import size_mesh
+
+        r = size_mesh(100, service=self._svc(), per_node_options=(25, 50, 100), seed=1)
+        airframes = [row["agg_airframes"] for row in r["rows"]]
+        spread = (max(airframes) - min(airframes)) / max(airframes)
+        # Within a couple percent — the duty cycle is linear, so how you
+        # slice the region barely moves the total.
+        self.assertLess(spread, 0.05)
+
+    def test_many_small_nodes_do_not_reduce_the_radio_count(self):
+        from aiur.sim.fleet import size_mesh
+
+        r = size_mesh(100, service=self._svc(), per_node_options=(25, 100), seed=1)
+        by = {row["per_node_airborne"]: row for row in r["rows"]}
+        # More, smaller nodes waste per-node radio minimums, so their
+        # aggregate radio count is no better — and usually worse.
+        self.assertGreaterEqual(by[25]["agg_radios"], by[100]["agg_radios"])
+
+    def test_node_count_is_ceiling_of_the_split(self):
+        from aiur.sim.fleet import size_mesh
+
+        r = size_mesh(150, service=self._svc(), per_node_options=(40,), seed=1)
+        row = r["rows"][0]
+        self.assertEqual(row["nodes"], 4)  # ceil(150 / 40)
+        self.assertGreaterEqual(row["capacity_airborne"], 150)
+
+
 class Report(unittest.TestCase):
     def test_report_carries_the_fields_a_decision_reads(self):
         report = run_study(
