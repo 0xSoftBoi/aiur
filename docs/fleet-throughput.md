@@ -407,7 +407,16 @@ Scout endurance, mass and per-link video cost are estimates for an airframe
 that has not been built; the radio verdict is only as good as the per-link
 cost behind it.
 
-## The verdict: recovery is the easy part
+## The verdict: recovery is the easy part *to scale*
+
+One clarification before the argument, because [prior art](prior-art.md)
+insists on it: a single aerial capture is a genuinely hard *capability* — it
+took DARPA Gremlins years and nine near-miss contacts, and turbulence has
+defeated every attempt back to the 1930s Goblin. That is exactly why P0 is
+funded on the dock. What follows is *not* that recovery is easy to build. It
+is that recovery is cheap to **scale**: it amortises, and the scaling walls
+are elsewhere. Hold both — the hard engineering problem is also the cheap
+scaling resource.
 
 Put every section above together and the model reaches a conclusion the
 programme is not currently organised around. Size the whole carrier, all
