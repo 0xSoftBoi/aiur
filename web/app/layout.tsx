@@ -1,10 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
+import { SiteFooter } from "@/components/site-footer";
+import { SceneGate } from "@/components/scene-gate";
+import { ScrollReveal } from "@/components/scroll-reveal";
+import { SiteHeader } from "@/components/site-header";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AIUR — Airborne Infrastructure",
+  title: {
+    default: "AIUR — Airborne Infrastructure",
+    template: "%s — AIUR",
+  },
   description:
     "A lighter-than-air carrier built to deploy, coordinate, and recover autonomous aircraft.",
   metadataBase: new URL("https://aiur.vercel.app"),
@@ -24,7 +32,16 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SceneGate />
+        <ScrollReveal />
+        <a className="skip-link" href="#top">
+          Skip to content
+        </a>
+        <SiteHeader />
+        <main id="top">{children}</main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }
