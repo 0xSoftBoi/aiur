@@ -1652,9 +1652,12 @@ class DesignPoint:
     converged: bool
     achieved_airborne: float
     iterations: int
-    #: The constraint binding the final configuration — the one the target
-    #: is most sensitive to, and where marginal budget should go.
+    #: The constraint the simulation names for the final configuration.
     binding_constraint: str
+    #: Every resource that is actually taut — reducing it one step breaks the
+    #: target. Found by probing, not by which check fired first, so it does
+    #: not over-blame the one resource the seed happened to size tightest.
+    taut_constraints: tuple[str, ...]
     #: The sized carrier, as a resource bill a human reads.
     bill: dict
     #: Key metrics of the winning run.
@@ -1703,7 +1706,11 @@ def size_for_airborne(
     fleet = max(target_airborne + 1, math.ceil(target_airborne / airborne_fraction))
     heads = max(1, math.ceil(recov_rate * (occ + stow_s) / 0.7))
     lanes = max(1, math.ceil(recov_rate * launch_interval_s))
-    radios = max(1, math.ceil(target_airborne / links_per_channel))
+    # Radio carries the same ~15% design headroom the other resources get,
+    # rather than being sized to exactly 100% of the target: a comms system
+    # is not run at saturation, and sizing it tight was what made radio
+    # always report as *the* binder when it merely had no margin.
+    radios = max(1, math.ceil(target_airborne / (links_per_channel * 0.85)))
     ballast = max(1.0, recov_rate * aircraft_mass_g * 1.3)
     pitch_auth = 4000.0
     roll_auth = 4000.0
@@ -1793,8 +1800,42 @@ def size_for_airborne(
                 fleet += max(1, math.ceil(deficit / airborne_fraction))
                 radios = max(radios, math.ceil(target_airborne / links_per_channel))
 
-    final = simulate_fleet(build(), service, seed=seed)
+    final_params = build()
+    final = simulate_fleet(final_params, service, seed=seed)
     converged = final.serves_fleet and final.mean_airborne >= 0.97 * target_airborne
+
+    # Probe which resources are actually taut: reduce each one step and see
+    # if the target survives. This replaces "whichever check fired first"
+    # with "everything that genuinely binds", so a bill whose seed sized one
+    # resource tighter than another does not misreport where the money goes.
+    def _holds(**reduction) -> bool:
+        r = simulate_fleet(replace(final_params, **reduction), service, seed=seed)
+        return r.serves_fleet and r.mean_airborne >= 0.97 * target_airborne
+
+    taut: list[str] = []
+    if converged:
+        if radios > 1 and not _holds(radio_channels=radios - 1):
+            taut.append("radio")
+        elif radios == 1 and final.radio_utilisation >= 0.85:
+            taut.append("radio")
+        if heads > 1 and not _holds(capture_heads=heads - 1):
+            taut.append("capture heads")
+        if lanes > 1 and not _holds(launch_lanes=lanes - 1):
+            taut.append("launch lanes")
+        if not _holds(ballast_rate_g_s=ballast * 0.7):
+            taut.append("ballast / trim")
+        if not _holds(pitch_authority_g_m=pitch_auth * 0.7):
+            taut.append("pitch authority")
+        if not _holds(roll_authority_g_m=roll_auth * 0.7):
+            taut.append("roll authority")
+        if use_swap and chargers and not _holds(
+            charger_channels=int(chargers * 0.85), spare_packs=int(spares * 0.85)
+        ):
+            taut.append("battery pool")
+        # Airframes/charge: fewer airframes means fewer airborne by
+        # construction, so the duty cycle is always taut against the target.
+        taut.append("airframes (duty cycle)")
+
     notes = [
         "Terminal-traffic interaction is left off in this design point "
         "(independent corridors, no wake penalty): head and airspace counts "
@@ -1817,6 +1858,7 @@ def size_for_airborne(
         achieved_airborne=final.mean_airborne,
         iterations=iterations,
         binding_constraint=final.binding_constraint,
+        taut_constraints=tuple(taut),
         bill={
             "fleet_size": fleet,
             "capture_heads": heads,

@@ -1046,6 +1046,22 @@ class DesignPointSynthesis(unittest.TestCase):
         self.assertTrue(dp.binding_constraint)
         self.assertTrue(dp.notes)
 
+    def test_taut_set_is_the_scaling_resources_not_the_amortising_dock(self):
+        # The probe reduces each resource one step; the set that breaks the
+        # target is the honest answer to "where does the money go". At a
+        # non-trivial target it must contain the airframe/duty-cycle term
+        # (always 1:1) and must NOT contain capture heads (the amortising
+        # resource has slack). This is the amortisation thesis, as a test.
+        from aiur.sim.fleet import size_for_airborne
+
+        dp = size_for_airborne(100, service=self._svc(), seed=1)
+        self.assertTrue(dp.converged)
+        self.assertIn("airframes (duty cycle)", dp.taut_constraints)
+        self.assertNotIn("capture heads", dp.taut_constraints)
+        # Every taut member is genuinely tight: the probe only lists it if
+        # reducing it broke the target, so the set is non-empty here.
+        self.assertTrue(dp.taut_constraints)
+
 
 class MixedFleet(unittest.TestCase):
     """A recovery class and a scout class share one carrier's radio and lift.

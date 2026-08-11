@@ -18,7 +18,11 @@ def render_design_points(report: dict) -> str:
             f"=== {p['target_airborne']} aircraft airborne  [{status}]  "
             f"(achieved {p['achieved_airborne']:.1f}, {p['iterations']} iterations)"
         )
-        out.append(f"    binding constraint: {p['binding_constraint']}")
+        taut = p.get("taut_constraints") or []
+        out.append(
+            "    taut (reducing any one breaks the target): "
+            + (", ".join(taut) if taut else "—")
+        )
         out.append("    bill of materials:")
         out.append(f"      airframes owned         {b['fleet_size']}")
         out.append(f"      capture heads           {b['capture_heads']}")
