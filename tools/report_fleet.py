@@ -52,7 +52,43 @@ def render_design_points(report: dict) -> str:
     return "\n".join(out)
 
 
+def render_mixed_fleet(report: dict) -> str:
+    sh = report["shared"]
+    out = ["MIXED-FLEET CARRIER — recovery aircraft and scouts on one platform"]
+    out.append("")
+    out.append("SHARED (summed across classes — one radio, one launch airspace, one lift):")
+    out.append(
+        f"  radios              {sh['radios']} x {sh['links_per_channel']} links "
+        f"= {sh['radios']*sh['links_per_channel']} concurrent"
+    )
+    out.append(
+        f"  radio link load     {sh['total_link_load']:.0f} "
+        f"({100*sh['radio_utilisation']:.0f}% of budget), dominated by {report['radio_dominated_by']}"
+    )
+    out.append(f"  launch lanes        {sh['launch_lanes_total']} total")
+    out.append(f"  airframe mass       {sh['airframe_mass_kg']:.1f} kg carried")
+    out.append("")
+    out.append("PER CLASS (own dock, own duty cycle):")
+    hdr = f"  {'class':<13} {'airborne':>8} {'links/ea':>8} {'radio load':>11} {'fleet':>6} {'heads':>6} {'lanes':>6}"
+    out.append(hdr)
+    out.append("  " + "-" * (len(hdr) - 2))
+    for c in report["classes"]:
+        flag = "" if c["converged"] else "  [NOT CONVERGED]"
+        out.append(
+            f"  {c['name']:<13} {c['target_airborne']:>8} {c['radio_links_each']:>8.1f} "
+            f"{c['link_load']:>11.0f} {c['fleet_size']:>6} {c['capture_heads']:>6} "
+            f"{c['launch_lanes']:>6}{flag}"
+        )
+    out.append("")
+    out.append("notes:")
+    for note in report["notes"]:
+        out.append(f"  - {note}")
+    return "\n".join(out)
+
+
 def render(report: dict) -> str:
+    if report.get("study") == "mixed-fleet carrier":
+        return render_mixed_fleet(report)
     if report.get("study") == "fleet design point":
         return render_design_points(report)
     out = []

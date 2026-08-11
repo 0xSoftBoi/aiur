@@ -1047,6 +1047,67 @@ class DesignPointSynthesis(unittest.TestCase):
         self.assertTrue(dp.notes)
 
 
+class MixedFleet(unittest.TestCase):
+    """A recovery class and a scout class share one carrier's radio and lift.
+
+    The carrier flies more than one kind of aircraft. The insight to guard is
+    that the shared resources — radio above all — are summed, so a small,
+    radio-hungry scout wing can dominate the budget out of all proportion to
+    its airborne count.
+    """
+
+    def _svc(self):
+        return service(p_capture=1.0, occupancy=20.0)
+
+    def test_video_scouts_dominate_the_shared_radio(self):
+        from aiur.sim.fleet import ClassSpec, size_carrier
+
+        classes = [
+            ClassSpec("recovery", 20, radio_links=1.0),
+            ClassSpec(
+                "scout", 10, mass_g=25, endurance_s=180, sortie_s=120,
+                recharge_s=1800, radio_links=4.0,
+            ),
+        ]
+        r = size_carrier(classes, service=self._svc(), links_per_channel=20)
+        # 10 scouts at 4 links = 40; 20 recovery at 1 = 20. Scouts dominate.
+        self.assertEqual(r["radio_dominated_by"], "scout")
+        loads = {c["name"]: c["link_load"] for c in r["classes"]}
+        self.assertGreater(loads["scout"], loads["recovery"])
+        self.assertEqual(r["shared"]["total_link_load"], 60.0)
+
+    def test_link_cost_drives_the_radio_count_monotonically(self):
+        from aiur.sim.fleet import ClassSpec, size_carrier
+
+        def radios(cost):
+            classes = [
+                ClassSpec("recovery", 20, radio_links=1.0),
+                ClassSpec("scout", 10, mass_g=25, endurance_s=180, sortie_s=120,
+                          recharge_s=1800, radio_links=cost),
+            ]
+            return size_carrier(classes, service=self._svc(), links_per_channel=20)[
+                "shared"
+            ]["radios"]
+
+        counts = [radios(c) for c in (1.0, 4.0, 8.0)]
+        self.assertEqual(counts, sorted(counts))
+
+    def test_each_class_is_sized_on_its_own_duty_cycle(self):
+        from aiur.sim.fleet import ClassSpec, size_carrier
+
+        classes = [
+            ClassSpec("recovery", 20, endurance_s=600, sortie_s=420, recharge_s=3600),
+            ClassSpec("scout", 20, mass_g=25, endurance_s=180, sortie_s=120, recharge_s=1800),
+        ]
+        r = size_carrier(classes, service=self._svc(), links_per_channel=20)
+        by = {c["name"]: c for c in r["classes"]}
+        # Same airborne target, but the short-legged scout recovers far more
+        # often, so it needs more heads than the long-legged recovery class.
+        self.assertGreaterEqual(by["scout"]["capture_heads"], by["recovery"]["capture_heads"])
+        for c in r["classes"]:
+            self.assertTrue(c["converged"])
+
+
 class Report(unittest.TestCase):
     def test_report_carries_the_fields_a_decision_reads(self):
         report = run_study(

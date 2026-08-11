@@ -82,4 +82,9 @@ Do not power an actuator until A0 produces:
 - photographs of the closed load path and keeper guides;
 - a disposition for any hand-work performed on load-bearing geometry.
 
+A0 must also produce the three measurements that decide A1 purchases — S1
+actuation force, free-probe wander, and closed-contact current — listed with
+their thresholds in the [build plan](p0a-build-plan.md) and captured in
+[`p0a-a0-measurements-template.csv`](p0a-a0-measurements-template.csv).
+
 A1 then freezes the actuator linkage, passive first-capture insert, switch brackets, and wiring revision. Only the complete A1 article can run the run-in/600-cycle/5 N/1 N P0-A procedure.

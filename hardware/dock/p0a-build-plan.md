@@ -96,11 +96,20 @@ A0 exits when it has produced, per the fabrication pack:
 - photographs of the closed load path and keeper guides;
 - a disposition for any hand-work performed on load-bearing geometry.
 
-Add three measurements that A1 purchases depend on:
+Add three measurements that A1 purchases depend on. These are not part of the
+original A0 list, and they are the reason Stage 2 can close at all — each one
+decides a purchase that is otherwise a guess. Record them in
+[`p0a-a0-measurements-template.csv`](p0a-a0-measurements-template.csv), which
+is pre-populated with the three rows so they cannot be quietly skipped.
 
-- **S1 actuation force available from a seated probe.** Selects the switch variant.
-- **Free-probe wander with the keeper open.** Above 0.60 mm reinstates the deleted passive backstop, which changes what gets built. At or below, the deletion holds.
-- **Contact current with the candidate pull-up fitted.** Below 3.0 mA, fit the 680 Ω.
+| Measurement | Threshold | Decides |
+| --- | --- | --- |
+| S1 actuation force available from a seated probe | Compare against 1.47 N / 0.74 N / lever | Which switch variant is built in — the docked static weight is 0.468 N, below even the 0.74 N variant |
+| Free-probe wander, keeper open, worst direction | >0.60 mm reinstates the deleted backstop | Whether the deletion review's disposition still holds, and therefore what gets built |
+| Closed-contact current with the candidate pull-up | <3.0 mA fits 680 Ω rather than 1.0 kΩ; must stay above the ~1.5 mA micro-load boundary | The pull-up value, which in turn releases the fault-insertion relay board |
+
+A measurement recorded without its decision is half-done: the `decision` column
+is what Stage 2 reads.
 
 ## Stage 2 — freezes
 
