@@ -80,10 +80,53 @@ export default function CommitmentsPage() {
         </div>
       </section>
 
+      <section className="plate-section" aria-labelledby="plate-title">
+        <div className="shell">
+          <div className="section-meta light-meta">
+            <span>02 / CONTROLLED GEOMETRY</span>
+            <span>REV-B / SCREENING ARTICLE</span>
+          </div>
+          <div className="section-head">
+            <h2 id="plate-title">The drawing is generated, not drawn</h2>
+            <p className="section-lede">
+              Every callout below is emitted by the same script that writes the
+              STLs the printer receives. A dimension on this sheet cannot
+              disagree with the part that gets made.
+            </p>
+          </div>
+
+          <figure className="plate" data-reveal>
+            <div className="plate-sheet">
+              <img
+                src="/p0a_cross_section_rev_b_dark.svg"
+                alt="Dimensioned cross-section of the P0-A Rev-B recovery interface: Ø180 mm funnel mouth, Ø16 mm throat, 65 mm depth, Ø12 mm probe belt, Ø9 mm seat, 5.2 mm keeper slot, 110 mm probe tip standoff above the rotor plane."
+              />
+            </div>
+            <figcaption className="plate-block">
+              <div><span>DRAWING</span><strong>P0A-XS-REV-B</strong></div>
+              <div><span>REVISION</span><strong>B</strong></div>
+              <div><span>UNITS</span><strong>MILLIMETRES</strong></div>
+              <div><span>SOURCE</span><strong>generate_rev_a.py</strong></div>
+              <div><span>COMMIT</span><strong>ab364ba</strong></div>
+              <div><span>STATUS</span><strong>SCREENING ARTICLE</strong></div>
+            </figcaption>
+          </figure>
+
+          <div className="note-band">
+            <span>WHAT THIS SHEET IS NOT</span>
+            <p>
+              First-article fit geometry, not production interface control
+              dimensions and not a flight-qualified part. The physical fit owns
+              the final geometry; this sheet owns what gets printed to test it.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="rules paper-section" id="rules" aria-labelledby="rules-title">
         <div className="shell">
           <div className="section-meta">
-            <span>02 / DESIGN RULES</span>
+            <span>03 / DESIGN RULES</span>
             <span>NON-NEGOTIABLE</span>
           </div>
           <div className="section-head">
