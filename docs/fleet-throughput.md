@@ -202,6 +202,40 @@ drifting vertically has not served its fleet — it is moving the dock under
 aircraft on terminal approach, which is the one thing the entire capture
 architecture exists to avoid.
 
+### Pitch: where you stow them, not just how many
+
+The ballast term above is a scalar — total mass off the carrier against a
+heave chase. It says nothing about *where* the stowed aircraft sit, and a
+magazine is a line of slots along the keel: a partially-filled one is only
+balanced if its occupied slots are symmetric about the neutral point. The
+model now optionally carries that geometry (`--magazine-span-m`, off by
+default so the numbers above are unchanged), tracks the longitudinal pitch
+moment of the stow distribution, and folds a pitch-authority exceedance into
+the pass criterion the same way heave is.
+
+The finding is that **the stow policy is a free pitch-trim control input,
+and getting it wrong fails the carrier on identical hardware.** For a
+200-aircraft carrier over a 30 m magazine, held to a 2000 g·m pitch
+authority:
+
+- a **balanced** policy — index each recovered aircraft into the free slot
+  that pulls the centroid back toward neutral — peaks at ~1,600 g·m and
+  holds;
+- an **edge** policy — the naive revolver or belt that just uses the next
+  physical slot — peaks at ~12,800 g·m and is outside authority essentially
+  all the time.
+
+Same aircraft, same fleet, same dock; the only difference is which slot the
+indexer chooses, and one serves the fleet while the other pitches the
+vehicle continuously under the aircraft trying to land on it. Stowing is not
+a filing problem, it is attitude control, and it costs nothing to get right
+if the indexer is told to.
+
+Only the longitudinal axis is modelled; slots are assumed on the centreline,
+so roll is out of scope, and the pitch authority is an estimate for a moment
+budget (vectored thrust, movable or distributed ballast) that has not been
+designed.
+
 ## Terminal traffic: why "2 heads serve 200" has a condition attached
 
 Every head count above assumes each head owns an independent approach
@@ -254,9 +288,10 @@ assume the optimistic end for free.
 - **Stow, go-around, ballast rate, ballast capacity and trim authority are
   estimates** for mechanisms that do not exist. The trim verdict in
   particular is only as good as the authority figure behind it.
-- **Trim is a scalar.** Where in the magazine an aircraft is stowed — and
-  therefore pitch and roll moments — is absent. A magazine that fills from
-  one end trims the vehicle long before total mass matters.
+- **Trim geometry is longitudinal only.** Pitch from the stow distribution
+  is now modelled (off by default); roll is not — slots are assumed on the
+  centreline — and the pitch authority is an estimate for an undesigned
+  moment budget.
 - **Radio is absent.** Crazyradio addresses dozens, not hundreds. This is a
   real ceiling on fleet size and it is not represented.
 - **Energy is seconds, not chemistry.** No capacity fade, no temperature.
@@ -286,6 +321,9 @@ assume the optimistic end for free.
    traffic makes co-located heads collapse under their own congestion; the
    belly must separate them into non-interfering approach volumes, and the
    head counts above hold only when it does.
-7. **The remaining unmodelled effects that move the number the unsafe way**
-   are magazine geometry (pitch/roll trim from where aircraft stow) and
-   radio capacity. Both are next.
+7. **Make the indexer balance the magazine — it is free pitch control.** A
+   balanced stow policy holds attitude on the same hardware an edge-filling
+   revolver pitches out of authority. Specify it as a requirement on the
+   indexer, not an emergent property of whatever slot is nearest.
+8. **The remaining unmodelled effect that moves the number the unsafe way**
+   is radio capacity — Crazyradio addresses dozens, not hundreds. It is next.

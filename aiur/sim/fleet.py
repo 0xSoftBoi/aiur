@@ -361,6 +361,33 @@ class FleetParams:
     #   a large belly — a spacing this scalar model cannot represent, so the
     #   parameters must be calibrated to a specific layout before they are
     #   believed.
+    # ---- magazine geometry ------------------------------------------------
+    #
+    # Trim above is a scalar: total mass off the carrier vs a heave-ballast
+    # chase.  It is silent on *where* the stowed aircraft sit.  A magazine is
+    # a line of slots along the keel, and a partially-filled one has a mass
+    # centroid that is only at the neutral point if the occupied slots are
+    # balanced about it.  A magazine that empties from one end — a revolver
+    # or belt that just uses the next physical slot — walks the centroid off
+    # the neutral point and pitches the vehicle nose-up or -down long before
+    # the total mass becomes a heave problem.
+    #
+    # This is off by default (``magazine_span_m is None``): with it off no
+    # moment is computed and the head counts elsewhere are unchanged.  Turned
+    # on, the stow policy becomes a pitch-trim control input — where you put
+    # each recovered aircraft is free, and it decides whether the centroid
+    # stays put.  Only the longitudinal (pitch) axis is modelled; slots are
+    # assumed on the centreline, so roll is out of scope.
+    #: Longitudinal extent of the slot line, metres. ``None`` = geometry off.
+    magazine_span_m: float | None = None
+    #: "balanced" places each recovered aircraft in the free slot that keeps
+    #: the centroid nearest neutral; "edge" fills from one physical end, the
+    #: naive revolver/belt that this model exists to warn against.
+    stow_policy: str = "balanced"
+    #: Pitch moment the carrier can hold, gram-metres. Estimate for authority
+    #: from vectored thrust / distributed or movable ballast.
+    pitch_authority_g_m: float = 2000.0
+
     #: Max aircraft on final approach at once. ``None`` = one corridor per
     #: head, i.e. the independent-corridor assumption (no extra airspace
     #: limit), which is today's behaviour.
@@ -369,6 +396,10 @@ class FleetParams:
     traffic_holds_s: float = 0.0
     #: Capture probability lost per other aircraft on final.
     traffic_miss_penalty: float = 0.0
+
+    @property
+    def geometry_enabled(self) -> bool:
+        return self.magazine_span_m is not None
 
     @property
     def approach_corridors_effective(self) -> int:
@@ -462,6 +493,19 @@ class FleetParams:
             raise ValueError("traffic_holds_s must be >= 0")
         if self.traffic_miss_penalty < 0.0:
             raise ValueError("traffic_miss_penalty must be >= 0")
+        if self.magazine_span_m is not None:
+            if self.magazine_span_m <= 0.0:
+                raise ValueError("magazine_span_m must be > 0")
+            if self.stow_policy not in ("balanced", "edge"):
+                raise ValueError(f"unknown stow_policy {self.stow_policy!r}")
+            if self.pitch_authority_g_m <= 0.0:
+                raise ValueError("pitch_authority_g_m must be > 0")
+            if self.slots < self.fleet_size:
+                raise ValueError(
+                    "magazine geometry needs a slot per airframe (slots >= "
+                    "fleet_size); a magazine that cannot hold the whole fleet "
+                    "has no well-defined stow layout at rest"
+                )
 
 
 @dataclass(frozen=True)
@@ -522,6 +566,12 @@ class FleetResult:
     #: during which the carrier is drifting vertically while aircraft are
     #: trying to land on a dock attached to it.
     trim_exceedance_fraction: float
+    #: Peak longitudinal pitch moment from the stow distribution, gram-metres.
+    #: Zero when magazine geometry is off.
+    peak_pitch_moment_g_m: float
+    #: Fraction of measured time the pitch moment exceeded pitch authority —
+    #: time the dock is pitching under aircraft on approach.
+    pitch_exceedance_fraction: float
 
     @property
     def serves_fleet(self) -> bool:
@@ -538,6 +588,7 @@ class FleetResult:
         return (
             self.loss_pct <= LOSS_THRESHOLD_PCT
             and self.trim_exceedance_fraction <= TRIM_EXCEEDANCE_THRESHOLD
+            and self.pitch_exceedance_fraction <= TRIM_EXCEEDANCE_THRESHOLD
         )
 
 
@@ -557,6 +608,9 @@ class _Aircraft:
     attempts: int = 0
     queued_at: float = 0.0
     holds_slot: bool = True
+    #: Magazine slot this aircraft currently occupies, or -1 when airborne.
+    #: Used only when magazine geometry is enabled.
+    slot_index: int = -1
 
 
 def simulate_fleet(
@@ -589,6 +643,41 @@ def simulate_fleet(
     free_heads = params.capture_heads
     used_slots = params.fleet_size  # every aircraft starts stowed
     lane_free_at = [0.0] * params.launch_lanes
+
+    # Magazine geometry. Slots lie on a centred line along the keel; at rest
+    # every airframe holds one and the full magazine is balanced. As aircraft
+    # launch and return, the occupied-slot centroid — and so the pitch moment
+    # — moves, and the stow policy decides whether it stays near neutral. All
+    # bookkeeping is skipped when geometry is off, so the default path is
+    # untouched. slots >= fleet_size is guaranteed by validate(), so a free
+    # slot always exists when a captured aircraft needs to stow.
+    geometry = params.geometry_enabled
+    if geometry:
+        n_slots = params.slots
+        slot_pos = [
+            params.magazine_span_m * ((k + 0.5) / n_slots - 0.5)
+            for k in range(n_slots)
+        ]
+        free_slots = set(range(params.fleet_size, n_slots))
+        for aircraft in fleet:
+            aircraft.slot_index = aircraft.index
+        pitch_moment_g_m = params.aircraft_mass_g * sum(
+            slot_pos[i] for i in range(params.fleet_size)
+        )
+    else:
+        slot_pos = []
+        free_slots = set()
+        pitch_moment_g_m = 0.0
+    peak_pitch_moment_g_m = 0.0
+    pitch_exceeded_s = 0.0
+
+    def choose_slot() -> int:
+        if params.stow_policy == "edge":
+            # Fill from one physical end: the naive revolver/belt.
+            return min(free_slots)
+        # Balanced: the free slot that pulls the centroid back toward neutral.
+        target = -pitch_moment_g_m / params.aircraft_mass_g
+        return min(free_slots, key=lambda k: abs(slot_pos[k] - target))
 
     recoveries = 0
     #: Every recovery, warm-up included, so the loss rate below has a
@@ -652,6 +741,7 @@ def simulate_fleet(
 
         nonlocal last_t, airborne_integral, head_blocked_s, on_final_integral
         nonlocal ballast_g, peak_trim_error_g, trim_exceeded_s
+        nonlocal peak_pitch_moment_g_m, pitch_exceeded_s
         if t <= last_t:
             return
         span_total = t - last_t
@@ -663,6 +753,14 @@ def simulate_fleet(
             on_final_integral += on_final * span
             if blocked_since is not None:
                 head_blocked_s += span
+            # Pitch moment is piecewise constant between events (it changes
+            # only on launch and stow), so charging the whole span at the
+            # current moment is exact, not a discretisation.
+            if geometry:
+                mag = abs(pitch_moment_g_m)
+                peak_pitch_moment_g_m = max(peak_pitch_moment_g_m, mag)
+                if mag > params.pitch_authority_g_m:
+                    pitch_exceeded_s += span
 
         # Ballast chases the mass that is currently off the carrier, rate
         # limited and capped.  Error is worst at the start of the span and
@@ -723,7 +821,7 @@ def simulate_fleet(
             schedule(release, lambda now, a=aircraft: launch(now, a))
 
     def launch(t: float, aircraft: _Aircraft) -> None:
-        nonlocal airborne, sorties, used_slots
+        nonlocal airborne, sorties, used_slots, pitch_moment_g_m
         advance(t)
         aircraft.state = _SORTIE
         aircraft.energy_s = params.endurance_s
@@ -731,6 +829,10 @@ def simulate_fleet(
         if aircraft.holds_slot:
             aircraft.holds_slot = False
             used_slots -= 1
+            if geometry and aircraft.slot_index >= 0:
+                pitch_moment_g_m -= params.aircraft_mass_g * slot_pos[aircraft.slot_index]
+                free_slots.add(aircraft.slot_index)
+                aircraft.slot_index = -1
         airborne += 1
         if t >= measured_from:
             sorties += 1
@@ -828,7 +930,7 @@ def simulate_fleet(
 
     def resolve(t: float, aircraft: _Aircraft, captured: bool, occupancy: float) -> None:
         nonlocal free_heads, head_busy_s, airborne, recoveries, used_slots
-        nonlocal recoveries_total, on_final
+        nonlocal recoveries_total, on_final, pitch_moment_g_m
         nonlocal lost_reserve, lost_retries, max_depth, peak_slots
         advance(t)
         # The corridor frees the moment the approach resolves, even though a
@@ -844,6 +946,13 @@ def simulate_fleet(
             aircraft.state = _CHARGING
             aircraft.holds_slot = True
             used_slots += 1
+            if geometry:
+                # Index the aircraft into a slot; the policy decides which,
+                # and that choice is the pitch-trim control input.
+                slot = choose_slot()
+                free_slots.discard(slot)
+                aircraft.slot_index = slot
+                pitch_moment_g_m += params.aircraft_mass_g * slot_pos[slot]
             airborne -= 1
             recoveries_total += 1
             if t >= measured_from:
@@ -1047,6 +1156,8 @@ def simulate_fleet(
         pack_starved=pack_wait_events > 0,
         mean_on_final=round(on_final_integral / measured_span, 2),
         peak_on_final=peak_on_final,
+        peak_pitch_moment_g_m=round(peak_pitch_moment_g_m, 1),
+        pitch_exceedance_fraction=round(pitch_exceeded_s / measured_span, 4),
         peak_trim_error_g=round(peak_trim_error_g, 1),
         trim_exceedance_fraction=round(trim_exceeded_s / measured_span, 4),
         dock_mass_g=round(
@@ -1094,6 +1205,17 @@ def _diagnose(result: FleetResult, params: FleetParams) -> str:
             f"{100.0 * result.trim_exceedance_fraction:.0f}% of the time "
             f"outside it): ballast at {params.ballast_rate_g_s:.1f} g/s "
             "cannot follow the launch and recovery waves"
+        )
+    # Pitch is the second silent trim failure: the total mass can be trimmed
+    # while its distribution is not, so this is checked alongside heave and
+    # before the throughput constraints.
+    if result.pitch_exceedance_fraction > TRIM_EXCEEDANCE_THRESHOLD:
+        return (
+            f"magazine pitch trim ({result.peak_pitch_moment_g_m:.0f} g·m "
+            f"peak vs {params.pitch_authority_g_m:.0f} g·m authority, "
+            f"{100.0 * result.pitch_exceedance_fraction:.0f}% of the time "
+            f"outside it): the '{params.stow_policy}' stow policy lets the "
+            "occupied-slot centroid wander off the neutral point"
         )
     # Launch is checked before the empty-queue case on purpose.  A
     # launch-limited carrier has an empty recovery queue precisely because
@@ -1236,6 +1358,10 @@ def sweep_heads(
                 "peak_on_final": max(r.peak_on_final for r in runs),
                 "mean_on_final": round(
                     sum(r.mean_on_final for r in runs) / len(runs), 2
+                ),
+                "peak_pitch_moment_g_m": max(r.peak_pitch_moment_g_m for r in runs),
+                "pitch_exceedance_fraction": max(
+                    r.pitch_exceedance_fraction for r in runs
                 ),
                 "binding_constraint": worst.binding_constraint,
             }
@@ -1400,6 +1526,19 @@ def main(argv: list[str] | None = None) -> int:
         default=0.0,
         help="capture probability lost per other aircraft on final",
     )
+    parser.add_argument(
+        "--magazine-span-m",
+        type=float,
+        default=None,
+        help="longitudinal slot-line extent; enables magazine pitch geometry",
+    )
+    parser.add_argument(
+        "--stow-policy",
+        choices=("balanced", "edge"),
+        default="balanced",
+        help="where recovered aircraft are indexed (geometry on)",
+    )
+    parser.add_argument("--pitch-authority-g-m", type=float, default=2000.0)
     args = parser.parse_args(argv)
 
     base = FleetParams(
@@ -1418,6 +1557,9 @@ def main(argv: list[str] | None = None) -> int:
         approach_corridors=args.corridors,
         traffic_holds_s=args.traffic_holds_s,
         traffic_miss_penalty=args.traffic_miss,
+        magazine_span_m=args.magazine_span_m,
+        stow_policy=args.stow_policy,
+        pitch_authority_g_m=args.pitch_authority_g_m,
     )
     print(
         json.dumps(

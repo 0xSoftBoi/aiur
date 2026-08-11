@@ -42,6 +42,14 @@ def render(report: dict) -> str:
         )
     else:
         out.append("traffic: independent corridors (interaction off — head counts are LOWER bounds)")
+    span = base.get("magazine_span_m")
+    if span is not None:
+        out.append(
+            f"magazine: {span:.0f}m slot line, '{base.get('stow_policy', 'balanced')}' "
+            f"stow policy, {base.get('pitch_authority_g_m', 0):.0f} g·m pitch authority"
+        )
+    else:
+        out.append("magazine: scalar trim only (geometry off — no pitch moment modelled)")
     out.append(f"seeds {report['seeds']}, loss threshold {report['loss_threshold_pct']}%")
     out.append("")
 
@@ -66,6 +74,20 @@ def render(report: dict) -> str:
 
     out.append("fin = peak aircraft simultaneously on final approach")
     out.append("trim g = peak uncorrected buoyant trim error; trim% = time outside trim authority")
+    if base.get("magazine_span_m") is not None:
+        out.append("")
+        out.append("MAGAZINE PITCH (from the stow distribution)")
+        h3 = f"{'fleet':>6} {'heads':>6} {'peak g·m':>10} {'pitch%':>7}"
+        out.append(h3)
+        out.append("-" * len(h3))
+        for sweep in report["sweeps"]:
+            for row in sweep["rows"]:
+                out.append(
+                    f"{sweep['fleet_size']:>6} {row['capture_heads']:>6} "
+                    f"{row.get('peak_pitch_moment_g_m', 0):>10.0f} "
+                    f"{100 * row.get('pitch_exceedance_fraction', 0):>7.1f}"
+                )
+            out.append("")
     out.append("")
 
     out.append("MECHANISM LIFE (actuations over the run; life test must cover these x margin)")
