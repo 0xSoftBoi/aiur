@@ -1,0 +1,60 @@
+"""Render a fleet-throughput study as a readable table."""
+import json, sys
+
+
+def render(report: dict) -> str:
+    out = []
+    svc = report["service_model"]
+    base = report["base_params"]
+    out.append("FLEET-THROUGHPUT STUDY")
+    out.append(
+        f"service model: p_capture={svc['p_capture']:.3f} "
+        f"[{svc['ci_low']*100:.0f},{svc['ci_high']*100:.0f}]%, "
+        f"{svc['episodes']} twin episodes, {len(svc['occupancy_samples_s'])} occupancy samples"
+    )
+    out.append(f"  source: {svc['source']}")
+    out.append(
+        f"fleet cycle: sortie {base['sortie_s']:.0f}s of {base['endurance_s']:.0f}s endurance"
+        f" ({base['endurance_s'] - base['sortie_s']:.0f}s reserve), recharge {base['recharge_s']:.0f}s"
+    )
+    out.append(
+        f"policy: {base['queue_policy']}, retry limit {base['retry_limit']}, "
+        f"stow {base['stow_s']:.0f}s, go-around {base['go_around_s']:.0f}s"
+    )
+    out.append(f"seeds {report['seeds']}, loss threshold {report['loss_threshold_pct']}%")
+    out.append("")
+
+    hdr = f"{'fleet':>6} {'heads':>6} {'serves':>7} {'loss%':>7} {'thr/h':>8} {'dem/h':>8} {'p95 wait':>9} {'util':>6} {'lnch':>6} {'air':>7} {'qmax':>5} {'trim g':>7} {'trim%':>6}  binding"
+    out.append(hdr)
+    out.append("-" * len(hdr))
+    for sweep in report["sweeps"]:
+        for row in sweep["rows"]:
+            out.append(
+                f"{sweep['fleet_size']:>6} {row['capture_heads']:>6} "
+                f"{('yes' if row['serves_fleet'] else 'NO'):>7} "
+                f"{row['worst_loss_pct']:>7.2f} {row['throughput_per_hour']:>8.1f} "
+                f"{row['demand_per_hour']:>8.1f} {row['p95_queue_wait_s']:>9.1f} "
+                f"{row['head_utilisation']:>6.2f} {row['launch_utilisation']:>6.2f} "
+                f"{row['mean_airborne']:>7.1f} {row['max_queue_depth']:>5} "
+                f"{row['peak_trim_error_g']:>7.0f} "
+                f"{100 * row['trim_exceedance_fraction']:>6.1f}  "
+                f"{row['binding_constraint'][:48]}"
+            )
+        out.append("")
+
+    out.append("trim g = peak uncorrected buoyant trim error; trim% = time outside trim authority")
+    out.append("")
+    out.append("MINIMUM CAPTURE HEADS")
+    for sweep in report["sweeps"]:
+        minimum = sweep["minimum_heads"]
+        answer = f"{minimum} head(s)" if minimum is not None else "NOT SERVED at any tested count"
+        out.append(f"  {sweep['fleet_size']:>4} aircraft -> {answer}")
+    out.append("")
+    out.append("caveats:")
+    for caveat in report["caveats"]:
+        out.append(f"  - {caveat}")
+    return "\n".join(out)
+
+
+if __name__ == "__main__":
+    print(render(json.load(open(sys.argv[1]) if len(sys.argv) > 1 else sys.stdin)))

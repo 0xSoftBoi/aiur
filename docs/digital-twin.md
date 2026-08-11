@@ -137,6 +137,24 @@ results, not vehicle performance):
   radius). Toy-grade or GNSS-grade terminal navigation therefore demands
   either a better relative sensor or a larger capture funnel (SHARED-001).
 
+## Fleet-scale study
+
+The sweeps above characterize one recovery. A separate study asks what a
+carrier costs to operate *N* aircraft, calibrating a discrete-event queue
+from real twin episodes:
+
+```
+python -m aiur.sim.fleet --fleet 10 50 100 200 400 | python tools/report_fleet.py
+```
+
+Headline results and their limits: [fleet-throughput.md](fleet-throughput.md).
+Two capture heads serve 200 aircraft and three serve 400 — but every fleet
+the dock can serve is recharge-bound, one launch lane caps the vehicle at
+720 sorties/hour with an *empty* recovery queue, and the fleet is a
+buoyant-trim disturbance to the carrier that carries it. Head counts are
+lower bounds: the twin flies one aircraft at one dock, so terminal traffic
+interaction between converging aircraft is not represented.
+
 ## Twin-derived engineering findings
 
 Findings the twin has already produced that constrain the hardware program:

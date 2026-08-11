@@ -50,8 +50,10 @@ The product core (buoyant carrier + mechanically positive dock + recovery
 autonomy + evidence-gated loop + twin) is vertical-agnostic. Exploratory
 concept studies with derived requirement deltas live in
 [docs/verticals/](docs/verticals/README.md): agriculture, energy
-infrastructure, wildfire response support, and toys/STEM. CARRIER-P0
-remains the only funded article; the twin's `outdoor-gust-sweep` and
+infrastructure, wildfire response support, toys/STEM, and counter-UAS
+airspace awareness. Every study is scoped to sensing, monitoring, mapping
+and relay; none specifies an effector. CARRIER-P0 remains the only funded
+article; the twin's `outdoor-gust-sweep` and
 `degraded-sensor-sweep` studies quantify the two milestones every non-lab
 vertical shares.
 
@@ -84,6 +86,8 @@ Analysis and models:
 - [Digital twin](docs/digital-twin.md) and the [package](aiur/sim/)
 - [Capture-architecture trade study](docs/capture-architecture-trade.md) —
   `python -m aiur.sim.design_study | python tools/report_study.py`
+- [Fleet-throughput study](docs/fleet-throughput.md) —
+  `python -m aiur.sim.fleet | python tools/report_fleet.py`
 - [Mass and capture-envelope model](aiur/p0.py)
 - [Capture-chain tolerance stack](aiur/tolerance.py) — `python -m aiur.tolerance`
 - [Dock FMECA and fault trees](docs/dock-fmeca.md)
