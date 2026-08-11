@@ -80,38 +80,31 @@ export function SiteHeader() {
               >
                 {item.label}
               </Link>
-            </div>
-          ))}
 
-          {NAV.map((item) => (
-            <div
-              className="nav-panel"
-              key={`${item.label}-panel`}
-              hidden={open !== item.label}
-              onMouseEnter={cancelClose}
-            >
-              <div className="shell nav-panel-inner">
-                <div className="nav-panel-lead">
-                  <span>{item.label}</span>
-                  <p>{item.blurb}</p>
-                  <Link href={item.href} className="nav-panel-all">
-                    Overview <span aria-hidden="true">→</span>
-                  </Link>
-                </div>
-                <div className="nav-panel-links">
-                  {item.links.map(([label, href, copy]) =>
-                    href.startsWith("http") ? (
-                      <a key={label} href={href} target="_blank" rel="noreferrer">
-                        <strong>{label}</strong>
-                        <span>{copy}</span>
-                      </a>
-                    ) : (
-                      <Link key={label} href={href}>
-                        <strong>{label}</strong>
-                        <span>{copy}</span>
-                      </Link>
-                    ),
-                  )}
+              <div className="nav-panel" hidden={open !== item.label} onMouseEnter={cancelClose}>
+                <div className="shell nav-panel-inner">
+                  <div className="nav-panel-lead">
+                    <span>{item.label}</span>
+                    <p>{item.blurb}</p>
+                    <Link href={item.href} className="nav-panel-all">
+                      Overview <span aria-hidden="true">→</span>
+                    </Link>
+                  </div>
+                  <div className="nav-panel-links">
+                    {item.links.map(([label, href, copy]) =>
+                      href.startsWith("http") ? (
+                        <a key={label} href={href} target="_blank" rel="noreferrer">
+                          <strong>{label}</strong>
+                          <span>{copy}</span>
+                        </a>
+                      ) : (
+                        <Link key={label} href={href}>
+                          <strong>{label}</strong>
+                          <span>{copy}</span>
+                        </Link>
+                      ),
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

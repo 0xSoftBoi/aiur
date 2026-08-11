@@ -22,8 +22,11 @@ export function ScrollReveal() {
 
     document.documentElement.setAttribute("data-reveal-ready", "");
 
+    let delivered = false;
+
     const observer = new IntersectionObserver(
       (entries) => {
+        delivered = true;
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
           entry.target.setAttribute("data-revealed", "");
@@ -34,7 +37,23 @@ export function ScrollReveal() {
     );
 
     nodes.forEach((node) => observer.observe(node));
-    return () => observer.disconnect();
+
+    // Fail open. Hiding content is done in CSS, so an observer that never
+    // delivers a callback would leave the page permanently blank rather than
+    // merely un-animated. If nothing has been delivered by the time the first
+    // scroll would plausibly have happened, drop the effect and show
+    // everything. A working observer always delivers an initial batch, so this
+    // does not fire on a healthy page.
+    const failOpen = window.setTimeout(() => {
+      if (delivered) return;
+      observer.disconnect();
+      nodes.forEach((node) => node.setAttribute("data-revealed", ""));
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(failOpen);
+      observer.disconnect();
+    };
   }, [pathname]);
 
   return null;
