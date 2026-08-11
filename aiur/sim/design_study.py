@@ -241,7 +241,13 @@ def run_study(
             "safety first, then positioning-noise tolerance, then nominal "
             "capture rate. Cost terms are reported, never folded into a score."
         ),
-        "architectures": [asdict(result) for result in ranked],
+        # ``safe`` is a property, so asdict() would drop it — and it is the
+        # first key the ranking sorts on.  A report that ranks safety first
+        # and then does not say which candidates are safe is worse than
+        # useless: it looks authoritative while withholding the finding.
+        "architectures": [
+            {**asdict(result), "safe": result.safe} for result in ranked
+        ],
         "caveats": [
             "Simulation only. No candidate has been built or measured, and "
             "the twin's NASA-STD-7009B validation factor is level 1 for all "

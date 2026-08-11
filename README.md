@@ -82,6 +82,8 @@ Program definition:
 Analysis and models:
 
 - [Digital twin](docs/digital-twin.md) and the [package](aiur/sim/)
+- [Capture-architecture trade study](docs/capture-architecture-trade.md) —
+  `python -m aiur.sim.design_study | python tools/report_study.py`
 - [Mass and capture-envelope model](aiur/p0.py)
 - [Capture-chain tolerance stack](aiur/tolerance.py) — `python -m aiur.tolerance`
 - [Dock FMECA and fault trees](docs/dock-fmeca.md)
