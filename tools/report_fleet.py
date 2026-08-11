@@ -42,6 +42,27 @@ def render(report: dict) -> str:
         )
     else:
         out.append("traffic: independent corridors (interaction off — head counts are LOWER bounds)")
+    span = base.get("magazine_span_m")
+    if span is not None:
+        width = base.get("magazine_width_m", 0.0)
+        cols = base.get("magazine_columns", 1)
+        geom = f"{span:.0f}m" + (f" x {width:.0f}m ({cols} cols)" if width else " line")
+        out.append(
+            f"magazine: {geom}, '{base.get('stow_policy', 'balanced')}' stow policy, "
+            f"{base.get('pitch_authority_g_m', 0):.0f}/{base.get('roll_authority_g_m', 0):.0f} "
+            "g·m pitch/roll authority"
+        )
+    else:
+        out.append("magazine: scalar trim only (geometry off — no pitch moment modelled)")
+    radios = base.get("radio_channels")
+    if radios is not None:
+        lpc = base.get("links_per_channel", 0)
+        out.append(
+            f"radio: {radios} x {lpc} = {radios * lpc} concurrent links, "
+            f"approach link cost {base.get('approach_link_cost', 1)}"
+        )
+    else:
+        out.append("radio: unlimited (link budget off — no airborne ceiling modelled)")
     out.append(f"seeds {report['seeds']}, loss threshold {report['loss_threshold_pct']}%")
     out.append("")
 
@@ -66,6 +87,22 @@ def render(report: dict) -> str:
 
     out.append("fin = peak aircraft simultaneously on final approach")
     out.append("trim g = peak uncorrected buoyant trim error; trim% = time outside trim authority")
+    if base.get("magazine_span_m") is not None:
+        out.append("")
+        out.append("MAGAZINE TRIM (from the stow distribution)")
+        h3 = f"{'fleet':>6} {'heads':>6} {'pitch g·m':>10} {'pitch%':>7} {'roll g·m':>10} {'roll%':>7}"
+        out.append(h3)
+        out.append("-" * len(h3))
+        for sweep in report["sweeps"]:
+            for row in sweep["rows"]:
+                out.append(
+                    f"{sweep['fleet_size']:>6} {row['capture_heads']:>6} "
+                    f"{row.get('peak_pitch_moment_g_m', 0):>10.0f} "
+                    f"{100 * row.get('pitch_exceedance_fraction', 0):>7.1f} "
+                    f"{row.get('peak_roll_moment_g_m', 0):>10.0f} "
+                    f"{100 * row.get('roll_exceedance_fraction', 0):>7.1f}"
+                )
+            out.append("")
     out.append("")
 
     out.append("MECHANISM LIFE (actuations over the run; life test must cover these x margin)")

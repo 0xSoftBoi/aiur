@@ -151,11 +151,20 @@ Headline results and their limits: [fleet-throughput.md](fleet-throughput.md).
 Two capture heads serve 200 aircraft and three serve 400 — but every fleet
 the dock can serve is recharge-bound, one launch lane caps the vehicle at
 720 sorties/hour with an *empty* recovery queue, and the fleet is a
-buoyant-trim disturbance to the carrier that carries it. Terminal-traffic
-interaction between converging aircraft is now an optional overlay (off by
-default, so those head counts are still lower bounds); turned on, it shows
-that co-located heads collapse under their own congestion, so recovery
-scales with independent corridors rather than with more heads.
+buoyant-trim disturbance to the carrier that carries it. Two effects the
+twin's single-recovery episodes cannot produce are carried as optional
+overlays (off by default, so those head counts are still lower bounds):
+terminal-traffic interaction, which shows co-located heads collapsing under
+their own congestion so recovery scales with independent corridors not more
+heads; magazine pitch and roll geometry, which shows the stow policy is a free
+attitude-trim control input — a balanced indexer holds both axes where an
+edge-filling revolver pitches or rolls the vehicle out of authority on
+identical hardware; and a
+radio link budget, which caps concurrent airborne aircraft at the number the
+carrier can talk to and is the ceiling battery swap runs into. The binding
+constraint walks — recharge → swap → radio → heads → launch → corridors →
+trim — so there is no single bottleneck; a fleet plan budgets the whole
+chain.
 
 ## Twin-derived engineering findings
 

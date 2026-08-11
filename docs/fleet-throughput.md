@@ -202,6 +202,50 @@ drifting vertically has not served its fleet — it is moving the dock under
 aircraft on terminal approach, which is the one thing the entire capture
 architecture exists to avoid.
 
+### Pitch and roll: where you stow them, not just how many
+
+The ballast term above is a scalar — total mass off the carrier against a
+heave chase. It says nothing about *where* the stowed aircraft sit, and a
+magazine is a grid of slots: a partially-filled one is only balanced if its
+occupied slots are symmetric about the neutral point on both axes. The model
+now optionally carries that geometry (`--magazine-span-m`, plus
+`--magazine-width-m` / `--magazine-columns` for the lateral axis, off by
+default so the numbers above are unchanged), tracks the longitudinal pitch
+**and** lateral roll moments of the stow distribution, and folds both
+exceedances into the pass criterion the same way heave is.
+
+The finding is that **the stow policy is a free pitch-trim control input,
+and getting it wrong fails the carrier on identical hardware.** For a
+200-aircraft carrier over a 30 m magazine, held to a 2000 g·m pitch
+authority:
+
+- a **balanced** policy — index each recovered aircraft into the free slot
+  that pulls the centroid back toward neutral — peaks at ~1,600 g·m and
+  holds;
+- an **edge** policy — the naive revolver or belt that just uses the next
+  physical slot — peaks at ~12,800 g·m and is outside authority essentially
+  all the time.
+
+Same aircraft, same fleet, same dock; the only difference is which slot the
+indexer chooses, and one serves the fleet while the other pitches the
+vehicle continuously under the aircraft trying to land on it. Stowing is not
+a filing problem, it is attitude control, and it costs nothing to get right
+if the indexer is told to.
+
+The same holds on the lateral axis. Give the magazine width and columns and
+a side-biased fill rolls the vehicle exactly as an end-biased fill pitches
+it; the balanced policy minimises the 2-D moment vector, so one indexer rule
+holds both axes at once. Which axis actually binds is geometry: a long thin
+keel magazine pitches far more easily than it rolls (roll stays small for
+the 200-aircraft case above), while a short wide one is the reverse — with a
+30 m-wide magazine the edge policy blows roll past authority 90% of the time
+and balanced pulls it back. Roll authority on a keel-hung magazine is
+usually the tighter of the two, so it is worth checking, not assuming.
+
+The pitch and roll authorities are estimates for a moment budget (vectored
+thrust, movable or distributed ballast) that has not been designed, and the
+discreteness of a single aircraft sets a floor the indexer cannot beat.
+
 ## Terminal traffic: why "2 heads serve 200" has a condition attached
 
 Every head count above assumes each head owns an independent approach
@@ -244,6 +288,35 @@ volume (penalty on) at the other — and a real belly sits between them, to be
 calibrated to a specific layout. What the model now refuses to let you do is
 assume the optimistic end for free.
 
+## Radio: the ceiling battery swap runs into
+
+Every airborne aircraft needs a supervisory link and every aircraft on final
+needs a tight control link, and radios are finite — Crazyradio addresses
+dozens, not hundreds. The model carries this as a link budget
+(`--radio-channels` × `--links-per-channel`), off by default. The safe design
+refuses to launch an aircraft it cannot talk to, so radio shows up as a **hard
+ceiling on concurrent airborne aircraft**, never as a lost-link loss.
+
+That ceiling is independent of heads, slots, charge and launch, which is
+exactly why it matters: it is the wall battery swap hits. Swap removes the
+charge limit and wants ~60 aircraft airborne from a 200-airframe fleet — but
+at 20 links per radio, one radio holds the sky at 20, two at 40, three at 60.
+The airborne count tracks the link budget almost exactly until enough radios
+are added that heads become the limit again. So the full chain a "hundreds of
+drones" claim has to answer is:
+
+> recharge → (battery swap) → radio links → capture heads → launch lanes → corridors → trim,
+
+and every one of them is a real resource that has to be bought. There is no
+single bottleneck to fix, and "airborne" — the number that does anything —
+is set by whichever of these is scarcest.
+
+The link budget is a scalar: it does not model channel contention, packet
+loss, interference, or the mesh/broadcast schemes a real hundred-aircraft
+system would need instead of unicast control. It says only "you cannot fly
+more than you can talk to", which is the floor of the problem, not its
+ceiling.
+
 ## What this does not say
 
 - **Terminal-traffic interaction is an overlay, off by default.** With it
@@ -254,11 +327,15 @@ assume the optimistic end for free.
 - **Stow, go-around, ballast rate, ballast capacity and trim authority are
   estimates** for mechanisms that do not exist. The trim verdict in
   particular is only as good as the authority figure behind it.
-- **Trim is a scalar.** Where in the magazine an aircraft is stowed — and
-  therefore pitch and roll moments — is absent. A magazine that fills from
-  one end trims the vehicle long before total mass matters.
-- **Radio is absent.** Crazyradio addresses dozens, not hundreds. This is a
-  real ceiling on fleet size and it is not represented.
+- **Trim geometry covers pitch and roll, not vertical stacking.** Both
+  moments from the stow distribution are modelled (off by default); the
+  authorities are estimates for an undesigned moment budget, and the slot
+  grid is a single layer — a magazine stacked in height would add a third
+  term this does not carry.
+- **Radio is a scalar link budget, off by default.** It caps concurrent
+  airborne aircraft at a link count; it does not model channel contention,
+  packet loss, interference, or the mesh/broadcast schemes a real
+  hundred-aircraft system needs. It is the floor of the comms problem.
 - **Energy is seconds, not chemistry.** No capacity fade, no temperature.
 - **No hardware has recovered a single aircraft.** This sizes an
   architecture; it does not validate one.
@@ -267,10 +344,11 @@ assume the optimistic end for free.
 
 1. **Do not build a dock per aircraft.** Build few heads and many passive
    slots. The study puts numbers on "few": 2 for 200, 3 for 400.
-2. **Charge rate is the scaling lever, not capture rate.** Every fleet the
-   dock can serve is recharge-bound — until you break that with battery
-   swap, which then promotes capture heads to the bottleneck. There is no
-   single lever; the chain is recharge → heads → launch.
+2. **There is no single bottleneck — size the whole chain.** The binding
+   constraint walks: recharge → (battery swap) → radio links → capture heads
+   → launch lanes → corridors → trim. Fix one and the next takes over.
+   "Airborne", the number that does anything, is set by whichever is
+   scarcest, so a credible fleet plan budgets all of them, not the cheapest.
 3. **Prefer passive; price every actuated mechanism in cycles, not count.**
    Battery swap roughly doubles airborne-count-per-airframe but adds a
    second life-limited mechanism running millions of cycles a year, on top
@@ -286,6 +364,13 @@ assume the optimistic end for free.
    traffic makes co-located heads collapse under their own congestion; the
    belly must separate them into non-interfering approach volumes, and the
    head counts above hold only when it does.
-7. **The remaining unmodelled effects that move the number the unsafe way**
-   are magazine geometry (pitch/roll trim from where aircraft stow) and
-   radio capacity. Both are next.
+7. **Make the indexer balance the magazine — it is free attitude control.**
+   A balanced stow policy holds pitch and roll on the same hardware an
+   edge-filling revolver tips out of authority. Specify it as a requirement
+   on the indexer, not an emergent property of whatever slot is nearest, and
+   check roll as well as pitch — on a keel magazine roll authority is the
+   tighter axis.
+8. **Buy radios per aircraft you intend to fly, not per aircraft you own.**
+   The link budget hard-caps concurrent airborne; it is the ceiling battery
+   swap runs into, so a swap investment is wasted without the radios to use
+   the aircraft it frees.
