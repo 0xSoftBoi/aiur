@@ -1845,6 +1845,143 @@ def size_for_airborne(
     )
 
 
+# --------------------------------------------------------------------------
+# Mixed fleets: a recovery class and a scout class share one carrier
+# --------------------------------------------------------------------------
+#
+# The carrier does not fly one kind of aircraft. A Crazyflie-class recovery
+# article proves the dock; a WHOOP-class scout — lighter, shorter-legged, and
+# if it streams FPV video, far hungrier on the radio — flies ahead to look.
+# They are different airframes with different docks and duty cycles, but they
+# share the things the carrier has only one of: the radio, the launch
+# airspace, and the lift.
+#
+# Radio is the one that bites. Each class draws its own link load, and the
+# budget must hold the *sum*: a handful of video scouts at several links each
+# can eat the ceiling that would otherwise fly dozens of supervisory-link
+# recovery aircraft. So a mixed fleet is sized by taking each class's
+# recovery subsystem on its own duty cycle, then sizing the shared radio
+# against the combined instantaneous link demand. The per-class recovery
+# sizing is a real simulation; the shared radio and lift are exact sums,
+# because a hard link budget and a mass budget genuinely add.
+
+
+@dataclass(frozen=True)
+class ClassSpec:
+    """One aircraft class the carrier must fly, and how much of it airborne."""
+
+    name: str
+    target_airborne: int
+    mass_g: float = 37.0
+    endurance_s: float = 600.0
+    sortie_s: float = 420.0
+    recharge_s: float = 3600.0
+    #: Supervisory-link-equivalents one airborne aircraft of this class draws.
+    #: 1 is a Crazyflie-style command/telemetry link; a WHOOP streaming FPV
+    #: video is several, which is the whole point of tracking it per class.
+    radio_links: float = 1.0
+    use_swap: bool = False
+
+
+#: A Crazyflie-class recovery aircraft: the article the dock is built around.
+RECOVERY_CLASS = ClassSpec(name="recovery", target_airborne=20, radio_links=1.0)
+
+#: A WHOOP-class scout: light, short-legged, and radio-hungry if it carries
+#: video. Endurance and mass are order-of-magnitude engineering estimates for
+#: a 65–75 mm ducted airframe, not measurements.
+SCOUT_CLASS = ClassSpec(
+    name="whoop-scout",
+    target_airborne=10,
+    mass_g=25.0,
+    endurance_s=180.0,
+    sortie_s=120.0,
+    recharge_s=1800.0,
+    radio_links=4.0,
+)
+
+
+def size_carrier(
+    classes: Sequence[ClassSpec],
+    *,
+    service: ServiceModel,
+    links_per_channel: int = 20,
+    seed: int = 1,
+    horizon_s: float = 4 * 3600.0,
+) -> dict:
+    """Size one carrier flying several aircraft classes at once.
+
+    Each class's recovery subsystem is sized by the single-class solver on
+    its own duty cycle (radio left effectively unlimited there); the shared
+    radio and lift are then summed across classes, because a link budget and
+    a mass budget add exactly. The report names the class that dominates the
+    shared radio, which is the number a mixed-fleet plan turns on.
+    """
+
+    per_class = []
+    total_link_load = 0.0
+    total_launch_lanes = 0
+    total_airframe_mass_g = 0.0
+    for spec in classes:
+        point = size_for_airborne(
+            spec.target_airborne,
+            service=service,
+            endurance_s=spec.endurance_s,
+            sortie_s=spec.sortie_s,
+            recharge_s=spec.recharge_s,
+            use_swap=spec.use_swap,
+            aircraft_mass_g=spec.mass_g,
+            links_per_channel=10**9,  # size recovery without radio interfering
+            seed=seed,
+            horizon_s=horizon_s,
+        )
+        link_load = spec.target_airborne * spec.radio_links
+        total_link_load += link_load
+        total_launch_lanes += point.bill["launch_lanes"]
+        total_airframe_mass_g += point.bill["fleet_size"] * spec.mass_g
+        per_class.append(
+            {
+                "name": spec.name,
+                "target_airborne": spec.target_airborne,
+                "radio_links_each": spec.radio_links,
+                "link_load": round(link_load, 1),
+                "fleet_size": point.bill["fleet_size"],
+                "capture_heads": point.bill["capture_heads"],
+                "launch_lanes": point.bill["launch_lanes"],
+                "charger_channels": point.bill["charger_channels"],
+                "converged": point.converged,
+                "recovery_binding": point.binding_constraint,
+            }
+        )
+
+    radios = max(1, math.ceil(total_link_load / links_per_channel))
+    dominant = max(per_class, key=lambda c: c["link_load"])
+    return {
+        "study": "mixed-fleet carrier",
+        "shared": {
+            "radios": radios,
+            "links_per_channel": links_per_channel,
+            "total_link_load": round(total_link_load, 1),
+            "radio_utilisation": round(total_link_load / (radios * links_per_channel), 3),
+            "launch_lanes_total": total_launch_lanes,
+            "airframe_mass_kg": round(total_airframe_mass_g / 1000.0, 2),
+        },
+        "radio_dominated_by": dominant["name"],
+        "classes": per_class,
+        "notes": [
+            "Radio and lift are summed across classes (both are true "
+            "budgets); each class's recovery subsystem is a separate "
+            "simulation on its own duty cycle. Heads and docks are NOT shared "
+            "between classes — a whoop and a Crazyflie need different capture "
+            "geometry — so the counts are per class.",
+            "Scout endurance, mass and per-link video cost are engineering "
+            "estimates for a ducted 65–75 mm airframe, not measurements. The "
+            "radio verdict is only as good as the per-link cost behind it.",
+            "This sizes an architecture. No hardware has recovered one "
+            "aircraft of either class.",
+        ],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
@@ -1958,7 +2095,41 @@ def main(argv: list[str] | None = None) -> int:
             "airborne counts, instead of running the head sweep"
         ),
     )
+    parser.add_argument(
+        "--scouts",
+        type=int,
+        default=None,
+        help=(
+            "add a WHOOP-class scout wing of this many airborne to a mixed "
+            "fleet; the recovery target comes from the first --target-airborne"
+        ),
+    )
+    parser.add_argument(
+        "--scout-links",
+        type=float,
+        default=SCOUT_CLASS.radio_links,
+        help="radio links one airborne scout draws (video is several)",
+    )
     args = parser.parse_args(argv)
+
+    if args.scouts is not None:
+        recovery_target = (args.target_airborne or [20])[0]
+        service = calibrate_service(
+            episodes=args.episodes,
+            scenario=sil_p0b if args.noise == 1.0 else noise_scenario(args.noise),
+        )
+        report = size_carrier(
+            [
+                replace(RECOVERY_CLASS, target_airborne=recovery_target),
+                replace(SCOUT_CLASS, target_airborne=args.scouts, radio_links=args.scout_links),
+            ],
+            service=service,
+            links_per_channel=args.links_per_channel,
+            seed=args.seeds[0],
+            horizon_s=args.hours * 3600.0,
+        )
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
 
     if args.target_airborne:
         service = calibrate_service(

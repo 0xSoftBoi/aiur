@@ -366,6 +366,43 @@ so its head and airspace counts are lower bounds; and it sizes trim, pitch,
 roll and pack authorities as *requirements the vehicle must meet*, not as
 things known to exist. It is a sizing tool, not a validation.
 
+## Two aircraft classes: scouts are radio-expensive
+
+The carrier does not fly one kind of aircraft. A Crazyflie-class article
+proves the dock; a WHOOP-class scout — a ducted 65–75 mm airframe, ~25 g,
+short-legged — flies ahead to look. They are different airframes with
+different docks and duty cycles, but they share the things the carrier has
+only one of: the radio, the launch airspace, and the lift. `size_carrier`
+sizes each class's recovery subsystem on its own duty cycle, then sums the
+shared budgets.
+
+```
+python -m aiur.sim.fleet --target-airborne 20 --scouts 10 | python tools/report_fleet.py
+```
+
+The result is a warning about the cheap aircraft, not the expensive one.
+**A scout wing dominates the radio budget out of all proportion to its
+size.** Ten video scouts, at ~4 links each for an FPV stream, draw 40 links
+— *twice* the 20 links of a full 20-aircraft recovery fleet, for a third of
+the airborne count. Push the video link to 8 and the scouts alone need more
+radios than the entire recovery fleet. Radio was already the taut wall for
+the recovery fleet; scouts are the thing that makes it taut sooner, and it
+is their comms payload, not their airframe, that does it.
+
+The short legs bite too. A scout on a three-minute sortie recovers far more
+often than a Crazyflie on ten, so it needs *more* capture heads than the
+recovery class per aircraft airborne — the small cheap drone is the
+cycle-expensive one. None of this is visible if scouts are treated as
+"extra aircraft"; they are a different resource profile, and the number they
+turn on is the radio.
+
+Heads and docks are not shared between the classes — a whoop and a Crazyflie
+need different capture geometry — so those counts are per class. Radio and
+lift are exact sums because a link budget and a mass budget genuinely add.
+Scout endurance, mass and per-link video cost are estimates for an airframe
+that has not been built; the radio verdict is only as good as the per-link
+cost behind it.
+
 ## What this does not say
 
 - **Terminal-traffic interaction is an overlay, off by default.** With it
