@@ -109,6 +109,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 import heapq
 import json
+import math
 import random
 from typing import Callable, Iterable, Sequence
 
@@ -1624,6 +1625,226 @@ def run_study(
     }
 
 
+# --------------------------------------------------------------------------
+# Synthesis: size the whole carrier for a target airborne count
+# --------------------------------------------------------------------------
+#
+# Everything above sizes one resource at a time, each demonstrated in
+# isolation. That is how the effects were found, but it is not an answer: the
+# memo's own conclusion is that the binding constraint *walks the chain*, so
+# the only honest way to say what "hundreds of drones" costs is to turn every
+# constraint on at once and size the whole vehicle together.
+#
+# The user asks for a number of aircraft *airborne* — the number that does
+# something — not a number owned. This solver takes that target, seeds a
+# configuration from the duty-cycle arithmetic, then repairs it against the
+# real integrated simulation: it reads the binding constraint the run
+# reports and buys down exactly that resource, repeating until the carrier
+# both serves its fleet and holds the target overhead. What it returns is a
+# bill of materials and, as importantly, the constraint that was hardest to
+# satisfy — the one a real programme would spend its money on.
+
+
+@dataclass(frozen=True)
+class DesignPoint:
+    target_airborne: int
+    served: bool
+    converged: bool
+    achieved_airborne: float
+    iterations: int
+    #: The constraint binding the final configuration — the one the target
+    #: is most sensitive to, and where marginal budget should go.
+    binding_constraint: str
+    #: The sized carrier, as a resource bill a human reads.
+    bill: dict
+    #: Key metrics of the winning run.
+    metrics: dict
+    notes: tuple[str, ...]
+
+
+def size_for_airborne(
+    target_airborne: int,
+    *,
+    service: ServiceModel,
+    endurance_s: float = 600.0,
+    sortie_s: float = 420.0,
+    recharge_s: float = 3600.0,
+    stow_s: float = DEFAULT_STOW_S,
+    use_swap: bool = False,
+    swap_s: float = DEFAULT_SWAP_S,
+    links_per_channel: int = 20,
+    aircraft_mass_g: float = 37.0,
+    magazine_span_m: float = 30.0,
+    magazine_width_m: float = 8.0,
+    magazine_columns: int = 4,
+    launch_interval_s: float = 5.0,
+    seed: int = 1,
+    horizon_s: float = 4 * 3600.0,
+    max_iter: int = 120,
+) -> DesignPoint:
+    """Size a carrier, all constraints on, for ``target_airborne`` overhead.
+
+    Seeds from the duty cycle, then repairs against the integrated run: the
+    binding constraint each iteration names the resource to buy down. This
+    converges on a viable configuration and, at the end, on the constraint
+    that resisted longest — the real answer to "what does it cost".
+    """
+
+    occ = service.mean_occupancy_s
+    turnaround = swap_s if use_swap else recharge_s
+    cycle_s = sortie_s + turnaround + stow_s + occ
+    airborne_fraction = sortie_s / cycle_s
+    # Recoveries per second the target implies: each overhead aircraft
+    # returns roughly once per flight, and flight ~ sortie.
+    recov_rate = target_airborne / sortie_s
+
+    # Analytic seed — deliberately a little light, so the repair loop does
+    # the real work against the simulation rather than a formula.
+    fleet = max(target_airborne + 1, math.ceil(target_airborne / airborne_fraction))
+    heads = max(1, math.ceil(recov_rate * (occ + stow_s) / 0.7))
+    lanes = max(1, math.ceil(recov_rate * launch_interval_s))
+    radios = max(1, math.ceil(target_airborne / links_per_channel))
+    ballast = max(1.0, recov_rate * aircraft_mass_g * 1.3)
+    pitch_auth = 4000.0
+    roll_auth = 4000.0
+    if use_swap:
+        chargers = math.ceil(target_airborne * recharge_s / sortie_s * 1.2)
+        spares = chargers
+    else:
+        chargers = None
+        spares = 0
+
+    def build() -> FleetParams:
+        return FleetParams(
+            fleet_size=fleet,
+            capture_heads=heads,
+            launch_lanes=lanes,
+            launch_interval_s=launch_interval_s,
+            endurance_s=endurance_s,
+            sortie_s=sortie_s,
+            recharge_s=recharge_s,
+            stow_s=stow_s,
+            aircraft_mass_g=aircraft_mass_g,
+            energy_mode="swap" if use_swap else "charge_in_place",
+            swap_s=swap_s,
+            spare_packs=spares,
+            charger_channels=chargers,
+            ballast_rate_g_s=ballast,
+            trim_authority_g=100.0,
+            magazine_span_m=magazine_span_m,
+            magazine_width_m=magazine_width_m,
+            magazine_columns=magazine_columns,
+            pitch_authority_g_m=pitch_auth,
+            roll_authority_g_m=roll_auth,
+            radio_channels=radios,
+            links_per_channel=links_per_channel,
+            horizon_s=horizon_s,
+        )
+
+    best: FleetResult | None = None
+    iterations = 0
+    for iterations in range(1, max_iter + 1):
+        result = simulate_fleet(build(), service, seed=seed)
+        enough = result.mean_airborne >= 0.97 * target_airborne
+        if best is None or (result.serves_fleet, result.mean_airborne) > (
+            best.serves_fleet,
+            best.mean_airborne,
+        ):
+            best = result
+        if result.serves_fleet and enough:
+            break
+        bc = result.binding_constraint
+        if not result.serves_fleet:
+            # Fix the failure the run reported.
+            if "radio capacity" in bc:
+                radios += 1
+            elif "buoyant trim" in bc:
+                ballast *= 1.4
+            elif "pitch trim" in bc:
+                pitch_auth *= 1.4
+            elif "roll trim" in bc:
+                roll_auth *= 1.4
+            elif "battery pool" in bc or "pack-charge" in bc:
+                chargers = int((chargers or 1) * 1.3) + 1
+                spares = int(spares * 1.3) + 1
+            elif "magazine slots" in bc:
+                fleet += max(1, fleet // 10)
+            elif "launch lanes" in bc:
+                lanes += 1
+            else:  # capture heads, arrival burstiness → recovery side
+                heads += 1
+        else:
+            # Serves the fleet but not enough of it is airborne; the run's
+            # binding constraint says which cap is holding it down.
+            if "radio capacity" in bc:
+                radios += 1
+            elif "launch lanes" in bc:
+                lanes += 1
+            elif "capture heads" in bc:
+                heads += 1
+            elif "battery pool" in bc or "pack-charge" in bc:
+                chargers = int((chargers or 1) * 1.3) + 1
+                spares = int(spares * 1.3) + 1
+            else:
+                # Charge/duty-cycle limited: only more airframes raise the
+                # overhead count. Keep radio matched so it does not become
+                # the next wall by surprise.
+                deficit = max(1, target_airborne - int(result.mean_airborne))
+                fleet += max(1, math.ceil(deficit / airborne_fraction))
+                radios = max(radios, math.ceil(target_airborne / links_per_channel))
+
+    final = simulate_fleet(build(), service, seed=seed)
+    converged = final.serves_fleet and final.mean_airborne >= 0.97 * target_airborne
+    notes = [
+        "Terminal-traffic interaction is left off in this design point "
+        "(independent corridors, no wake penalty): head and airspace counts "
+        "are lower bounds until a belly layout is chosen and its interaction "
+        "parameters measured.",
+        "Trim, pitch and roll authorities and the pack pool are sized as "
+        "requirements the vehicle must meet, not as things known to exist.",
+        "This sizes an architecture. No hardware has recovered one aircraft.",
+    ]
+    if not converged:
+        notes.insert(
+            0,
+            f"DID NOT CONVERGE in {max_iter} iterations; the bill below is the "
+            "best configuration found and its binding constraint is the wall.",
+        )
+    return DesignPoint(
+        target_airborne=target_airborne,
+        served=final.serves_fleet,
+        converged=converged,
+        achieved_airborne=final.mean_airborne,
+        iterations=iterations,
+        binding_constraint=final.binding_constraint,
+        bill={
+            "fleet_size": fleet,
+            "capture_heads": heads,
+            "launch_lanes": lanes,
+            "radio_channels": radios,
+            "links_per_channel": links_per_channel,
+            "ballast_rate_g_s": round(ballast, 1),
+            "energy_mode": "swap" if use_swap else "charge_in_place",
+            "spare_packs": spares,
+            "charger_channels": chargers,
+            "magazine_slots": fleet,
+            "pitch_authority_g_m": round(pitch_auth),
+            "roll_authority_g_m": round(roll_auth),
+            "dock_mass_g": final.dock_mass_g,
+        },
+        metrics={
+            "achieved_airborne": final.mean_airborne,
+            "throughput_per_hour": final.throughput_per_hour,
+            "loss_pct": final.loss_pct,
+            "keeper_cycles": final.keeper_cycles,
+            "swap_cycles": final.swap_cycles,
+            "radio_utilisation": final.radio_utilisation,
+            "head_utilisation": final.head_utilisation,
+        },
+        notes=tuple(notes),
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
@@ -1727,7 +1948,52 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--links-per-channel", type=int, default=20)
     parser.add_argument("--approach-link-cost", type=int, default=1)
+    parser.add_argument(
+        "--target-airborne",
+        type=int,
+        nargs="+",
+        default=None,
+        help=(
+            "size the whole carrier, all constraints on, for these concurrent "
+            "airborne counts, instead of running the head sweep"
+        ),
+    )
     args = parser.parse_args(argv)
+
+    if args.target_airborne:
+        service = calibrate_service(
+            episodes=args.episodes,
+            scenario=sil_p0b if args.noise == 1.0 else noise_scenario(args.noise),
+        )
+        points = [
+            size_for_airborne(
+                target,
+                service=service,
+                endurance_s=args.endurance,
+                sortie_s=args.sortie,
+                recharge_s=args.recharge,
+                stow_s=args.stow,
+                use_swap=args.energy == "swap",
+                swap_s=args.swap_s,
+                links_per_channel=args.links_per_channel,
+                horizon_s=args.hours * 3600.0,
+                seed=args.seeds[0],
+            )
+            for target in args.target_airborne
+        ]
+        print(
+            json.dumps(
+                {
+                    "study": "fleet design point",
+                    "service_model": asdict(service),
+                    "energy_mode": args.energy,
+                    "design_points": [asdict(p) for p in points],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
 
     base = FleetParams(
         endurance_s=args.endurance,
