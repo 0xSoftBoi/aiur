@@ -306,6 +306,148 @@ class BuoyantTrim(unittest.TestCase):
         self.assertEqual(result.trim_exceedance_fraction, 0.0)
 
 
+class BatterySwap(unittest.TestCase):
+    """Hot-swap replaces slot-hours of charging with a mechanical exchange.
+
+    The point the model must make honestly: swap does not create energy. The
+    fleet still consumes packs at its flight rate, so the pool has to supply
+    them at that rate. The bottleneck moves from idle airframes to packs and
+    chargers — a good trade only because airframes are the expensive, few,
+    FMECA'd resource and packs are cheap. If the tests only showed the
+    airborne-count win without the pool cost, the model would be lying.
+    """
+
+    def test_validate_rejects_bad_energy_mode(self):
+        with self.assertRaises(ValueError):
+            simulate_fleet(FleetParams(energy_mode="teleport"), service())
+
+    def test_swap_needs_a_charger(self):
+        with self.assertRaises(ValueError):
+            simulate_fleet(
+                FleetParams(energy_mode="swap", charger_channels=0), service()
+            )
+
+    def test_a_generous_pool_beats_charge_in_place_on_airborne_count(self):
+        base = dict(fleet_size=200, capture_heads=3)
+        cip = simulate_fleet(FleetParams(**base), service(), seed=1)
+        swap = simulate_fleet(
+            FleetParams(
+                **base,
+                energy_mode="swap",
+                swap_s=12.0,
+                spare_packs=1000,
+                charger_channels=1000,
+                pack_charge_s=3600.0,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertGreater(swap.mean_airborne, 2.0 * cip.mean_airborne)
+
+    def test_the_win_is_paid_for_in_packs_a_stingy_pool_starves(self):
+        # Same swap mechanism, no spare packs, one charger: the pool cannot
+        # supply packs at the flight rate, so recovered aircraft wait and
+        # the airborne count is no better than charge-in-place. This is the
+        # honest counterweight to the previous test.
+        result = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=3,
+                energy_mode="swap",
+                spare_packs=0,
+                charger_channels=1,
+                pack_charge_s=3600.0,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertTrue(result.pack_starved)
+        self.assertIn("battery pool", result.binding_constraint)
+
+    def test_pack_starvation_is_diagnosed_even_with_an_empty_recovery_queue(self):
+        # Pool starvation holds aircraft in slots, not in the recovery
+        # queue, so losses are zero and the queue is empty. Without the
+        # dedicated check this reads as "none — serves the fleet".
+        result = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=8,
+                energy_mode="swap",
+                spare_packs=0,
+                charger_channels=1,
+                pack_charge_s=3600.0,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertEqual(result.loss_pct, 0.0)
+        self.assertNotIn("none", result.binding_constraint)
+        self.assertIn("battery pool", result.binding_constraint)
+
+    def test_more_spare_packs_never_reduce_airborne_count(self):
+        airborne = [
+            simulate_fleet(
+                FleetParams(
+                    fleet_size=200,
+                    capture_heads=4,
+                    energy_mode="swap",
+                    spare_packs=n,
+                    charger_channels=n if n else 1,
+                    pack_charge_s=3600.0,
+                ),
+                service(),
+                seed=1,
+            ).mean_airborne
+            for n in (0, 200, 600, 1200)
+        ]
+        self.assertEqual(airborne, sorted(airborne))
+
+    def test_keeper_cycles_count_every_recovery_including_warmup(self):
+        # The keeper servo is the dock's one unavoidable moving mechanism,
+        # and it actuates once per recovery over the WHOLE run — warm-up
+        # included — because a mechanism life test does not get to ignore
+        # the cycles that happened before the measurement window opened.
+        for mode, extra in (
+            ("charge_in_place", {}),
+            ("swap", dict(spare_packs=1000, charger_channels=1000)),
+        ):
+            result = simulate_fleet(
+                FleetParams(fleet_size=100, capture_heads=3, energy_mode=mode, **extra),
+                service(),
+                seed=1,
+            )
+            self.assertGreater(result.keeper_cycles, result.recoveries)
+            self.assertGreater(result.recoveries, 0)
+
+    def test_swap_cycles_are_zero_without_swap_and_positive_with_it(self):
+        cip = simulate_fleet(FleetParams(fleet_size=100, capture_heads=2), service(), seed=1)
+        self.assertEqual(cip.swap_cycles, 0)
+        swap = simulate_fleet(
+            FleetParams(
+                fleet_size=100,
+                capture_heads=2,
+                energy_mode="swap",
+                spare_packs=500,
+                charger_channels=500,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertGreater(swap.swap_cycles, 0)
+
+    def test_swap_is_deterministic(self):
+        params = FleetParams(
+            fleet_size=200,
+            capture_heads=3,
+            energy_mode="swap",
+            spare_packs=400,
+            charger_channels=400,
+        )
+        a = simulate_fleet(params, service(0.9), seed=7)
+        b = simulate_fleet(params, service(0.9), seed=7)
+        self.assertEqual(a, b)
+
+
 class QueueBehaviour(unittest.TestCase):
     def test_adding_heads_never_increases_losses(self):
         base = FleetParams(fleet_size=200, capture_heads=1, recharge_s=900.0)

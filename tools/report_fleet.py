@@ -21,6 +21,17 @@ def render(report: dict) -> str:
         f"policy: {base['queue_policy']}, retry limit {base['retry_limit']}, "
         f"stow {base['stow_s']:.0f}s, go-around {base['go_around_s']:.0f}s"
     )
+    mode = base.get("energy_mode", "charge_in_place")
+    if mode == "swap":
+        chargers = base.get("charger_channels")
+        chargers = "one/airframe" if chargers is None else chargers
+        out.append(
+            f"energy: battery swap, {base['swap_s']:.0f}s exchange, "
+            f"{base['spare_packs']} spare packs, {chargers} chargers, "
+            f"pack recharge {base.get('pack_charge_s') or base['recharge_s']:.0f}s"
+        )
+    else:
+        out.append("energy: charge in place (recovered aircraft holds its slot)")
     out.append(f"seeds {report['seeds']}, loss threshold {report['loss_threshold_pct']}%")
     out.append("")
 
@@ -44,6 +55,19 @@ def render(report: dict) -> str:
 
     out.append("trim g = peak uncorrected buoyant trim error; trim% = time outside trim authority")
     out.append("")
+
+    out.append("MECHANISM LIFE (actuations over the run; life test must cover these x margin)")
+    hdr2 = f"{'fleet':>6} {'heads':>6} {'keeper cyc':>11} {'swap cyc':>9}"
+    out.append(hdr2)
+    out.append("-" * len(hdr2))
+    for sweep in report["sweeps"]:
+        for row in sweep["rows"]:
+            out.append(
+                f"{sweep['fleet_size']:>6} {row['capture_heads']:>6} "
+                f"{row.get('keeper_cycles', 0):>11} {row.get('swap_cycles', 0):>9}"
+            )
+        out.append("")
+
     out.append("MINIMUM CAPTURE HEADS")
     for sweep in report["sweeps"]:
         minimum = sweep["minimum_heads"]

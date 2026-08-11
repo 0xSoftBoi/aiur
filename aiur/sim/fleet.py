@@ -126,6 +126,11 @@ DEFAULT_STOW_S = 8.0
 #: re-acquire.  Estimate.
 DEFAULT_GO_AROUND_S = 25.0
 
+#: Time to mechanically exchange a depleted battery pack for a charged one.
+#: Estimate for a mechanism that does not exist; it is a parameter so the
+#: sweep can show how much the answer depends on it.
+DEFAULT_SWAP_S = 12.0
+
 #: Loss rate above which a configuration is judged not to serve its fleet.
 #: A "loss" is an aircraft that ran its reserve out in the queue or
 #: exhausted its retries — on hardware that is a crash, so the threshold is
@@ -248,6 +253,37 @@ class FleetParams:
     sortie_s: float = 420.0
     recharge_s: float = 3600.0
 
+    # ---- energy replenishment ---------------------------------------------
+    #
+    # "charge_in_place": the recovered aircraft holds its slot for the full
+    # recharge — the P0-style assumption, and the reason every large fleet
+    # in this model is charge-bound.
+    #
+    # "swap": the aircraft exchanges its depleted pack for a charged one in
+    # swap_s and relaunches; the depleted pack then recharges in a shared
+    # pool of charger channels while spare packs keep aircraft flying.
+    #
+    # Swap does not create energy.  The fleet still consumes packs at its
+    # flight rate, so the pool must supply them at that rate: the bottleneck
+    # moves from *idle airframes* to *packs and chargers*.  That is the whole
+    # point — airframes are the expensive, few, FMECA'd resource, and packs
+    # are cheap.  Swap buys airborne count per airframe, paid for in spare
+    # packs, charger channels, and an actuated mechanism that cycles hundreds
+    # of times per deployment (reported as lifetime actuations, never folded
+    # into a score; cf. NASA-STD-5017 mechanism life-with-margin practice).
+    energy_mode: str = "charge_in_place"
+    swap_s: float = DEFAULT_SWAP_S
+    #: Packs in circulation beyond one per airframe.  Zero spares means an
+    #: aircraft can only relaunch once its own pack is charged, which is
+    #: charge-in-place with extra steps.
+    spare_packs: int = 0
+    #: Packs that can charge simultaneously in the pool.  ``None`` means one
+    #: per airframe, i.e. charger capacity never binds and only pack count
+    #: and swap rate do.
+    charger_channels: int | None = None
+    #: Time for one pooled pack to recharge.  ``None`` inherits recharge_s.
+    pack_charge_s: float | None = None
+
     stow_s: float = DEFAULT_STOW_S
     go_around_s: float = DEFAULT_GO_AROUND_S
     #: Attempts before the aircraft is diverted rather than re-queued.
@@ -314,10 +350,39 @@ class FleetParams:
         return self.fleet_size if self.magazine_slots is None else self.magazine_slots
 
     @property
+    def pack_charge_effective_s(self) -> float:
+        return self.recharge_s if self.pack_charge_s is None else self.pack_charge_s
+
+    @property
+    def charger_channels_effective(self) -> int:
+        return (
+            self.fleet_size
+            if self.charger_channels is None
+            else self.charger_channels
+        )
+
+    @property
+    def turnaround_s(self) -> float:
+        """Airframe-side time from recovery to relaunch-ready.
+
+        In swap mode this is the mechanical exchange, not the recharge —
+        that is the entire benefit, and it is what the demand and warm-up
+        estimates must use so the pool constraint shows up as unmet demand
+        rather than being baked into the demand figure itself.
+        """
+
+        return self.recharge_s if self.energy_mode == "charge_in_place" else self.swap_s
+
+    @property
     def effective_warmup_s(self) -> float:
         if self.warmup_s is not None:
             return self.warmup_s
-        return min(self.recharge_s + self.endurance_s, 0.5 * self.horizon_s)
+        slow_s = (
+            self.recharge_s
+            if self.energy_mode == "charge_in_place"
+            else self.pack_charge_effective_s
+        )
+        return min(slow_s + self.endurance_s, 0.5 * self.horizon_s)
 
     def validate(self) -> None:
         if self.fleet_size < 1:
@@ -333,6 +398,13 @@ class FleetParams:
             )
         if self.queue_policy not in ("energy", "fcfs"):
             raise ValueError(f"unknown queue_policy {self.queue_policy!r}")
+        if self.energy_mode not in ("charge_in_place", "swap"):
+            raise ValueError(f"unknown energy_mode {self.energy_mode!r}")
+        if self.energy_mode == "swap":
+            if self.spare_packs < 0:
+                raise ValueError("spare_packs must be >= 0")
+            if self.charger_channels_effective < 1:
+                raise ValueError("swap mode needs at least one charger channel")
 
 
 @dataclass(frozen=True)
@@ -368,6 +440,19 @@ class FleetResult:
     binding_constraint: str
     dock_mass_g: float
     payload_margin_g: float
+    #: Keeper servo actuations over the run — one per recovery. The dock's
+    #: single unavoidable moving mechanism; its cycle count is what a
+    #: mechanism life test must cover with margin (NASA-STD-5017: qualify to
+    #: at least 2x expected life, more for life-limited mechanisms).
+    keeper_cycles: int
+    #: Battery-swap actuations over the run, zero in charge-in-place mode.
+    #: A second life-limited mechanism the swap architecture adds, and the
+    #: reliability price of trading a passive charge contact for an active
+    #: exchange.
+    swap_cycles: int
+    #: Swap mode only: recovered aircraft had to wait for a charged pack.
+    #: The pool, not the dock, is then the limit.
+    pack_starved: bool
     #: Largest buoyant trim error the mass-exchange system failed to
     #: cancel, in grams of static lightness or heaviness.
     peak_trim_error_g: float
@@ -448,6 +533,17 @@ def simulate_fleet(
     #: denominator drawn from the same span as its numerator.
     recoveries_total = 0
     sorties = 0
+
+    # Battery-swap pool. Packs are fungible tokens: charged ones sit ready,
+    # depleted ones charge in a finite set of channels, and an aircraft that
+    # lands with no charged pack available waits (holding its slot) until one
+    # is. Spares start charged and ready.
+    charged_packs = params.spare_packs
+    charging_count = 0
+    depleted_queue = 0
+    waiting_for_pack: list[_Aircraft] = []
+    swaps_total = 0
+    pack_wait_events = 0
     lost_reserve = 0
     lost_retries = 0
     waits: list[float] = []
@@ -656,10 +752,13 @@ def simulate_fleet(
                 recoveries += 1
                 peak_slots = max(peak_slots, used_slots)
             schedule(t + params.stow_s, lambda now: release_head(now))
-            schedule(
-                t + params.stow_s + params.recharge_s,
-                lambda now, a=aircraft: recharged(now, a),
-            )
+            if params.energy_mode == "swap":
+                schedule(t + params.stow_s, lambda now, a=aircraft: begin_swap(now, a))
+            else:
+                schedule(
+                    t + params.stow_s + params.recharge_s,
+                    lambda now, a=aircraft: recharged(now, a),
+                )
             return
 
         free_heads += 1
@@ -711,6 +810,56 @@ def simulate_fleet(
         aircraft.state = _READY
         try_launch(t)
 
+    # ---- battery-swap pool -------------------------------------------------
+
+    def deposit_depleted(t: float) -> None:
+        """A just-removed depleted pack enters the charger pool."""
+
+        nonlocal charging_count, depleted_queue
+        if charging_count < params.charger_channels_effective:
+            charging_count += 1
+            schedule(t + params.pack_charge_effective_s, pack_ready)
+        else:
+            depleted_queue += 1
+
+    def acquire_charged(t: float, aircraft: _Aircraft) -> None:
+        """Hand the aircraft a charged pack now, or make it wait for one."""
+
+        nonlocal charged_packs, pack_wait_events
+        if charged_packs > 0:
+            charged_packs -= 1
+            schedule(t + params.swap_s, lambda now, a=aircraft: swapped(now, a))
+        else:
+            if t >= measured_from:
+                pack_wait_events += 1
+            waiting_for_pack.append(aircraft)
+
+    def pack_ready(t: float) -> None:
+        """A pooled pack finished charging."""
+
+        nonlocal charging_count, depleted_queue, charged_packs
+        charging_count -= 1
+        if waiting_for_pack:
+            aircraft = waiting_for_pack.pop(0)
+            schedule(t + params.swap_s, lambda now, a=aircraft: swapped(now, a))
+        else:
+            charged_packs += 1
+        if depleted_queue > 0:
+            depleted_queue -= 1
+            charging_count += 1
+            schedule(t + params.pack_charge_effective_s, pack_ready)
+
+    def begin_swap(t: float, aircraft: _Aircraft) -> None:
+        deposit_depleted(t)
+        acquire_charged(t, aircraft)
+
+    def swapped(t: float, aircraft: _Aircraft) -> None:
+        nonlocal swaps_total
+        advance(t)
+        swaps_total += 1
+        aircraft.state = _READY
+        try_launch(t)
+
     # ---- the reserve-exhaustion watchdog ----------------------------------
     #
     # An aircraft sitting in the queue burns reserve in wall-clock time, not
@@ -744,7 +893,7 @@ def simulate_fleet(
     # steady-state demand rather than a thundering herd.
     cycle_estimate_s = (
         params.sortie_s
-        + params.recharge_s
+        + params.turnaround_s
         + service.mean_occupancy_s
         + params.stow_s
     )
@@ -767,7 +916,7 @@ def simulate_fleet(
     attempted = recoveries_total + losses
     head_capacity_s = params.capture_heads * measured_span
     launch_capacity = params.launch_lanes * measured_span / params.launch_interval_s
-    cycle_s = params.sortie_s + params.recharge_s + service.mean_occupancy_s + params.stow_s
+    cycle_s = params.sortie_s + params.turnaround_s + service.mean_occupancy_s + params.stow_s
     demand_per_hour = 3600.0 * params.fleet_size / cycle_s
 
     result = FleetResult(
@@ -789,6 +938,9 @@ def simulate_fleet(
         mean_airborne=round(airborne_integral / measured_span, 2),
         sorties=sorties,
         binding_constraint="",
+        keeper_cycles=recoveries_total,
+        swap_cycles=swaps_total,
+        pack_starved=pack_wait_events > 0,
         peak_trim_error_g=round(peak_trim_error_g, 1),
         trim_exceedance_fraction=round(trim_exceeded_s / measured_span, 4),
         dock_mass_g=round(
@@ -848,6 +1000,17 @@ def _diagnose(result: FleetResult, params: FleetParams) -> str:
             f"{3600.0 * params.launch_lanes / params.launch_interval_s:.0f} "
             "sorties/h): the carrier can recover faster than it can release"
         )
+    # Pack starvation is checked here, before the empty-queue case, for the
+    # same reason trim and launch are: a pool-limited carrier holds its
+    # recovered aircraft in slots waiting for charged packs, so the recovery
+    # queue is empty and "none" would read as health while airborne count is
+    # suppressed. The fix is spare packs or chargers, not more heads.
+    if params.energy_mode == "swap" and result.pack_starved:
+        return (
+            f"battery pool ({params.spare_packs} spare packs, "
+            f"{params.charger_channels_effective} chargers): recovered "
+            "aircraft wait for a charged pack before they can relaunch"
+        )
     if result.loss_pct <= LOSS_THRESHOLD_PCT and result.max_queue_depth <= 1:
         return "none — the carrier serves this fleet with the queue empty"
     if result.peak_slots_used >= params.slots and params.slots < params.fleet_size:
@@ -865,6 +1028,11 @@ def _diagnose(result: FleetResult, params: FleetParams) -> str:
         return (
             "arrival burstiness: heads are not saturated on average, but "
             "the fleet arrives in a wave and the reserve runs out inside it"
+        )
+    if params.energy_mode == "swap":
+        return (
+            "pack-charge throughput: airframes cycle freely, the pool "
+            "recharges packs as fast as it can and that is the limit"
         )
     return "recharge time: the fleet is charge-limited, not recovery-limited"
 
@@ -942,6 +1110,8 @@ def sweep_heads(
                 ),
                 "max_queue_depth": max(r.max_queue_depth for r in runs),
                 "dock_mass_g": worst.dock_mass_g,
+                "keeper_cycles": max(r.keeper_cycles for r in runs),
+                "swap_cycles": max(r.swap_cycles for r in runs),
                 "binding_constraint": worst.binding_constraint,
             }
         )
@@ -1056,6 +1226,31 @@ def main(argv: list[str] | None = None) -> int:
             "noise; >1 is what exercises the go-around and divert paths"
         ),
     )
+    parser.add_argument(
+        "--energy",
+        choices=("charge_in_place", "swap"),
+        default="charge_in_place",
+        help="how recovered aircraft regain energy",
+    )
+    parser.add_argument("--swap-s", type=float, default=DEFAULT_SWAP_S)
+    parser.add_argument(
+        "--spare-packs",
+        type=int,
+        default=0,
+        help="swap mode: packs in circulation beyond one per airframe",
+    )
+    parser.add_argument(
+        "--charger-channels",
+        type=int,
+        default=None,
+        help="swap mode: packs that can charge at once (default: one per airframe)",
+    )
+    parser.add_argument(
+        "--pack-charge-s",
+        type=float,
+        default=None,
+        help="swap mode: time for one pooled pack to recharge (default: --recharge)",
+    )
     args = parser.parse_args(argv)
 
     base = FleetParams(
@@ -1066,6 +1261,11 @@ def main(argv: list[str] | None = None) -> int:
         magazine_slots=args.slots,
         queue_policy=args.policy,
         horizon_s=args.hours * 3600.0,
+        energy_mode=args.energy,
+        swap_s=args.swap_s,
+        spare_packs=args.spare_packs,
+        charger_channels=args.charger_channels,
+        pack_charge_s=args.pack_charge_s,
     )
     print(
         json.dumps(

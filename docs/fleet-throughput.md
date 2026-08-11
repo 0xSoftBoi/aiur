@@ -101,6 +101,68 @@ p_capture 0.85, across five seeds). This is worth stating because the
 opposite is easy to assume: the policy is not free insurance, it is a
 response to an unreliable mechanism.
 
+## Battery swap: moving the bottleneck, not removing it
+
+Recharge dominates because a recovered aircraft holds a slot for the full
+charge — an hour against a ten-minute sortie. The obvious attack is to stop
+charging airframes in place and instead swap the depleted pack for a charged
+one in seconds, letting the dead pack recharge in a shared pool while the
+airframe flies again. The model now carries this as an energy mode
+(`--energy swap`), with a pool of spare packs and charger channels.
+
+It works, and the result is more honest than the pitch:
+
+```
+python -m aiur.sim.fleet --fleet 200 --energy swap \
+    --spare-packs 1000 --charger-channels 1000 | python tools/report_fleet.py
+```
+
+**Swap does not create energy — it converts idle airframes into idle
+batteries.** With a 12 s exchange, the per-airframe cycle drops from ~4000 s
+to ~460 s, so the same 200 airframes want to fly ~9× as often. Airborne
+count rises from ~22 to ~82. But the fleet still burns energy at its flight
+rate, so the pool must supply packs at that rate: sustaining it needs on the
+order of **1,000 spare packs and 1,000 charger channels** — roughly the
+charge-in-place slot count, now filled with batteries instead of airframes.
+
+That is the actual trade, and it is a good one *if and only if* airframes
+are the expensive, few, individually-qualified resource and packs are cheap.
+You buy airborne-count-per-airframe and pay in battery inventory and charger
+mass. If packs are not cheap, swap buys nothing.
+
+**Swap also re-exposes capture heads as the bottleneck.** Once the fleet is
+no longer charge-bound, its demand jumps past what a few heads can recover:
+at 200 aircraft in swap mode, 4 heads still do not serve the fleet. The
+constraint chain is recharge → (swap) → heads → launch, and fixing one
+promotes the next. There is no single lever.
+
+### Fewer moving parts is the reliability position, and swap costs there
+
+The dock already has one unavoidable moving mechanism: the keeper servo,
+which actuates once per recovery. Battery swap adds a second life-limited
+mechanism that also cycles once per recovery. The model reports both as
+lifetime actuations, because that — not part count alone — is what a
+mechanism qualification gates on: NASA-STD-5017 requires moving mechanical
+assemblies to be life-tested to at least twice expected life (more for
+life-limited or high-cycle mechanisms), with torque/force margin held across
+the whole range.
+
+The numbers make the cost concrete. A 200-aircraft carrier runs on the order
+of **2,000 keeper cycles and 2,000 swap cycles in a four-hour window**.
+Extrapolated to a continuous deployment that is millions of cycles per
+mechanism per year, each of which must be qualified with margin. Swap
+doubles the count of life-limited actuated mechanisms in the recovery path
+and drives both hard. A passive charge contact has no such qualification
+burden — it is the fewer-moving-parts option, and it is why charge-in-place
+is not simply the loser here.
+
+The design rule that falls out: **add an actuated mechanism only when a
+passive alternative cannot meet the requirement, and when you do, its cycle
+count is a first-class cost carried next to the benefit — never folded into
+a score.** The trade study module already applies exactly this rule to the
+capture mechanism (actuators and sensed channels are printed, never scored);
+the fleet model now applies it to the energy architecture.
+
 ## The buoyant-trim coupling
 
 The largest finding is one the study was not originally built to make.
@@ -163,12 +225,20 @@ architecture exists to avoid.
 1. **Do not build a dock per aircraft.** Build few heads and many passive
    slots. The study puts numbers on "few": 2 for 200, 3 for 400.
 2. **Charge rate is the scaling lever, not capture rate.** Every fleet the
-   dock can serve is recharge-bound.
-3. **Size a mass-exchange system now, as a requirement, not later as an
+   dock can serve is recharge-bound — until you break that with battery
+   swap, which then promotes capture heads to the bottleneck. There is no
+   single lever; the chain is recharge → heads → launch.
+3. **Prefer passive; price every actuated mechanism in cycles, not count.**
+   Battery swap roughly doubles airborne-count-per-airframe but adds a
+   second life-limited mechanism running millions of cycles a year, on top
+   of the keeper servo. Whether that trade is worth it depends entirely on
+   whether airframes are dearer than the pack-and-charger inventory swap
+   demands — a number this study frames but cannot decide for you.
+4. **Size a mass-exchange system now, as a requirement, not later as an
    integration surprise.** Minimum ballast rate ≈ launch rate × aircraft
    mass, and it must be sized against head count, not just fleet size.
-4. **Specify "airborne", never "fleet size".** They differ by ~9× on the
+5. **Specify "airborne", never "fleet size".** They differ by ~9× on the
    current duty cycle.
-5. **The next modelling work is terminal traffic interaction**, because it
+6. **The next modelling work is terminal traffic interaction**, because it
    is the one unmodelled effect that moves the headline number in the
    unsafe direction.
