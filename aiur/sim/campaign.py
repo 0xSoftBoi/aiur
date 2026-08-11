@@ -47,6 +47,7 @@ from .engine import EpisodeConfig, EpisodeOutcome, EpisodeResult, run_episode
 from .events import EventKind
 from .gates import evaluate_sil_gate, sil_gate_by_id
 from .scenarios import (
+    carrier_wake_case,
     degraded_sensor_case,
     nav_bias_ramp_case,
     outdoor_gust_case,
@@ -69,6 +70,11 @@ SENSOR_NOISE_SCALES: tuple[float, ...] = (1.0, 3.0, 10.0, 30.0)
 #: detector's per-step threshold: the slow end is invisible to it, the fast
 #: end trips it, and the interesting answer is in between.
 NAV_BIAS_RAMP_RATES_M_S: tuple[float, ...] = (0.0, 0.005, 0.01, 0.02, 0.05, 0.10)
+
+#: Carrier belly-dock downwash, m/s.  Straddles the terminal approach-speed
+#: budget (~0.1-0.2 m/s): the low end is a mild bubble, the high end pushes
+#: the drone away faster than it closes, and the collapse is in between.
+CARRIER_WAKE_DOWNWASH_M_S: tuple[float, ...] = (0.0, 0.05, 0.10, 0.15, 0.20, 0.40)
 
 
 @dataclass(frozen=True)
@@ -357,6 +363,15 @@ def run_sweep(
             "the twin is declared for external optical positioning at the "
             "Lighthouse-grade sigma of 3 mm (noise_scale 1.0)"
         )
+    elif study == "carrier-wake-sweep":
+        bins = CARRIER_WAKE_DOWNWASH_M_S
+        case = carrier_wake_case
+        bin_label = "downwash_m_s"
+        domain_limit = 0.0
+        domain_limit_text = (
+            "the twin is declared for a carrier whose belly-dock wake is "
+            "negligible; every non-zero downwash is the study's subject"
+        )
     else:
         raise KeyError(f"unknown sweep study: {study}")
 
@@ -420,7 +435,12 @@ def main(argv: list[str] | None = None) -> int:
         "--scenario",
         required=True,
         choices=sorted(GATE_SCENARIOS)
-        + ["outdoor-gust-sweep", "degraded-sensor-sweep", "nav-bias-ramp-sweep"],
+        + [
+            "outdoor-gust-sweep",
+            "degraded-sensor-sweep",
+            "nav-bias-ramp-sweep",
+            "carrier-wake-sweep",
+        ],
     )
     parser.add_argument("--episodes", type=int, default=200)
     parser.add_argument("--episodes-per-bin", type=int, default=30)

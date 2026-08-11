@@ -20,7 +20,12 @@ from __future__ import annotations
 from dataclasses import replace
 import random
 
-from .disturbances import AirModelParams, INDOOR_CALM, outdoor_breeze
+from .disturbances import (
+    AirModelParams,
+    CarrierWakeParams,
+    INDOOR_CALM,
+    outdoor_breeze,
+)
 from .engine import (
     DroneSetup,
     EpisodeConfig,
@@ -78,6 +83,7 @@ def sil_p0b(
     with_fault: bool = False,
     correlated_fault: bool = False,
     air: AirModelParams = INDOOR_CALM,
+    wake: CarrierWakeParams = CarrierWakeParams(),
     drone_sensor: PoseSensorParams = LIGHTHOUSE_GRADE,
     guidance: GuidanceParams = GuidanceParams(),
     record_telemetry: bool = False,
@@ -99,6 +105,7 @@ def sil_p0b(
         ),
         script=(ScriptStep(0, ScriptAction.RECOVER),),
         air=air,
+        wake=wake,
         drone_sensor=drone_sensor,
         guidance=guidance,
         max_duration_s=150.0,
@@ -208,6 +215,26 @@ def outdoor_gust_case(seed: int, mean_wind_m_s: float) -> EpisodeConfig:
     """
 
     return sil_p0c(seed, air=outdoor_breeze(mean_wind_m_s))
+
+
+def carrier_wake_case(seed: int, downwash_m_s: float) -> EpisodeConfig:
+    """One episode of the carrier-wake-sweep study.
+
+    A recovery flown through the carrier's own belly-dock downwash — the air
+    disturbance in the exact volume where capture happens, and the one that
+    historically decided aerial recovery (the Sparrowhawk trapeze, the Goblin,
+    Gremlins' nine near-misses). The scene-wide air model cannot express it;
+    :class:`CarrierWakeParams` adds it as a downward bubble on the dock.
+
+    The study locates the downwash level where capture collapses for the
+    P0-scale article. The expectation, to be confirmed by the sweep, is that
+    collapse arrives once the downwash approaches the terminal approach-speed
+    budget (~0.1–0.2 m/s): a drone pushed down faster than it closes cannot
+    reach the seat. The buoyant carrier's advantage is that its wake is small
+    to begin with; this quantifies how small it has to stay.
+    """
+
+    return sil_p0b(seed, wake=CarrierWakeParams(downwash_m_s=downwash_m_s))
 
 
 def nav_bias_ramp_case(seed: int, ramp_rate_m_s: float) -> EpisodeConfig:

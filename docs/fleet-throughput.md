@@ -407,42 +407,59 @@ Scout endurance, mass and per-link video cost are estimates for an airframe
 that has not been built; the radio verdict is only as good as the per-link
 cost behind it.
 
-## The verdict: recovery is the easy part
+## The verdict: recovery is the easy part *to scale*
+
+One clarification before the argument, because [prior art](prior-art.md)
+insists on it: a single aerial capture is a genuinely hard *capability* — it
+took DARPA Gremlins years and nine near-miss contacts, and turbulence has
+defeated every attempt back to the 1930s Goblin. That is exactly why P0 is
+funded on the dock. What follows is *not* that recovery is easy to build. It
+is that recovery is cheap to **scale**: it amortises, and the scaling walls
+are elsewhere. Hold both — the hard engineering problem is also the cheap
+scaling resource.
 
 Put every section above together and the model reaches a conclusion the
 programme is not currently organised around. Size the whole carrier, all
 constraints on, across the range, and one pattern dominates every row:
 
-| airborne | airframes (charge / swap) | capture heads | radios | binds on |
+| airborne | airframes (charge / swap) | capture heads | radios | taut set (reduce any → target breaks) |
 | ---: | ---: | ---: | ---: | --- |
-| 20 | 193 / 22 | 2 | 1 | radio |
-| 50 | 482 / 55 | 5 | 3 | radio |
-| 100 | 964 / 110 | 10 | 5 | radio |
-| 200 | 1,928 / 219 | 19 | 10 | radio |
+| 20 | 193 / 22 | 2 | 2 | heads, ballast, airframes |
+| 50 | 482 / 55 | 5 | 3 | radio, airframes |
+| 100 | 964 / 110 | 10 | 6 | launch, ballast, airframes |
+| 200 | 1,928 / 219 | 19 | 12 | launch, ballast, airframes |
 
-The lesson is in how each resource *scales*, not in any single number:
+The taut set is found by probing — reducing each resource one step and
+seeing if the target survives — so it reports what genuinely binds, not
+whichever check happens to fire first. The lesson is in how each resource
+*scales*:
 
 - **The dock amortises.** Two capture heads serve 200 aircraft; nineteen
-  serve two thousand. Capture is a shared, reused resource, so it never
-  binds — which is exactly why the programme's engineering attention, aimed
-  squarely at the dock, is aimed at the cheap corner of the problem.
-- **Radio does not amortise.** Every airborne aircraft needs its own link;
-  200 airborne is 200 concurrent links, and no cleverness makes one link fly
-  two aircraft. Radio scales one-for-one with the swarm, and that is the
-  definition of the wall.
-- **Energy does not amortise either**, it just changes currency: 200
-  airborne is ~1,900 airframes or ~2,100 charger channels. A real swarm is a
-  large energy-handling plant whichever way it is paid for.
+  serve two thousand. Capture is a shared, reused resource, so it has slack
+  and almost never appears in the taut set — which is exactly why the
+  programme's engineering attention, aimed squarely at the dock, is aimed at
+  the cheap corner of the problem. (It shows up only at 20 airborne, where
+  integer rounding makes two heads tight; that is a rounding artefact, not a
+  scaling wall.)
+- **The taut set is precisely the resources that scale one-for-one with the
+  swarm.** Airframes (or their charger equivalent) are taut in every row;
+  launch lanes, ballast, and radio rotate through as the tightest of the
+  1:1 resources. Every airborne aircraft needs its own share of each — a
+  link, a launch slot in time, a gram of ballast, a joule — and none of it
+  amortises the way a head does.
 
-So the two things that make a swarm hard are the two that refuse to
-amortise — **links and joules** — and recovery, the funded article, is not
-one of them. Recovery has to be proven, but it is being treated as the
-scaling risk when it is the solved-in-principle part.
+So what makes a swarm hard is everything that scales one-for-one — **links,
+launch, ballast, and above all joules** — and recovery, the funded article,
+is none of them. Recovery has to be proven, but it is being treated as the
+scaling risk when it is the one part with room to spare.
 
-**The pivot that unlocks "hundreds" is onboard autonomy, not a bigger
-dock.** Radio binds one-for-one *only if every aircraft needs a continuous
-control link*. Break that — aircraft that fly the mission and only check in
-periodically — and one radio supervises many:
+Among those 1:1 walls, radio is the one with a known escape, which is why it
+matters out of proportion to its rank in the taut set. **The pivot that
+unlocks "hundreds" is onboard autonomy** — the one lever that turns a
+one-for-one resource back into an amortising one. Radio binds per-aircraft
+*only if every aircraft needs a continuous control link*. Break that —
+aircraft that fly the mission and only check in periodically — and one radio
+supervises many:
 
 | aircraft per radio | radios for 200 airborne |
 | ---: | ---: |
@@ -460,14 +477,34 @@ wants **autonomy out, not video back**.
 lift, and being a single point of failure. Hundreds airborne over a region
 is not one impossible mothership; it is a **mesh of carriers, each cycling a
 few dozen autonomous aircraft, tiled geographically.** This model sizes one
-node. The region is N nodes, and lift and radio both punish the monolith.
+node; the region is N nodes.
 
-A caveat on the sizer itself: it reports radio as *the* binder partly
-because it sizes radio to exactly meet the target while giving the other
-resources a hair of margin, so the design point is really *multiply* taut —
-radio is first among equals, not uniquely hard. But the amortisation
-argument is independent of that rounding: links and joules scale one-for-one
-and docks do not, and that asymmetry is the finding.
+But the mesh is not an *economy* — and the sizer says so. Slice a 200-airborne
+region across nodes of different size and the aggregate airframe count is
+invariant (~1,930 whether it is ten nodes of 20 or two of 100): the duty
+cycle is linear, so distributing the swarm neither creates nor destroys the
+bill. Worse, the per-node quantised resources — radios, capture heads — get
+*mildly dearer* with many small nodes, because each node wastes a fractional
+minimum (20 radios across ten small nodes versus 12 across two large ones).
+So the number of carriers is not chosen for efficiency; there is none to
+find in the aircraft bill. It is chosen for the things this model does not
+carry: what one vehicle can physically lift and power, resilience against
+losing a node, geographic coverage, and inter-node relay and handoff for
+range. Those terms — carrier structure and crew favouring fewer big nodes,
+coverage and relay favouring more small ones — are where the vehicle-count
+decision actually lives.
+
+The sizer confirms this by probing, not by which check fires first. For each
+converged design point it reduces every resource one step and reports the
+set that actually breaks the target. Given equal design margin, that taut
+set is striking: at 100 airborne it is **launch lanes, ballast, and airframes
+— every one a resource that scales one-for-one with the swarm — while capture
+heads, the amortising resource, carries slack and never appears.** Radio
+joins the set at smaller targets and drops out when it is given the same
+headroom every other resource gets; it was never uniquely the wall, only the
+one the first draft sized tightest. The finding is not "radio" — it is the
+asymmetry itself: **the binding set is exactly the non-amortising resources,
+and the dock, the funded focus, is the one with room to spare.**
 
 ## What this does not say
 

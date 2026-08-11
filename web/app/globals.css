@@ -2292,3 +2292,71 @@ h2 em {
   border-color: var(--signal);
   color: var(--signal);
 }
+
+/* Drawing plate ------------------------------------------------------------ */
+
+.plate-section {
+  position: relative;
+  z-index: 2;
+  padding: clamp(40px, 4vw, 62px) 0 clamp(72px, 8vw, 110px);
+  background: #080909;
+}
+
+.plate {
+  margin: 0;
+  border: 1px solid var(--line);
+  background: #0a0b0b;
+}
+
+.plate-sheet {
+  padding: clamp(14px, 2vw, 30px);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.plate-sheet img {
+  display: block;
+  width: 100%;
+  min-width: 620px;
+  height: auto;
+}
+
+/* Title block: the fields a real sheet carries, in the order it carries them. */
+.plate-block {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.plate-block > div {
+  padding: 16px 18px;
+  border-right: 1px solid var(--line);
+}
+
+.plate-block > div:last-child { border-right: 0; }
+
+.plate-block span {
+  display: block;
+  margin-bottom: 9px;
+  color: #6c7370;
+  font: 650 8px/1 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.16em;
+}
+
+.plate-block strong {
+  font: 520 12px/1.3 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.02em;
+  color: var(--white);
+}
+
+@media (max-width: 900px) {
+  .plate-block { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .plate-block > div:nth-child(3n) { border-right: 0; }
+  .plate-block > div:nth-child(n + 4) { border-top: 1px solid var(--line); }
+}
+
+@media (max-width: 560px) {
+  .plate-block { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plate-block > div:nth-child(3n) { border-right: 1px solid var(--line); }
+  .plate-block > div:nth-child(2n) { border-right: 0; }
+  .plate-block > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+}

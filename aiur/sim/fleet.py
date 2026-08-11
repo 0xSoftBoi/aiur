@@ -1652,9 +1652,12 @@ class DesignPoint:
     converged: bool
     achieved_airborne: float
     iterations: int
-    #: The constraint binding the final configuration — the one the target
-    #: is most sensitive to, and where marginal budget should go.
+    #: The constraint the simulation names for the final configuration.
     binding_constraint: str
+    #: Every resource that is actually taut — reducing it one step breaks the
+    #: target. Found by probing, not by which check fired first, so it does
+    #: not over-blame the one resource the seed happened to size tightest.
+    taut_constraints: tuple[str, ...]
     #: The sized carrier, as a resource bill a human reads.
     bill: dict
     #: Key metrics of the winning run.
@@ -1703,7 +1706,11 @@ def size_for_airborne(
     fleet = max(target_airborne + 1, math.ceil(target_airborne / airborne_fraction))
     heads = max(1, math.ceil(recov_rate * (occ + stow_s) / 0.7))
     lanes = max(1, math.ceil(recov_rate * launch_interval_s))
-    radios = max(1, math.ceil(target_airborne / links_per_channel))
+    # Radio carries the same ~15% design headroom the other resources get,
+    # rather than being sized to exactly 100% of the target: a comms system
+    # is not run at saturation, and sizing it tight was what made radio
+    # always report as *the* binder when it merely had no margin.
+    radios = max(1, math.ceil(target_airborne / (links_per_channel * 0.85)))
     ballast = max(1.0, recov_rate * aircraft_mass_g * 1.3)
     pitch_auth = 4000.0
     roll_auth = 4000.0
@@ -1793,8 +1800,42 @@ def size_for_airborne(
                 fleet += max(1, math.ceil(deficit / airborne_fraction))
                 radios = max(radios, math.ceil(target_airborne / links_per_channel))
 
-    final = simulate_fleet(build(), service, seed=seed)
+    final_params = build()
+    final = simulate_fleet(final_params, service, seed=seed)
     converged = final.serves_fleet and final.mean_airborne >= 0.97 * target_airborne
+
+    # Probe which resources are actually taut: reduce each one step and see
+    # if the target survives. This replaces "whichever check fired first"
+    # with "everything that genuinely binds", so a bill whose seed sized one
+    # resource tighter than another does not misreport where the money goes.
+    def _holds(**reduction) -> bool:
+        r = simulate_fleet(replace(final_params, **reduction), service, seed=seed)
+        return r.serves_fleet and r.mean_airborne >= 0.97 * target_airborne
+
+    taut: list[str] = []
+    if converged:
+        if radios > 1 and not _holds(radio_channels=radios - 1):
+            taut.append("radio")
+        elif radios == 1 and final.radio_utilisation >= 0.85:
+            taut.append("radio")
+        if heads > 1 and not _holds(capture_heads=heads - 1):
+            taut.append("capture heads")
+        if lanes > 1 and not _holds(launch_lanes=lanes - 1):
+            taut.append("launch lanes")
+        if not _holds(ballast_rate_g_s=ballast * 0.7):
+            taut.append("ballast / trim")
+        if not _holds(pitch_authority_g_m=pitch_auth * 0.7):
+            taut.append("pitch authority")
+        if not _holds(roll_authority_g_m=roll_auth * 0.7):
+            taut.append("roll authority")
+        if use_swap and chargers and not _holds(
+            charger_channels=int(chargers * 0.85), spare_packs=int(spares * 0.85)
+        ):
+            taut.append("battery pool")
+        # Airframes/charge: fewer airframes means fewer airborne by
+        # construction, so the duty cycle is always taut against the target.
+        taut.append("airframes (duty cycle)")
+
     notes = [
         "Terminal-traffic interaction is left off in this design point "
         "(independent corridors, no wake penalty): head and airspace counts "
@@ -1817,6 +1858,7 @@ def size_for_airborne(
         achieved_airborne=final.mean_airborne,
         iterations=iterations,
         binding_constraint=final.binding_constraint,
+        taut_constraints=tuple(taut),
         bill={
             "fleet_size": fleet,
             "capture_heads": heads,
@@ -1982,6 +2024,92 @@ def size_carrier(
     }
 
 
+# --------------------------------------------------------------------------
+# The mesh: a region is N carrier nodes, not one bigger carrier
+# --------------------------------------------------------------------------
+#
+# One carrier tops out — radio, lift, and being a single point of failure —
+# so the verdict is that hundreds airborne over a region is a mesh of nodes,
+# each cycling a few dozen. The obvious hope is that slicing the swarm across
+# more carriers is cheaper. It is not. The duty cycle is linear, so the
+# aggregate airframe count is invariant to how you slice it; and per-node
+# quantised resources (radios, capture heads) get slightly *worse* with many
+# small nodes, because each node wastes a fractional minimum. The mesh does
+# not reduce the aircraft-side bill — it distributes it, and mildly taxes it.
+#
+# So the number of carriers is not an efficiency choice. It is set by what one
+# vehicle can physically lift and power, by resilience, and by geographic
+# coverage — terms that live outside this model, not inside the aircraft bill.
+
+
+def size_mesh(
+    regional_airborne: int,
+    *,
+    service: ServiceModel,
+    per_node_options: Sequence[int] = (20, 50, 100),
+    use_swap: bool = False,
+    links_per_channel: int = 20,
+    seed: int = 1,
+    horizon_s: float = 4 * 3600.0,
+) -> dict:
+    """Size a region of ``regional_airborne`` as a mesh, several ways.
+
+    For each candidate per-node size, size one node and multiply by the node
+    count. The point is the comparison: the aggregate aircraft bill barely
+    moves, so slicing is not where efficiency comes from.
+    """
+
+    rows = []
+    for per_node in per_node_options:
+        node = size_for_airborne(
+            per_node,
+            service=service,
+            use_swap=use_swap,
+            links_per_channel=links_per_channel,
+            seed=seed,
+            horizon_s=horizon_s,
+        )
+        nodes = math.ceil(regional_airborne / per_node)
+        b = node.bill
+        rows.append(
+            {
+                "per_node_airborne": per_node,
+                "nodes": nodes,
+                "capacity_airborne": nodes * per_node,
+                "agg_airframes": nodes * b["fleet_size"],
+                "agg_capture_heads": nodes * b["capture_heads"],
+                "agg_radios": nodes * b["radio_channels"],
+                "agg_charger_channels": (
+                    nodes * b["charger_channels"] if b["charger_channels"] else None
+                ),
+                "per_node_converged": node.converged,
+            }
+        )
+    return {
+        "study": "carrier mesh",
+        "regional_airborne": regional_airborne,
+        "energy_mode": "swap" if use_swap else "charge_in_place",
+        "rows": rows,
+        "notes": [
+            "The aggregate airframe count is invariant to slicing (the duty "
+            "cycle is linear); per-node quantised resources — radios, capture "
+            "heads — get mildly WORSE with many small nodes, because each "
+            "node wastes a fractional minimum. A mesh does not make the "
+            "aircraft-side bill cheaper, and can make it slightly dearer.",
+            "So the node count is not an efficiency choice. It is set by "
+            "per-vehicle lift and radio limits, by resilience (one carrier is "
+            "a single point of failure), and by geographic coverage.",
+            "NOT modelled, and this is where the vehicle-count decision "
+            "actually lives: carrier structure/envelope cost and crew (a real "
+            "per-node fixed cost that favours fewer, bigger nodes); inter-node "
+            "comms relay and aircraft handoff (which favour more nodes for "
+            "range and coverage); and the coverage geometry of the region.",
+            "This sizes an architecture. No hardware has recovered one "
+            "aircraft, let alone flown a mesh.",
+        ],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
@@ -2110,7 +2238,45 @@ def main(argv: list[str] | None = None) -> int:
         default=SCOUT_CLASS.radio_links,
         help="radio links one airborne scout draws (video is several)",
     )
+    parser.add_argument(
+        "--region",
+        type=int,
+        default=None,
+        help=(
+            "size a mesh for this many airborne over a region, sliced across "
+            "carrier nodes of the sizes given by --per-node"
+        ),
+    )
+    parser.add_argument(
+        "--per-node",
+        type=int,
+        nargs="+",
+        default=[20, 50, 100],
+        help="candidate per-node airborne counts to compare for --region",
+    )
     args = parser.parse_args(argv)
+
+    if args.region is not None:
+        service = calibrate_service(
+            episodes=args.episodes,
+            scenario=sil_p0b if args.noise == 1.0 else noise_scenario(args.noise),
+        )
+        print(
+            json.dumps(
+                size_mesh(
+                    args.region,
+                    service=service,
+                    per_node_options=args.per_node,
+                    use_swap=args.energy == "swap",
+                    links_per_channel=args.links_per_channel,
+                    seed=args.seeds[0],
+                    horizon_s=args.hours * 3600.0,
+                ),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
 
     if args.scouts is not None:
         recovery_target = (args.target_airborne or [20])[0]

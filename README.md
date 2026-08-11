@@ -88,6 +88,8 @@ Analysis and models:
   `python -m aiur.sim.design_study | python tools/report_study.py`
 - [Fleet-throughput study](docs/fleet-throughput.md) —
   `python -m aiur.sim.fleet | python tools/report_fleet.py`
+- [Prior-art survey](docs/prior-art.md) — DARPA Gremlins/OFFSET, ONR LOCUST,
+  Perdix, Sentien Hive, LTA motherships, and academic aerial docking
 - [Mass and capture-envelope model](aiur/p0.py)
 - [Capture-chain tolerance stack](aiur/tolerance.py) — `python -m aiur.tolerance`
 - [Dock FMECA and fault trees](docs/dock-fmeca.md)

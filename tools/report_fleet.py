@@ -18,7 +18,11 @@ def render_design_points(report: dict) -> str:
             f"=== {p['target_airborne']} aircraft airborne  [{status}]  "
             f"(achieved {p['achieved_airborne']:.1f}, {p['iterations']} iterations)"
         )
-        out.append(f"    binding constraint: {p['binding_constraint']}")
+        taut = p.get("taut_constraints") or []
+        out.append(
+            "    taut (reducing any one breaks the target): "
+            + (", ".join(taut) if taut else "—")
+        )
         out.append("    bill of materials:")
         out.append(f"      airframes owned         {b['fleet_size']}")
         out.append(f"      capture heads           {b['capture_heads']}")
@@ -86,7 +90,35 @@ def render_mixed_fleet(report: dict) -> str:
     return "\n".join(out)
 
 
+def render_mesh(report: dict) -> str:
+    out = [
+        f"CARRIER MESH — {report['regional_airborne']} airborne over a region, "
+        f"sliced several ways ({report['energy_mode']})"
+    ]
+    out.append("")
+    hdr = f"  {'per node':>8} {'nodes':>6} {'agg airframes':>13} {'agg radios':>11} {'agg heads':>10} {'agg chargers':>13}"
+    out.append(hdr)
+    out.append("  " + "-" * (len(hdr) - 2))
+    for r in report["rows"]:
+        ch = r["agg_charger_channels"]
+        flag = "" if r["per_node_converged"] else "  [node NOT CONVERGED]"
+        out.append(
+            f"  {r['per_node_airborne']:>8} {r['nodes']:>6} {r['agg_airframes']:>13} "
+            f"{r['agg_radios']:>11} {r['agg_capture_heads']:>10} "
+            f"{(str(ch) if ch is not None else '—'):>13}{flag}"
+        )
+    out.append("")
+    out.append("  read across a row-set: the aggregate barely moves — slicing distributes, it does not save")
+    out.append("")
+    out.append("notes:")
+    for note in report["notes"]:
+        out.append(f"  - {note}")
+    return "\n".join(out)
+
+
 def render(report: dict) -> str:
+    if report.get("study") == "carrier mesh":
+        return render_mesh(report)
     if report.get("study") == "mixed-fleet carrier":
         return render_mixed_fleet(report)
     if report.get("study") == "fleet design point":

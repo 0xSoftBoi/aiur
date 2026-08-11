@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560">
+    <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
+      <path d="M0,0 L8,4 L0,8 z" fill="#9aa19e"/>
+    </marker>
+    <style>
+      .t{font:700 20px system-ui,sans-serif;fill:#f1f2ed}
+      .s{font:500 12px system-ui,sans-serif;fill:#98a09c}
+      .l{font:600 12px system-ui,sans-serif;fill:#f1f2ed}
+      .part{stroke:#e7e9e4;stroke-width:2.5;fill:none;stroke-linejoin:round}
+      .keeper{stroke:#5aa9d6;stroke-width:3;fill:rgba(90,169,214,.20)}
+      .probe{stroke:#ff6428;stroke-width:3;fill:rgba(255,100,40,.16)}
+      .seat{stroke:#ff6428;stroke-width:3;fill:rgba(255,100,40,.36)}
+      .dim{stroke:#9aa19e;stroke-width:1.2;fill:none;marker-start:url(#a);marker-end:url(#a)}
+      .ext{stroke:rgba(241,242,237,.34);stroke-width:1;stroke-dasharray:4 3}
+      .ax{stroke:rgba(241,242,237,.34);stroke-width:1;stroke-dasharray:8 3 2 3}
+      .rotor{stroke:#ff4d3d;stroke-width:2;stroke-dasharray:7 5}
+    </style>
+  </defs>
+  <rect width="1000" height="560" fill="#0a0b0b"/>
+  <text x="36" y="34" class="t">CARRIER-P0 — P0-A REV-B DOCK CROSS-SECTION</text>
+  <text x="36" y="54" class="s">GENERATED FROM generate_rev_a.py — DIMENSIONS IN mm — SCREENING ARTICLE, PHYSICAL FIT OWNS FINAL GEOMETRY</text>
+
+  <text x="36" y="88" class="l">GENERAL ARRANGEMENT</text>
+  <line x1="300" y1="110" x2="300" y2="470" class="ax"/>
+  <path d="M156 354 L287.2 250 L312.8 250 L444 354" class="part"/>
+  <line x1="156" y1="354" x2="444" y2="354" class="ext"/>
+  <line x1="156" y1="388" x2="444" y2="388" class="dim"/>
+  <text x="266" y="382" class="l">&#216;180</text>
+  <line x1="470" y1="250" x2="470" y2="354" class="dim"/>
+  <text x="476" y="302" class="l">65 deep</text>
+  <line x1="227.2" y1="250" x2="287.2" y2="250" class="ext"/>
+  <text x="171.2" y="244" class="l">throat &#216;16</text>
+  <line x1="146" y1="530" x2="454" y2="530" class="rotor"/>
+  <text x="398" y="548" class="l">rotor plane</text>
+  <line x1="126" y1="354" x2="126" y2="530" class="dim"/>
+  <text x="28" y="442" class="l">110 standoff</text>
+  <text x="36" y="500" class="s">Probe tip standoff keeps the rotor plane clear of the funnel lip; the aircraft never enters the mouth.</text>
+
+  <text x="560" y="88" class="l">CAPTURE DETAIL — the keeper bears on the SEAT, never on the belt</text>
+  <line x1="720" y1="110" x2="720" y2="430" class="ax"/>
+  <rect x="636" y="150" width="168" height="46" rx="8" class="probe"/>
+  <text x="814" y="176" class="l">belt &#216;12 — funnel guides this</text>
+  <rect x="657" y="196" width="126" height="34" class="seat"/>
+  <text x="814" y="218" class="l">seat &#216;9 — keeper bears here</text>
+  <rect x="699" y="230" width="42" height="120" class="probe"/>
+  <text x="814" y="300" class="l">mast &#216;3</text>
+  <rect x="613.6" y="230" width="33.6" height="35" class="keeper"/>
+  <rect x="756.4" y="230" width="33.6" height="35" class="keeper"/>
+  <text x="463.6" y="251.5" class="l">keeper tines</text>
+  <line x1="683.6" y1="370" x2="756.4" y2="370" class="dim"/>
+  <text x="698" y="390" class="l">slot 5.2</text>
+  <line x1="756.4" y1="291" x2="790" y2="291" class="dim"/>
+  <text x="760.4" y="309" class="l">tine reach 5</text>
+  <text x="560" y="470" class="s">Open travel 13 mm; the tines must clear the belt, needing 10.41 mm.</text>
+  <text x="560" y="490" class="s">Drive: in-line slider-crank, crank 6.5 mm, link 19.5 mm, stroke = 2 x crank.</text>
+  <text x="560" y="510" class="s">Retention ledge is (seat &#8722; slot)/2 per side. Pin holes are drilled after print.</text>
+</svg>
