@@ -21,7 +21,7 @@ export default function SolutionsPage() {
           <>
             Launching is easy.
             <br />
-            <strong>Recovery is the problem.</strong>
+            <strong>Recovery isn&apos;t.</strong>
           </>
         }
         lede="Endurance, energy, backhaul, and fleet coordination all get harder at the edge. Aiur moves infrastructure with the mission instead of making every aircraft carry the entire problem alone."

@@ -35,7 +35,7 @@ export default function ApplicationsPage() {
             <span>NON-EXHAUSTIVE</span>
           </div>
 
-          <div className="app-grid">
+          <div className="app-grid" data-reveal>
             {APPLICATIONS.map((app, index) => (
               <AppCard app={app} index={index} key={app.slug} />
             ))}

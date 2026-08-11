@@ -19,7 +19,6 @@ export function AppCard({ app, index }: { app: Application; index: number }) {
     <article
       className="app-card"
       id={app.slug}
-      data-reveal
       style={
         {
           "--accent": app.accent,

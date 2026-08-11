@@ -88,7 +88,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="app-grid">
+          <div className="app-grid" data-reveal>
             {APPLICATIONS.slice(0, 3).map((app, index) => (
               <AppCard app={app} index={index} key={app.slug} />
             ))}
