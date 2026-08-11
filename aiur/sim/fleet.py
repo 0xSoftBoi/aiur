@@ -81,13 +81,15 @@ What is deliberately *not* modelled, because assuming it away is the way
 this kind of model lies
 -----------------------------------------------------------------------
 
-  * **Terminal traffic interaction.**  The twin episode flies one aircraft
-    at one dock.  This model assumes capture heads are independent
-    corridors, so aircraft never see each other on approach.  That is
-    optimistic and it is the single largest unmodelled risk here: real
-    converging traffic adds wake, deconfliction holds, and go-arounds
-    caused by other aircraft.  Every head count this module reports should
-    be read as a **lower bound**.
+  * **Terminal traffic interaction — modelled, but as an overlay and off by
+    default.**  The twin episode flies one aircraft at one dock, so it
+    cannot produce this effect; the fleet model adds it on top
+    (``approach_corridors``, ``traffic_holds_s``, ``traffic_miss_penalty``)
+    rather than pretending the twin measured it.  The defaults reproduce the
+    independent-corridor case exactly, so **a head count from a default run
+    is still a lower bound** — it becomes a real bound only once the traffic
+    parameters are set, and those parameters are estimates calibrated to a
+    belly layout this scalar model cannot itself represent.
   * **Carrier flight mechanics beyond static trim.**  Net buoyant trim and
     the ballast chase *are* modelled.  What is not: where in the magazine
     an aircraft is stowed, and therefore pitch and roll moments — a
@@ -335,6 +337,55 @@ class FleetParams:
     #: trying to land on it.
     trim_authority_g: float = 100.0
 
+    # ---- terminal-traffic interaction -------------------------------------
+    #
+    # The twin flies one aircraft at one dock, so nothing above sees
+    # converging traffic: every head count elsewhere in this model is a lower
+    # bound for exactly this reason.  These parameters overlay the missing
+    # effect, and all default to the no-interaction case, so a default run
+    # reproduces the independent-corridor numbers byte for byte.
+    #
+    # Two distinct real effects, kept as separate parameters:
+    #
+    #   approach_corridors caps how many aircraft may be on final at once,
+    #   independent of head count.  A belly that cannot spatially separate
+    #   its heads has fewer corridors than heads, and the surplus heads then
+    #   idle behind the airspace rather than behind their own throughput.
+    #
+    #   traffic_holds_s and traffic_miss_penalty are the interaction *cost* an
+    #   aircraft pays per other aircraft simultaneously on final: added
+    #   deconfliction hold time, and capture probability lost to wake and
+    #   avoidance manoeuvres.  These are estimates for an effect the twin does
+    #   not contain.  All concurrent finals are treated as mutually
+    #   interfering, which is conservative for heads spread well apart around
+    #   a large belly — a spacing this scalar model cannot represent, so the
+    #   parameters must be calibrated to a specific layout before they are
+    #   believed.
+    #: Max aircraft on final approach at once. ``None`` = one corridor per
+    #: head, i.e. the independent-corridor assumption (no extra airspace
+    #: limit), which is today's behaviour.
+    approach_corridors: int | None = None
+    #: Deconfliction hold added to an attempt per other aircraft on final.
+    traffic_holds_s: float = 0.0
+    #: Capture probability lost per other aircraft on final.
+    traffic_miss_penalty: float = 0.0
+
+    @property
+    def approach_corridors_effective(self) -> int:
+        return (
+            self.capture_heads
+            if self.approach_corridors is None
+            else self.approach_corridors
+        )
+
+    @property
+    def traffic_enabled(self) -> bool:
+        return (
+            self.approach_corridors is not None
+            or self.traffic_holds_s > 0.0
+            or self.traffic_miss_penalty > 0.0
+        )
+
     @property
     def ballast_capacity(self) -> float:
         if self.ballast_capacity_g is not None:
@@ -405,6 +456,12 @@ class FleetParams:
                 raise ValueError("spare_packs must be >= 0")
             if self.charger_channels_effective < 1:
                 raise ValueError("swap mode needs at least one charger channel")
+        if self.approach_corridors is not None and self.approach_corridors < 1:
+            raise ValueError("approach_corridors must be >= 1")
+        if self.traffic_holds_s < 0.0:
+            raise ValueError("traffic_holds_s must be >= 0")
+        if self.traffic_miss_penalty < 0.0:
+            raise ValueError("traffic_miss_penalty must be >= 0")
 
 
 @dataclass(frozen=True)
@@ -453,6 +510,11 @@ class FleetResult:
     #: Swap mode only: recovered aircraft had to wait for a charged pack.
     #: The pool, not the dock, is then the limit.
     pack_starved: bool
+    #: Mean and peak number of aircraft simultaneously on final approach.
+    #: The measure of terminal-traffic density; zero interaction cost only
+    #: when this stays at or below one.
+    mean_on_final: float
+    peak_on_final: int
     #: Largest buoyant trim error the mass-exchange system failed to
     #: cancel, in grams of static lightness or heaviness.
     peak_trim_error_g: float
@@ -573,6 +635,13 @@ def simulate_fleet(
     peak_trim_error_g = 0.0
     trim_exceeded_s = 0.0
 
+    # Terminal-traffic state: aircraft currently between the start of an
+    # attempt and its resolution, i.e. on final approach and contending for
+    # the shared airspace below the carrier.
+    on_final = 0
+    on_final_integral = 0.0
+    peak_on_final = 0
+
     def advance(t: float) -> None:
         """Integrate time-weighted metrics forward to ``t``.
 
@@ -581,7 +650,7 @@ def simulate_fleet(
         solution — no fixed-step integration and no step-size error.
         """
 
-        nonlocal last_t, airborne_integral, head_blocked_s
+        nonlocal last_t, airborne_integral, head_blocked_s, on_final_integral
         nonlocal ballast_g, peak_trim_error_g, trim_exceeded_s
         if t <= last_t:
             return
@@ -591,6 +660,7 @@ def simulate_fleet(
 
         if measured:
             airborne_integral += airborne * span
+            on_final_integral += on_final * span
             if blocked_since is not None:
                 head_blocked_s += span
 
@@ -697,7 +767,7 @@ def simulate_fleet(
     def pump(t: float) -> None:
         """Fill every free head from the queue, if a slot is available."""
 
-        nonlocal free_heads
+        nonlocal free_heads, on_final, peak_on_final
         while free_heads > 0 and queue:
             # A head that cannot unload cannot accept: with no free slot
             # the aircraft it captures has nowhere to go.  The queue backs
@@ -705,11 +775,25 @@ def simulate_fleet(
             # heads from slots and is invisible if you model heads alone.
             if used_slots >= params.slots:
                 break
+            # Airspace, not the head, can be the limit: a head is useless if
+            # there is no free corridor to fly the approach in. With traffic
+            # disabled this never binds before free_heads does, so the
+            # default path is unchanged.
+            if params.traffic_enabled and on_final >= params.approach_corridors_effective:
+                break
             aircraft = next_served(t)
             if aircraft is None:
                 break
             free_heads -= 1
             aircraft.state = _ON_HEAD
+            # Count the approach the instant the aircraft is committed to a
+            # head, not when its attempt event later fires: several are
+            # admitted at the same timestamp, and counting only at attempt()
+            # would let a whole burst slip past the corridor cap before any
+            # of them incremented it.
+            on_final += 1
+            if t >= measured_from:
+                peak_on_final = max(peak_on_final, on_final)
             wait = t - aircraft.queued_at
             # Holding costs energy at the same rate as flying: the aircraft
             # is airborne the whole time it is in the queue.
@@ -722,8 +806,19 @@ def simulate_fleet(
     def attempt(t: float, aircraft: _Aircraft) -> None:
         advance(t)
         aircraft.attempts += 1
+        # This aircraft was counted into on_final at admission, so its
+        # neighbours — the other aircraft simultaneously inbound — are
+        # on_final minus itself. The two RNG draws below keep their order
+        # (occupancy, then capture) so a traffic-disabled run reproduces the
+        # exact sequence of the earlier model: the traffic branch draws no
+        # randomness of its own.
+        neighbours = max(0, on_final - 1)
         occupancy = service.sample_occupancy_s(rng)
-        captured = rng.random() < service.p_capture
+        p_capture = service.p_capture
+        if params.traffic_enabled and neighbours > 0:
+            occupancy += params.traffic_holds_s * neighbours
+            p_capture = max(0.0, p_capture - params.traffic_miss_penalty * neighbours)
+        captured = rng.random() < p_capture
         schedule(
             t + occupancy,
             lambda now, a=aircraft, ok=captured, cost=occupancy: resolve(
@@ -733,9 +828,12 @@ def simulate_fleet(
 
     def resolve(t: float, aircraft: _Aircraft, captured: bool, occupancy: float) -> None:
         nonlocal free_heads, head_busy_s, airborne, recoveries, used_slots
-        nonlocal recoveries_total
+        nonlocal recoveries_total, on_final
         nonlocal lost_reserve, lost_retries, max_depth, peak_slots
         advance(t)
+        # The corridor frees the moment the approach resolves, even though a
+        # captured aircraft still occupies its head through the stow.
+        on_final -= 1
         aircraft.energy_s -= occupancy
         if t >= measured_from:
             head_busy_s += occupancy
@@ -759,6 +857,12 @@ def simulate_fleet(
                     t + params.stow_s + params.recharge_s,
                     lambda now, a=aircraft: recharged(now, a),
                 )
+            # A corridor just freed; a queued aircraft may now start its
+            # approach on another free head even though this head is still in
+            # its stow. Only relevant, and only invoked, when airspace is a
+            # modelled constraint, so the default path is untouched.
+            if params.traffic_enabled:
+                pump(t)
             return
 
         free_heads += 1
@@ -941,6 +1045,8 @@ def simulate_fleet(
         keeper_cycles=recoveries_total,
         swap_cycles=swaps_total,
         pack_starved=pack_wait_events > 0,
+        mean_on_final=round(on_final_integral / measured_span, 2),
+        peak_on_final=peak_on_final,
         peak_trim_error_g=round(peak_trim_error_g, 1),
         trim_exceedance_fraction=round(trim_exceeded_s / measured_span, 4),
         dock_mass_g=round(
@@ -1017,6 +1123,21 @@ def _diagnose(result: FleetResult, params: FleetParams) -> str:
         return (
             f"magazine slots ({params.slots} filled): heads idle while "
             "captured aircraft have nowhere to be indexed to"
+        )
+    # Approach airspace is named before capture heads: when corridors are
+    # tighter than heads, the airspace is the true limit and the surplus
+    # heads sit idle behind it, so blaming the heads would send the fix to
+    # the wrong place (more heads buy nothing).
+    if (
+        params.traffic_enabled
+        and params.approach_corridors_effective < params.capture_heads
+        and result.mean_on_final >= 0.85 * params.approach_corridors_effective
+    ):
+        return (
+            f"approach airspace ({params.approach_corridors_effective} "
+            f"corridors for {params.capture_heads} heads): converging "
+            "aircraft contend for the volume below the carrier and the "
+            "surplus heads idle behind deconfliction"
         )
     if result.head_utilisation >= 0.85:
         return (
@@ -1112,6 +1233,10 @@ def sweep_heads(
                 "dock_mass_g": worst.dock_mass_g,
                 "keeper_cycles": max(r.keeper_cycles for r in runs),
                 "swap_cycles": max(r.swap_cycles for r in runs),
+                "peak_on_final": max(r.peak_on_final for r in runs),
+                "mean_on_final": round(
+                    sum(r.mean_on_final for r in runs) / len(runs), 2
+                ),
                 "binding_constraint": worst.binding_constraint,
             }
         )
@@ -1169,10 +1294,12 @@ def run_study(
             for sweep in sweeps
         ],
         "caveats": [
-            "Capture heads are modelled as independent corridors: the twin "
-            "flies one aircraft at one dock, so no aircraft ever sees "
-            "another on approach. Real converging traffic adds holds and "
-            "go-arounds, so every head count here is a LOWER bound.",
+            "Terminal-traffic interaction is an optional overlay (approach "
+            "corridors, deconfliction holds, wake miss-penalty), OFF by "
+            "default. With it off the twin's one-aircraft-one-dock behaviour "
+            "stands and every head count is a LOWER bound; with it on the "
+            "count tightens, but the traffic parameters are estimates for a "
+            "belly layout this scalar model cannot represent.",
             "Stow and go-around times are engineering estimates for "
             "mechanisms that do not exist. The sweep is sensitive to them; "
             "vary them before believing a head count.",
@@ -1251,6 +1378,28 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="swap mode: time for one pooled pack to recharge (default: --recharge)",
     )
+    parser.add_argument(
+        "--corridors",
+        type=int,
+        default=None,
+        help=(
+            "max aircraft on final at once (default: one per head, i.e. no "
+            "airspace limit). Set below --max-heads to model a belly that "
+            "cannot separate its heads"
+        ),
+    )
+    parser.add_argument(
+        "--traffic-holds-s",
+        type=float,
+        default=0.0,
+        help="deconfliction hold added per other aircraft on final",
+    )
+    parser.add_argument(
+        "--traffic-miss",
+        type=float,
+        default=0.0,
+        help="capture probability lost per other aircraft on final",
+    )
     args = parser.parse_args(argv)
 
     base = FleetParams(
@@ -1266,6 +1415,9 @@ def main(argv: list[str] | None = None) -> int:
         spare_packs=args.spare_packs,
         charger_channels=args.charger_channels,
         pack_charge_s=args.pack_charge_s,
+        approach_corridors=args.corridors,
+        traffic_holds_s=args.traffic_holds_s,
+        traffic_miss_penalty=args.traffic_miss,
     )
     print(
         json.dumps(

@@ -448,6 +448,119 @@ class BatterySwap(unittest.TestCase):
         self.assertEqual(a, b)
 
 
+class TerminalTraffic(unittest.TestCase):
+    """The effect the twin cannot produce: converging aircraft interfere.
+
+    The twin flies one aircraft at one dock, so every head count elsewhere
+    in this model is a lower bound. This overlay adds the missing physics —
+    an airspace cap and a per-neighbour interaction cost — and it is off by
+    default precisely so that the committed independent-corridor numbers are
+    reproduced exactly unless someone opts in. The tests guard both halves:
+    that the default changes nothing, and that the overlay bites correctly.
+    """
+
+    def test_default_reproduces_the_independent_corridor_numbers(self):
+        # No traffic parameters set: the answer must be identical to the
+        # model without this feature. 2 heads serve 200, losses zero.
+        served = simulate_fleet(
+            FleetParams(fleet_size=200, capture_heads=2), service(), seed=1
+        )
+        self.assertEqual(served.loss_pct, 0.0)
+        self.assertTrue(served.serves_fleet)
+        # Traffic is off, so the interaction must not have been applied.
+        self.assertFalse(FleetParams(fleet_size=200, capture_heads=2).traffic_enabled)
+
+    def test_validate_rejects_bad_traffic_parameters(self):
+        for bad in (
+            FleetParams(approach_corridors=0),
+            FleetParams(traffic_holds_s=-1.0),
+            FleetParams(traffic_miss_penalty=-0.1),
+        ):
+            with self.assertRaises(ValueError):
+                simulate_fleet(bad, service())
+
+    def test_corridor_cap_bounds_concurrent_approaches(self):
+        # The core invariant: no more aircraft on final at once than there
+        # are corridors, however many heads exist. This is the bug that a
+        # naive "increment at attempt()" would leak, so it is asserted hard.
+        for corridors in (1, 2, 3):
+            result = simulate_fleet(
+                FleetParams(
+                    fleet_size=400,
+                    capture_heads=8,
+                    approach_corridors=corridors,
+                ),
+                service(),
+                seed=1,
+            )
+            self.assertLessEqual(result.peak_on_final, corridors)
+
+    def test_uncapped_concurrency_is_bounded_by_heads(self):
+        result = simulate_fleet(
+            FleetParams(fleet_size=400, capture_heads=6), service(), seed=1
+        )
+        self.assertLessEqual(result.peak_on_final, 6)
+
+    def test_airspace_tighter_than_heads_is_named_and_the_heads_go_idle(self):
+        result = simulate_fleet(
+            FleetParams(
+                fleet_size=400,
+                capture_heads=8,
+                approach_corridors=2,
+                recharge_s=900.0,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertIn("approach airspace", result.binding_constraint)
+        self.assertLessEqual(result.peak_on_final, 2)
+
+    def test_deconfliction_holds_raise_head_occupancy_and_can_cause_loss(self):
+        base = dict(fleet_size=200, capture_heads=3)
+        quiet = simulate_fleet(FleetParams(**base), service(), seed=1)
+        busy = simulate_fleet(
+            FleetParams(**base, traffic_holds_s=40.0), service(), seed=1
+        )
+        self.assertGreater(busy.head_utilisation, quiet.head_utilisation)
+        self.assertGreaterEqual(busy.loss_pct, quiet.loss_pct)
+
+    def test_wake_miss_penalty_only_raises_losses_never_lowers_them(self):
+        base = dict(fleet_size=200, capture_heads=3)
+        losses = [
+            simulate_fleet(
+                FleetParams(**base, traffic_miss_penalty=p), service(), seed=1
+            ).loss_pct
+            for p in (0.0, 0.1, 0.2, 0.3)
+        ]
+        self.assertEqual(losses, sorted(losses))
+
+    def test_a_miss_penalty_with_no_neighbours_does_nothing(self):
+        # A small fleet never puts two aircraft on final at once, so a wake
+        # penalty per neighbour has nothing to act on: the result must match
+        # the no-penalty case exactly. Guards against applying the penalty
+        # to an aircraft's own presence.
+        base = dict(fleet_size=10, capture_heads=2)
+        without = simulate_fleet(FleetParams(**base), service(), seed=1)
+        withp = simulate_fleet(
+            FleetParams(**base, traffic_miss_penalty=0.5), service(), seed=1
+        )
+        self.assertEqual(without.peak_on_final, 1)
+        self.assertEqual(without.loss_pct, withp.loss_pct)
+        self.assertEqual(without.recoveries, withp.recoveries)
+
+    def test_traffic_is_deterministic(self):
+        params = FleetParams(
+            fleet_size=400,
+            capture_heads=6,
+            approach_corridors=3,
+            traffic_holds_s=15.0,
+            traffic_miss_penalty=0.1,
+        )
+        a = simulate_fleet(params, service(0.9), seed=4)
+        b = simulate_fleet(params, service(0.9), seed=4)
+        self.assertEqual(a, b)
+
+
 class QueueBehaviour(unittest.TestCase):
     def test_adding_heads_never_increases_losses(self):
         base = FleetParams(fleet_size=200, capture_heads=1, recharge_s=900.0)

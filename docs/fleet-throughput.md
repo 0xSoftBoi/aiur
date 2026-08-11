@@ -202,12 +202,55 @@ drifting vertically has not served its fleet — it is moving the dock under
 aircraft on terminal approach, which is the one thing the entire capture
 architecture exists to avoid.
 
+## Terminal traffic: why "2 heads serve 200" has a condition attached
+
+Every head count above assumes each head owns an independent approach
+corridor — the twin flies one aircraft at one dock, so nothing in it sees
+converging traffic. The model now carries the missing effect as an overlay,
+**off by default** (so the numbers above are unchanged), with two knobs:
+
+- `--corridors N` caps how many aircraft may be on final at once, whatever
+  the head count. It models a belly that cannot spatially separate its
+  heads: the surplus heads then idle behind the airspace, and the model
+  names "approach airspace" as the binding constraint instead of the heads.
+- `--traffic-holds-s` and `--traffic-miss` are the interaction *cost* an
+  aircraft pays per other aircraft simultaneously on final — deconfliction
+  hold time, and capture probability lost to wake and avoidance.
+
+Turned on, it produces the finding that most qualifies the headline:
+
+**Under shared-airspace interference, adding capture heads does not rescue
+the fleet.** With a 25 s deconfliction hold per neighbour, a 200-aircraft
+carrier loses ~19–21% of its fleet at *every* head count from 2 to 12 — the
+losses barely move, because each head added is one more aircraft in the same
+contested volume, so concurrency and hold time rise together. A fleet that
+"2 heads serve" in the independent-corridor model is not served at any head
+count once its heads share one approach volume.
+
+The design consequence is sharp: **the way to scale recovery is more
+independent corridors, not more heads in one corridor.** Heads must be
+spatially separated around the belly into genuinely non-interfering approach
+volumes; co-locating them buys throughput on paper and congestion collapse
+in the air. "2 heads serve 200" is true *if and only if* those two heads
+are in separate corridors — which is a belly-geometry requirement the
+earlier result silently assumed.
+
+The overlay is deliberately conservative and cannot substitute for a real
+airspace model: all concurrent finals are treated as mutually interfering (a
+single shared volume), which over-charges heads that are in fact well
+separated, and the interference is a scalar with no geometry. The two knobs
+bracket the truth — independent corridors (off) at one end, one shared
+volume (penalty on) at the other — and a real belly sits between them, to be
+calibrated to a specific layout. What the model now refuses to let you do is
+assume the optimistic end for free.
+
 ## What this does not say
 
-- **Capture heads are modelled as independent corridors.** The twin flies
-  one aircraft at one dock, so no aircraft ever sees another on approach.
-  Real converging traffic adds wake, deconfliction holds, and go-arounds
-  caused by other aircraft. **Every head count here is a lower bound.**
+- **Terminal-traffic interaction is an overlay, off by default.** With it
+  off, the twin's one-aircraft-one-dock behaviour stands and **every head
+  count is a lower bound**; with it on, the count tightens, but the traffic
+  parameters are estimates for a belly layout this scalar model cannot
+  itself represent (see the section above).
 - **Stow, go-around, ballast rate, ballast capacity and trim authority are
   estimates** for mechanisms that do not exist. The trim verdict in
   particular is only as good as the authority figure behind it.
@@ -239,6 +282,10 @@ architecture exists to avoid.
    mass, and it must be sized against head count, not just fleet size.
 5. **Specify "airborne", never "fleet size".** They differ by ~9× on the
    current duty cycle.
-6. **The next modelling work is terminal traffic interaction**, because it
-   is the one unmodelled effect that moves the headline number in the
-   unsafe direction.
+6. **Scale recovery with independent corridors, not more heads.** Terminal
+   traffic makes co-located heads collapse under their own congestion; the
+   belly must separate them into non-interfering approach volumes, and the
+   head counts above hold only when it does.
+7. **The remaining unmodelled effects that move the number the unsafe way**
+   are magazine geometry (pitch/roll trim from where aircraft stow) and
+   radio capacity. Both are next.

@@ -32,10 +32,20 @@ def render(report: dict) -> str:
         )
     else:
         out.append("energy: charge in place (recovered aircraft holds its slot)")
+    corridors = base.get("approach_corridors")
+    holds = base.get("traffic_holds_s", 0.0)
+    miss = base.get("traffic_miss_penalty", 0.0)
+    if corridors is not None or holds or miss:
+        out.append(
+            f"traffic: {corridors if corridors is not None else 'one/head'} corridors, "
+            f"{holds:.0f}s hold/neighbour, {miss:.2f} miss-penalty/neighbour"
+        )
+    else:
+        out.append("traffic: independent corridors (interaction off — head counts are LOWER bounds)")
     out.append(f"seeds {report['seeds']}, loss threshold {report['loss_threshold_pct']}%")
     out.append("")
 
-    hdr = f"{'fleet':>6} {'heads':>6} {'serves':>7} {'loss%':>7} {'thr/h':>8} {'dem/h':>8} {'p95 wait':>9} {'util':>6} {'lnch':>6} {'air':>7} {'qmax':>5} {'trim g':>7} {'trim%':>6}  binding"
+    hdr = f"{'fleet':>6} {'heads':>6} {'serves':>7} {'loss%':>7} {'thr/h':>8} {'dem/h':>8} {'p95 wait':>9} {'util':>6} {'lnch':>6} {'air':>7} {'qmax':>5} {'fin':>4} {'trim g':>7} {'trim%':>6}  binding"
     out.append(hdr)
     out.append("-" * len(hdr))
     for sweep in report["sweeps"]:
@@ -47,12 +57,14 @@ def render(report: dict) -> str:
                 f"{row['demand_per_hour']:>8.1f} {row['p95_queue_wait_s']:>9.1f} "
                 f"{row['head_utilisation']:>6.2f} {row['launch_utilisation']:>6.2f} "
                 f"{row['mean_airborne']:>7.1f} {row['max_queue_depth']:>5} "
+                f"{row.get('peak_on_final', 0):>4} "
                 f"{row['peak_trim_error_g']:>7.0f} "
                 f"{100 * row['trim_exceedance_fraction']:>6.1f}  "
                 f"{row['binding_constraint'][:48]}"
             )
         out.append("")
 
+    out.append("fin = peak aircraft simultaneously on final approach")
     out.append("trim g = peak uncorrected buoyant trim error; trim% = time outside trim authority")
     out.append("")
 

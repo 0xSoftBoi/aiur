@@ -151,9 +151,11 @@ Headline results and their limits: [fleet-throughput.md](fleet-throughput.md).
 Two capture heads serve 200 aircraft and three serve 400 — but every fleet
 the dock can serve is recharge-bound, one launch lane caps the vehicle at
 720 sorties/hour with an *empty* recovery queue, and the fleet is a
-buoyant-trim disturbance to the carrier that carries it. Head counts are
-lower bounds: the twin flies one aircraft at one dock, so terminal traffic
-interaction between converging aircraft is not represented.
+buoyant-trim disturbance to the carrier that carries it. Terminal-traffic
+interaction between converging aircraft is now an optional overlay (off by
+default, so those head counts are still lower bounds); turned on, it shows
+that co-located heads collapse under their own congestion, so recovery
+scales with independent corridors rather than with more heads.
 
 ## Twin-derived engineering findings
 
