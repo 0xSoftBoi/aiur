@@ -15,7 +15,11 @@ aircraft says nothing about a carrier recovering a hundred.
 
 The gap matters because the intuitive answer is wrong in both directions.
 The obvious worry — mass — is not the constraint. The constraints that do
-bind are ones nobody had written down.
+bind are ones nobody had written down. The conclusion the sections below
+build to is in [The verdict](#the-verdict-recovery-is-the-easy-part):
+recovery, the funded article, is the easy part; the swarm is gated by the
+two resources that do not amortise — radio and energy — and the pivot that
+unlocks "hundreds" is onboard autonomy, not a bigger dock.
 
 ## The architecture being sized
 
@@ -403,6 +407,68 @@ Scout endurance, mass and per-link video cost are estimates for an airframe
 that has not been built; the radio verdict is only as good as the per-link
 cost behind it.
 
+## The verdict: recovery is the easy part
+
+Put every section above together and the model reaches a conclusion the
+programme is not currently organised around. Size the whole carrier, all
+constraints on, across the range, and one pattern dominates every row:
+
+| airborne | airframes (charge / swap) | capture heads | radios | binds on |
+| ---: | ---: | ---: | ---: | --- |
+| 20 | 193 / 22 | 2 | 1 | radio |
+| 50 | 482 / 55 | 5 | 3 | radio |
+| 100 | 964 / 110 | 10 | 5 | radio |
+| 200 | 1,928 / 219 | 19 | 10 | radio |
+
+The lesson is in how each resource *scales*, not in any single number:
+
+- **The dock amortises.** Two capture heads serve 200 aircraft; nineteen
+  serve two thousand. Capture is a shared, reused resource, so it never
+  binds — which is exactly why the programme's engineering attention, aimed
+  squarely at the dock, is aimed at the cheap corner of the problem.
+- **Radio does not amortise.** Every airborne aircraft needs its own link;
+  200 airborne is 200 concurrent links, and no cleverness makes one link fly
+  two aircraft. Radio scales one-for-one with the swarm, and that is the
+  definition of the wall.
+- **Energy does not amortise either**, it just changes currency: 200
+  airborne is ~1,900 airframes or ~2,100 charger channels. A real swarm is a
+  large energy-handling plant whichever way it is paid for.
+
+So the two things that make a swarm hard are the two that refuse to
+amortise — **links and joules** — and recovery, the funded article, is not
+one of them. Recovery has to be proven, but it is being treated as the
+scaling risk when it is the solved-in-principle part.
+
+**The pivot that unlocks "hundreds" is onboard autonomy, not a bigger
+dock.** Radio binds one-for-one *only if every aircraft needs a continuous
+control link*. Break that — aircraft that fly the mission and only check in
+periodically — and one radio supervises many:
+
+| aircraft per radio | radios for 200 airborne |
+| ---: | ---: |
+| 20 (continuous link) | 10 |
+| 100 (light supervision) | 2 |
+| 200 (autonomous) | 1 |
+
+Autonomy is the enabling technology for a real swarm, and it is the same
+GNSS-independent relative navigation (SHARED-001) the verticals already
+need. The scout finding is the mirror image: a video-streaming whoop
+re-imposes a fat continuous link and eats the budget, so the architecture
+wants **autonomy out, not video back**.
+
+**And one carrier is the wrong unit.** A single vehicle tops out on radio,
+lift, and being a single point of failure. Hundreds airborne over a region
+is not one impossible mothership; it is a **mesh of carriers, each cycling a
+few dozen autonomous aircraft, tiled geographically.** This model sizes one
+node. The region is N nodes, and lift and radio both punish the monolith.
+
+A caveat on the sizer itself: it reports radio as *the* binder partly
+because it sizes radio to exactly meet the target while giving the other
+resources a hair of margin, so the design point is really *multiply* taut —
+radio is first among equals, not uniquely hard. But the amortisation
+argument is independent of that rounding: links and joules scale one-for-one
+and docks do not, and that asymmetry is the finding.
+
 ## What this does not say
 
 - **Terminal-traffic interaction is an overlay, off by default.** With it
@@ -428,6 +494,13 @@ cost behind it.
 
 ## What it changes
 
+0. **Fund the things that do not amortise: energy cycling and onboard
+   autonomy.** The dock amortises and is the funded article; links and
+   joules scale one-for-one with the swarm and are not funded as the
+   scaling risk they are. Autonomy — the aircraft flying without a
+   continuous link — is the single change that moves the radio wall, and it
+   reuses SHARED-001. This is the first priority; everything below is
+   downstream of it.
 1. **Do not build a dock per aircraft.** Build few heads and many passive
    slots. The study puts numbers on "few": 2 for 200, 3 for 400.
 2. **There is no single bottleneck — size the whole chain.** The binding
@@ -459,4 +532,9 @@ cost behind it.
 8. **Buy radios per aircraft you intend to fly, not per aircraft you own.**
    The link budget hard-caps concurrent airborne; it is the ceiling battery
    swap runs into, so a swap investment is wasted without the radios to use
-   the aircraft it frees.
+   the aircraft it frees. And keep scouts autonomous and store-and-forward,
+   not live-FPV, unless a mission pays for the link: a video wing eats the
+   budget that would otherwise fly the recovery fleet.
+9. **Plan a mesh of carriers, not a bigger one.** Lift and radio both punish
+   the monolith. A region of hundreds airborne is N nodes each cycling a few
+   dozen; this study sizes one node.
