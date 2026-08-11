@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from aiur.sim.fleet import (
     LOSS_THRESHOLD_PCT,
+    TRIM_EXCEEDANCE_THRESHOLD,
     FleetParams,
     ServiceModel,
     calibrate_service,
@@ -558,6 +559,260 @@ class TerminalTraffic(unittest.TestCase):
         )
         a = simulate_fleet(params, service(0.9), seed=4)
         b = simulate_fleet(params, service(0.9), seed=4)
+        self.assertEqual(a, b)
+
+
+class MagazineGeometry(unittest.TestCase):
+    """Where aircraft stow, not just how many, sets the pitch trim.
+
+    Scalar trim tracks total mass off the carrier. This tracks the mass
+    *distribution* of what remains stowed: a magazine that empties from one
+    end walks its centroid off the neutral point and pitches the vehicle
+    while the total mass is still perfectly heave-trimmed. The stow policy is
+    therefore a free control input, and the tests below assert both that it
+    matters (edge fails where balanced holds) and that turning geometry off
+    changes nothing.
+    """
+
+    def test_geometry_off_by_default_and_reproduces_the_scalar_model(self):
+        r = simulate_fleet(FleetParams(fleet_size=200, capture_heads=2), service(), seed=1)
+        self.assertFalse(FleetParams().geometry_enabled)
+        self.assertEqual(r.peak_pitch_moment_g_m, 0.0)
+        self.assertEqual(r.pitch_exceedance_fraction, 0.0)
+        self.assertTrue(r.serves_fleet)
+
+    def test_validate_rejects_bad_geometry(self):
+        for bad in (
+            FleetParams(magazine_span_m=0.0),
+            FleetParams(magazine_span_m=30.0, stow_policy="lifo"),
+            FleetParams(magazine_span_m=30.0, pitch_authority_g_m=0.0),
+            # slots < fleet_size: no well-defined at-rest layout.
+            FleetParams(fleet_size=200, magazine_span_m=30.0, magazine_slots=100),
+        ):
+            with self.assertRaises(ValueError):
+                simulate_fleet(bad, service())
+
+    def test_edge_policy_pitches_the_vehicle_and_balanced_does_not(self):
+        base = dict(
+            fleet_size=200,
+            capture_heads=3,
+            magazine_span_m=30.0,
+            pitch_authority_g_m=2000.0,
+        )
+        balanced = simulate_fleet(FleetParams(**base, stow_policy="balanced"), service(), seed=1)
+        edge = simulate_fleet(FleetParams(**base, stow_policy="edge"), service(), seed=1)
+        # Same hardware, same fleet — only the stow policy differs.
+        self.assertGreater(edge.peak_pitch_moment_g_m, 3.0 * balanced.peak_pitch_moment_g_m)
+        self.assertTrue(balanced.serves_fleet)
+        self.assertFalse(edge.serves_fleet)
+        self.assertIn("pitch trim", edge.binding_constraint)
+
+    def test_a_full_symmetric_magazine_is_balanced(self):
+        # A tiny fleet keeps almost every slot full almost all the time, so
+        # the centroid barely moves and the peak moment stays small even
+        # under the edge policy — the moment comes from imbalance, not from
+        # having a magazine at all.
+        r = simulate_fleet(
+            FleetParams(
+                fleet_size=4,
+                capture_heads=2,
+                magazine_span_m=30.0,
+                stow_policy="edge",
+                pitch_authority_g_m=2000.0,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertLess(r.peak_pitch_moment_g_m, 2000.0)
+        self.assertEqual(r.pitch_exceedance_fraction, 0.0)
+
+    def test_wider_span_produces_a_larger_moment_under_the_edge_policy(self):
+        base = dict(
+            fleet_size=200,
+            capture_heads=3,
+            stow_policy="edge",
+            pitch_authority_g_m=1e12,  # never binds; isolate the moment size
+        )
+        narrow = simulate_fleet(FleetParams(**base, magazine_span_m=10.0), service(), seed=1)
+        wide = simulate_fleet(FleetParams(**base, magazine_span_m=40.0), service(), seed=1)
+        self.assertGreater(wide.peak_pitch_moment_g_m, narrow.peak_pitch_moment_g_m)
+
+    def test_geometry_is_deterministic(self):
+        params = FleetParams(
+            fleet_size=200,
+            capture_heads=3,
+            magazine_span_m=30.0,
+            magazine_width_m=8.0,
+            magazine_columns=4,
+            stow_policy="edge",
+        )
+        a = simulate_fleet(params, service(0.9), seed=6)
+        b = simulate_fleet(params, service(0.9), seed=6)
+        self.assertEqual(a, b)
+
+    def test_a_single_column_magazine_has_no_roll(self):
+        # The default width (0) / one column keeps every slot on the
+        # centreline, so roll is identically zero however the magazine is
+        # filled — the pitch-only case, reproduced.
+        r = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=3,
+                magazine_span_m=30.0,
+                stow_policy="edge",
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertGreater(r.peak_pitch_moment_g_m, 0.0)
+        self.assertEqual(r.peak_roll_moment_g_m, 0.0)
+        self.assertEqual(r.roll_exceedance_fraction, 0.0)
+
+    def test_a_wide_magazine_rolls_under_edge_and_balanced_controls_both(self):
+        # A short wide magazine makes roll the easy axis to break. The edge
+        # policy pushes roll past authority; balanced pulls both axes in.
+        base = dict(
+            fleet_size=200,
+            capture_heads=3,
+            magazine_span_m=8.0,
+            magazine_width_m=30.0,
+            magazine_columns=20,
+            pitch_authority_g_m=800.0,
+            roll_authority_g_m=800.0,
+        )
+        edge = simulate_fleet(FleetParams(**base, stow_policy="edge"), service(), seed=1)
+        balanced = simulate_fleet(FleetParams(**base, stow_policy="balanced"), service(), seed=1)
+        self.assertGreater(edge.roll_exceedance_fraction, TRIM_EXCEEDANCE_THRESHOLD)
+        # Balanced cuts both peak moments hard.
+        self.assertLess(balanced.peak_roll_moment_g_m, edge.peak_roll_moment_g_m)
+        self.assertLess(balanced.peak_pitch_moment_g_m, edge.peak_pitch_moment_g_m)
+
+    def test_roll_joins_the_pass_criterion(self):
+        base = dict(
+            fleet_size=200,
+            capture_heads=3,
+            magazine_span_m=8.0,
+            magazine_width_m=30.0,
+            magazine_columns=20,
+            stow_policy="edge",
+            pitch_authority_g_m=1e12,  # never bind pitch — isolate roll
+            roll_authority_g_m=800.0,
+        )
+        r = simulate_fleet(FleetParams(**base), service(), seed=1)
+        self.assertGreater(r.roll_exceedance_fraction, TRIM_EXCEEDANCE_THRESHOLD)
+        self.assertFalse(r.serves_fleet)
+        # With pitch authority effectively infinite, roll is the named cause.
+        self.assertIn("roll trim", r.binding_constraint)
+
+    def test_validate_rejects_bad_lateral_geometry(self):
+        for bad in (
+            FleetParams(magazine_span_m=30.0, magazine_width_m=-1.0),
+            FleetParams(magazine_span_m=30.0, magazine_columns=0),
+            FleetParams(magazine_span_m=30.0, roll_authority_g_m=0.0),
+        ):
+            with self.assertRaises(ValueError):
+                simulate_fleet(bad, service())
+
+
+class RadioCapacity(unittest.TestCase):
+    """Crazyradio addresses dozens, not hundreds.
+
+    Every airborne aircraft needs a supervisory link; the radios are finite,
+    so the link budget is a hard ceiling on concurrent airborne aircraft,
+    independent of heads, slots, charge and launch. The safe design refuses
+    to launch an aircraft it cannot talk to, so radio shows up as a cap on
+    airborne count, never as a lost-link loss — and it is the ceiling battery
+    swap runs into once it removes the charge limit.
+    """
+
+    def test_radio_off_by_default_reproduces_the_model(self):
+        r = simulate_fleet(FleetParams(fleet_size=200, capture_heads=2), service(), seed=1)
+        self.assertFalse(FleetParams().radio_enabled)
+        self.assertEqual(r.radio_utilisation, 0.0)
+
+    def test_validate_rejects_bad_radio(self):
+        for bad in (
+            FleetParams(radio_channels=0),
+            FleetParams(radio_channels=1, links_per_channel=0),
+            FleetParams(radio_channels=1, approach_link_cost=0),
+        ):
+            with self.assertRaises(ValueError):
+                simulate_fleet(bad, service())
+
+    def test_link_budget_caps_concurrent_airborne(self):
+        # A budget well below the ~22-airborne charge-limited demand must cap
+        # the sky at the budget, and it must never do so by losing aircraft.
+        r = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=3,
+                radio_channels=1,
+                links_per_channel=15,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertLessEqual(r.mean_airborne, 15.0)
+        self.assertEqual(r.loss_pct, 0.0)
+        self.assertIn("radio capacity", r.binding_constraint)
+
+    def test_enough_links_lift_the_ceiling_back_to_the_charge_limit(self):
+        base = dict(fleet_size=200, capture_heads=3)
+        capped = simulate_fleet(
+            FleetParams(**base, radio_channels=1, links_per_channel=15), service(), seed=1
+        )
+        ample = simulate_fleet(
+            FleetParams(**base, radio_channels=4, links_per_channel=20), service(), seed=1
+        )
+        uncapped = simulate_fleet(FleetParams(**base), service(), seed=1)
+        self.assertLess(capped.mean_airborne, ample.mean_airborne)
+        self.assertAlmostEqual(ample.mean_airborne, uncapped.mean_airborne, delta=1.0)
+
+    def test_radio_is_the_ceiling_battery_swap_runs_into(self):
+        # Swap removes the charge limit and wants ~60 airborne here; the link
+        # budget must hold it at the budget until enough radios are added.
+        sw = dict(
+            fleet_size=200,
+            capture_heads=3,
+            energy_mode="swap",
+            spare_packs=1000,
+            charger_channels=1000,
+            swap_s=12.0,
+        )
+        for radios, cap in ((1, 20), (2, 40), (3, 60)):
+            r = simulate_fleet(
+                FleetParams(**sw, radio_channels=radios, links_per_channel=20),
+                service(),
+                seed=1,
+            )
+            self.assertLessEqual(r.mean_airborne, cap)
+            self.assertGreater(r.mean_airborne, cap - 3.0)
+            self.assertIn("radio capacity", r.binding_constraint)
+
+    def test_launch_burst_cannot_exceed_the_budget(self):
+        # The admission race the corridor cap had: many launches are
+        # scheduled at one timestamp before any increments airborne. Peak
+        # airborne must still never exceed the budget.
+        r = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=4,
+                launch_lanes=8,
+                launch_interval_s=1.0,
+                radio_channels=1,
+                links_per_channel=10,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertLessEqual(r.mean_airborne, 10.0)
+
+    def test_radio_is_deterministic(self):
+        params = FleetParams(
+            fleet_size=200, capture_heads=3, radio_channels=2, links_per_channel=15
+        )
+        a = simulate_fleet(params, service(0.9), seed=8)
+        b = simulate_fleet(params, service(0.9), seed=8)
         self.assertEqual(a, b)
 
 

@@ -34,7 +34,13 @@ guesses, and the guesses are exactly the ones Rev-A already got wrong once.
 
 ## Stage 0 — order what A0 cannot change
 
-These do not depend on any A0 measurement.
+These do not depend on any A0 measurement. The purchasing sheet is
+[`p0a-stage0-order.csv`](p0a-stage0-order.csv): one row per line item, with
+what has to be verified at order, and the blocked lines carried in the same
+sheet with their blocker named so they cannot be ordered by accident. Fill
+`po_ref`, `ordered_date`, `received_date` and `coo_lot` as they land — the
+COO/lot column is the supply-chain evidence the fabrication pack asks for,
+and it is unrecoverable after parts are mixed into a bin.
 
 | Item | Qty | Note |
 | --- | ---: | --- |
