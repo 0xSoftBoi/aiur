@@ -202,16 +202,17 @@ drifting vertically has not served its fleet — it is moving the dock under
 aircraft on terminal approach, which is the one thing the entire capture
 architecture exists to avoid.
 
-### Pitch: where you stow them, not just how many
+### Pitch and roll: where you stow them, not just how many
 
 The ballast term above is a scalar — total mass off the carrier against a
 heave chase. It says nothing about *where* the stowed aircraft sit, and a
-magazine is a line of slots along the keel: a partially-filled one is only
-balanced if its occupied slots are symmetric about the neutral point. The
-model now optionally carries that geometry (`--magazine-span-m`, off by
+magazine is a grid of slots: a partially-filled one is only balanced if its
+occupied slots are symmetric about the neutral point on both axes. The model
+now optionally carries that geometry (`--magazine-span-m`, plus
+`--magazine-width-m` / `--magazine-columns` for the lateral axis, off by
 default so the numbers above are unchanged), tracks the longitudinal pitch
-moment of the stow distribution, and folds a pitch-authority exceedance into
-the pass criterion the same way heave is.
+**and** lateral roll moments of the stow distribution, and folds both
+exceedances into the pass criterion the same way heave is.
 
 The finding is that **the stow policy is a free pitch-trim control input,
 and getting it wrong fails the carrier on identical hardware.** For a
@@ -231,10 +232,19 @@ vehicle continuously under the aircraft trying to land on it. Stowing is not
 a filing problem, it is attitude control, and it costs nothing to get right
 if the indexer is told to.
 
-Only the longitudinal axis is modelled; slots are assumed on the centreline,
-so roll is out of scope, and the pitch authority is an estimate for a moment
-budget (vectored thrust, movable or distributed ballast) that has not been
-designed.
+The same holds on the lateral axis. Give the magazine width and columns and
+a side-biased fill rolls the vehicle exactly as an end-biased fill pitches
+it; the balanced policy minimises the 2-D moment vector, so one indexer rule
+holds both axes at once. Which axis actually binds is geometry: a long thin
+keel magazine pitches far more easily than it rolls (roll stays small for
+the 200-aircraft case above), while a short wide one is the reverse — with a
+30 m-wide magazine the edge policy blows roll past authority 90% of the time
+and balanced pulls it back. Roll authority on a keel-hung magazine is
+usually the tighter of the two, so it is worth checking, not assuming.
+
+The pitch and roll authorities are estimates for a moment budget (vectored
+thrust, movable or distributed ballast) that has not been designed, and the
+discreteness of a single aircraft sets a floor the indexer cannot beat.
 
 ## Terminal traffic: why "2 heads serve 200" has a condition attached
 
@@ -317,10 +327,11 @@ ceiling.
 - **Stow, go-around, ballast rate, ballast capacity and trim authority are
   estimates** for mechanisms that do not exist. The trim verdict in
   particular is only as good as the authority figure behind it.
-- **Trim geometry is longitudinal only.** Pitch from the stow distribution
-  is now modelled (off by default); roll is not — slots are assumed on the
-  centreline — and the pitch authority is an estimate for an undesigned
-  moment budget.
+- **Trim geometry covers pitch and roll, not vertical stacking.** Both
+  moments from the stow distribution are modelled (off by default); the
+  authorities are estimates for an undesigned moment budget, and the slot
+  grid is a single layer — a magazine stacked in height would add a third
+  term this does not carry.
 - **Radio is a scalar link budget, off by default.** It caps concurrent
   airborne aircraft at a link count; it does not model channel contention,
   packet loss, interference, or the mesh/broadcast schemes a real
@@ -353,10 +364,12 @@ ceiling.
    traffic makes co-located heads collapse under their own congestion; the
    belly must separate them into non-interfering approach volumes, and the
    head counts above hold only when it does.
-7. **Make the indexer balance the magazine — it is free pitch control.** A
-   balanced stow policy holds attitude on the same hardware an edge-filling
-   revolver pitches out of authority. Specify it as a requirement on the
-   indexer, not an emergent property of whatever slot is nearest.
+7. **Make the indexer balance the magazine — it is free attitude control.**
+   A balanced stow policy holds pitch and roll on the same hardware an
+   edge-filling revolver tips out of authority. Specify it as a requirement
+   on the indexer, not an emergent property of whatever slot is nearest, and
+   check roll as well as pitch — on a keel magazine roll authority is the
+   tighter axis.
 8. **Buy radios per aircraft you intend to fly, not per aircraft you own.**
    The link budget hard-caps concurrent airborne; it is the ceiling battery
    swap runs into, so a swap investment is wasted without the radios to use

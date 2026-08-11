@@ -44,9 +44,13 @@ def render(report: dict) -> str:
         out.append("traffic: independent corridors (interaction off — head counts are LOWER bounds)")
     span = base.get("magazine_span_m")
     if span is not None:
+        width = base.get("magazine_width_m", 0.0)
+        cols = base.get("magazine_columns", 1)
+        geom = f"{span:.0f}m" + (f" x {width:.0f}m ({cols} cols)" if width else " line")
         out.append(
-            f"magazine: {span:.0f}m slot line, '{base.get('stow_policy', 'balanced')}' "
-            f"stow policy, {base.get('pitch_authority_g_m', 0):.0f} g·m pitch authority"
+            f"magazine: {geom}, '{base.get('stow_policy', 'balanced')}' stow policy, "
+            f"{base.get('pitch_authority_g_m', 0):.0f}/{base.get('roll_authority_g_m', 0):.0f} "
+            "g·m pitch/roll authority"
         )
     else:
         out.append("magazine: scalar trim only (geometry off — no pitch moment modelled)")
@@ -85,8 +89,8 @@ def render(report: dict) -> str:
     out.append("trim g = peak uncorrected buoyant trim error; trim% = time outside trim authority")
     if base.get("magazine_span_m") is not None:
         out.append("")
-        out.append("MAGAZINE PITCH (from the stow distribution)")
-        h3 = f"{'fleet':>6} {'heads':>6} {'peak g·m':>10} {'pitch%':>7}"
+        out.append("MAGAZINE TRIM (from the stow distribution)")
+        h3 = f"{'fleet':>6} {'heads':>6} {'pitch g·m':>10} {'pitch%':>7} {'roll g·m':>10} {'roll%':>7}"
         out.append(h3)
         out.append("-" * len(h3))
         for sweep in report["sweeps"]:
@@ -94,7 +98,9 @@ def render(report: dict) -> str:
                 out.append(
                     f"{sweep['fleet_size']:>6} {row['capture_heads']:>6} "
                     f"{row.get('peak_pitch_moment_g_m', 0):>10.0f} "
-                    f"{100 * row.get('pitch_exceedance_fraction', 0):>7.1f}"
+                    f"{100 * row.get('pitch_exceedance_fraction', 0):>7.1f} "
+                    f"{row.get('peak_roll_moment_g_m', 0):>10.0f} "
+                    f"{100 * row.get('roll_exceedance_fraction', 0):>7.1f}"
                 )
             out.append("")
     out.append("")

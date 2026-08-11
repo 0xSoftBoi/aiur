@@ -374,19 +374,32 @@ class FleetParams:
     #
     # This is off by default (``magazine_span_m is None``): with it off no
     # moment is computed and the head counts elsewhere are unchanged.  Turned
-    # on, the stow policy becomes a pitch-trim control input — where you put
-    # each recovered aircraft is free, and it decides whether the centroid
-    # stays put.  Only the longitudinal (pitch) axis is modelled; slots are
-    # assumed on the centreline, so roll is out of scope.
+    # on, the stow policy becomes a *trim* control input — where you put each
+    # recovered aircraft is free, and it decides whether the centroid stays
+    # put.  Both axes are modelled: longitudinal (pitch) from the slot's
+    # position along the keel, and lateral (roll) from its position across the
+    # width.  A magazine one column wide (the default) has no lateral extent
+    # and so no roll, reproducing the pitch-only case; give it width and
+    # columns and a side-biased fill rolls the vehicle exactly as an
+    # end-biased fill pitches it.
     #: Longitudinal extent of the slot line, metres. ``None`` = geometry off.
     magazine_span_m: float | None = None
+    #: Lateral extent of the magazine, metres. 0 (default) = a single
+    #: centreline column, i.e. no roll — the pitch-only case.
+    magazine_width_m: float = 0.0
+    #: Number of lateral slot columns. 1 (default) keeps every slot on the
+    #: centreline whatever the width.
+    magazine_columns: int = 1
     #: "balanced" places each recovered aircraft in the free slot that keeps
-    #: the centroid nearest neutral; "edge" fills from one physical end, the
+    #: the 2-D centroid nearest neutral; "edge" fills from one corner, the
     #: naive revolver/belt that this model exists to warn against.
     stow_policy: str = "balanced"
     #: Pitch moment the carrier can hold, gram-metres. Estimate for authority
     #: from vectored thrust / distributed or movable ballast.
     pitch_authority_g_m: float = 2000.0
+    #: Roll moment the carrier can hold, gram-metres. Estimate; roll authority
+    #: on a keel-hung magazine is usually tighter than pitch.
+    roll_authority_g_m: float = 2000.0
 
     # ---- radio capacity ---------------------------------------------------
     #
@@ -539,6 +552,12 @@ class FleetParams:
                 raise ValueError(f"unknown stow_policy {self.stow_policy!r}")
             if self.pitch_authority_g_m <= 0.0:
                 raise ValueError("pitch_authority_g_m must be > 0")
+            if self.magazine_width_m < 0.0:
+                raise ValueError("magazine_width_m must be >= 0")
+            if self.magazine_columns < 1:
+                raise ValueError("magazine_columns must be >= 1")
+            if self.roll_authority_g_m <= 0.0:
+                raise ValueError("roll_authority_g_m must be > 0")
             if self.slots < self.fleet_size:
                 raise ValueError(
                     "magazine geometry needs a slot per airframe (slots >= "
@@ -611,6 +630,11 @@ class FleetResult:
     #: Fraction of measured time the pitch moment exceeded pitch authority —
     #: time the dock is pitching under aircraft on approach.
     pitch_exceedance_fraction: float
+    #: Peak lateral roll moment from the stow distribution, gram-metres. Zero
+    #: when the magazine has no lateral extent.
+    peak_roll_moment_g_m: float
+    #: Fraction of measured time the roll moment exceeded roll authority.
+    roll_exceedance_fraction: float
     #: Mean radio link demand as a fraction of the link budget. Zero when the
     #: radio limit is off; near 1 means radio is the airborne ceiling.
     radio_utilisation: float
@@ -631,6 +655,7 @@ class FleetResult:
             self.loss_pct <= LOSS_THRESHOLD_PCT
             and self.trim_exceedance_fraction <= TRIM_EXCEEDANCE_THRESHOLD
             and self.pitch_exceedance_fraction <= TRIM_EXCEEDANCE_THRESHOLD
+            and self.roll_exceedance_fraction <= TRIM_EXCEEDANCE_THRESHOLD
         )
 
 
@@ -696,30 +721,51 @@ def simulate_fleet(
     geometry = params.geometry_enabled
     if geometry:
         n_slots = params.slots
-        slot_pos = [
-            params.magazine_span_m * ((k + 0.5) / n_slots - 0.5)
+        cols = params.magazine_columns
+        rows_total = (n_slots + cols - 1) // cols
+        # Slots on a grid: rows along the keel (pitch), columns across the
+        # width (roll), each centred so a full magazine is balanced on both
+        # axes. One column (the default) puts every slot on the centreline,
+        # so slot_y is all zero and roll never appears.
+        slot_x = [
+            params.magazine_span_m * (((k // cols) + 0.5) / rows_total - 0.5)
+            for k in range(n_slots)
+        ]
+        slot_y = [
+            params.magazine_width_m * (((k % cols) + 0.5) / cols - 0.5)
+            if cols > 1
+            else 0.0
             for k in range(n_slots)
         ]
         free_slots = set(range(params.fleet_size, n_slots))
         for aircraft in fleet:
             aircraft.slot_index = aircraft.index
-        pitch_moment_g_m = params.aircraft_mass_g * sum(
-            slot_pos[i] for i in range(params.fleet_size)
-        )
+        m = params.aircraft_mass_g
+        pitch_moment_g_m = m * sum(slot_x[i] for i in range(params.fleet_size))
+        roll_moment_g_m = m * sum(slot_y[i] for i in range(params.fleet_size))
     else:
-        slot_pos = []
+        slot_x = []
+        slot_y = []
         free_slots = set()
         pitch_moment_g_m = 0.0
+        roll_moment_g_m = 0.0
     peak_pitch_moment_g_m = 0.0
     pitch_exceeded_s = 0.0
+    peak_roll_moment_g_m = 0.0
+    roll_exceeded_s = 0.0
 
     def choose_slot() -> int:
         if params.stow_policy == "edge":
-            # Fill from one physical end: the naive revolver/belt.
+            # Fill from one corner: the naive revolver/belt.
             return min(free_slots)
-        # Balanced: the free slot that pulls the centroid back toward neutral.
-        target = -pitch_moment_g_m / params.aircraft_mass_g
-        return min(free_slots, key=lambda k: abs(slot_pos[k] - target))
+        # Balanced: the free slot that pulls the 2-D centroid back toward
+        # neutral, i.e. minimises the resulting moment-vector magnitude.
+        m = params.aircraft_mass_g
+        return min(
+            free_slots,
+            key=lambda k: (pitch_moment_g_m + m * slot_x[k]) ** 2
+            + (roll_moment_g_m + m * slot_y[k]) ** 2,
+        )
 
     recoveries = 0
     #: Every recovery, warm-up included, so the loss rate below has a
@@ -799,6 +845,7 @@ def simulate_fleet(
         nonlocal last_t, airborne_integral, head_blocked_s, on_final_integral
         nonlocal ballast_g, peak_trim_error_g, trim_exceeded_s
         nonlocal peak_pitch_moment_g_m, pitch_exceeded_s
+        nonlocal peak_roll_moment_g_m, roll_exceeded_s
         if t <= last_t:
             return
         span_total = t - last_t
@@ -818,6 +865,10 @@ def simulate_fleet(
                 peak_pitch_moment_g_m = max(peak_pitch_moment_g_m, mag)
                 if mag > params.pitch_authority_g_m:
                     pitch_exceeded_s += span
+                rmag = abs(roll_moment_g_m)
+                peak_roll_moment_g_m = max(peak_roll_moment_g_m, rmag)
+                if rmag > params.roll_authority_g_m:
+                    roll_exceeded_s += span
 
         # Ballast chases the mass that is currently off the carrier, rate
         # limited and capped.  Error is worst at the start of the span and
@@ -886,7 +937,8 @@ def simulate_fleet(
             schedule(release, lambda now, a=aircraft: launch(now, a))
 
     def launch(t: float, aircraft: _Aircraft) -> None:
-        nonlocal airborne, sorties, used_slots, pitch_moment_g_m, pending_launch
+        nonlocal airborne, sorties, used_slots, pending_launch
+        nonlocal pitch_moment_g_m, roll_moment_g_m
         advance(t)
         pending_launch -= 1
         aircraft.state = _SORTIE
@@ -896,7 +948,9 @@ def simulate_fleet(
             aircraft.holds_slot = False
             used_slots -= 1
             if geometry and aircraft.slot_index >= 0:
-                pitch_moment_g_m -= params.aircraft_mass_g * slot_pos[aircraft.slot_index]
+                m = params.aircraft_mass_g
+                pitch_moment_g_m -= m * slot_x[aircraft.slot_index]
+                roll_moment_g_m -= m * slot_y[aircraft.slot_index]
                 free_slots.add(aircraft.slot_index)
                 aircraft.slot_index = -1
         airborne += 1
@@ -1004,7 +1058,7 @@ def simulate_fleet(
 
     def resolve(t: float, aircraft: _Aircraft, captured: bool, occupancy: float) -> None:
         nonlocal free_heads, head_busy_s, airborne, recoveries, used_slots
-        nonlocal recoveries_total, on_final, pitch_moment_g_m
+        nonlocal recoveries_total, on_final, pitch_moment_g_m, roll_moment_g_m
         nonlocal lost_reserve, lost_retries, max_depth, peak_slots
         advance(t)
         # The corridor frees the moment the approach resolves, even though a
@@ -1022,11 +1076,13 @@ def simulate_fleet(
             used_slots += 1
             if geometry:
                 # Index the aircraft into a slot; the policy decides which,
-                # and that choice is the pitch-trim control input.
+                # and that choice is the trim control input on both axes.
                 slot = choose_slot()
                 free_slots.discard(slot)
                 aircraft.slot_index = slot
-                pitch_moment_g_m += params.aircraft_mass_g * slot_pos[slot]
+                m = params.aircraft_mass_g
+                pitch_moment_g_m += m * slot_x[slot]
+                roll_moment_g_m += m * slot_y[slot]
             airborne -= 1
             recoveries_total += 1
             if t >= measured_from:
@@ -1239,6 +1295,8 @@ def simulate_fleet(
         peak_on_final=peak_on_final,
         peak_pitch_moment_g_m=round(peak_pitch_moment_g_m, 1),
         pitch_exceedance_fraction=round(pitch_exceeded_s / measured_span, 4),
+        peak_roll_moment_g_m=round(peak_roll_moment_g_m, 1),
+        roll_exceedance_fraction=round(roll_exceeded_s / measured_span, 4),
         radio_utilisation=0.0,  # filled below when the radio limit is on
         peak_trim_error_g=round(peak_trim_error_g, 1),
         trim_exceedance_fraction=round(trim_exceeded_s / measured_span, 4),
@@ -1310,6 +1368,14 @@ def _diagnose(result: FleetResult, params: FleetParams) -> str:
             f"{100.0 * result.pitch_exceedance_fraction:.0f}% of the time "
             f"outside it): the '{params.stow_policy}' stow policy lets the "
             "occupied-slot centroid wander off the neutral point"
+        )
+    if result.roll_exceedance_fraction > TRIM_EXCEEDANCE_THRESHOLD:
+        return (
+            f"magazine roll trim ({result.peak_roll_moment_g_m:.0f} g·m "
+            f"peak vs {params.roll_authority_g_m:.0f} g·m authority, "
+            f"{100.0 * result.roll_exceedance_fraction:.0f}% of the time "
+            f"outside it): the '{params.stow_policy}' stow policy lets the "
+            "occupied-slot centroid wander off the centreline"
         )
     # Launch is checked before the empty-queue case on purpose.  A
     # launch-limited carrier has an empty recovery queue precisely because
@@ -1466,6 +1532,10 @@ def sweep_heads(
                 "peak_pitch_moment_g_m": max(r.peak_pitch_moment_g_m for r in runs),
                 "pitch_exceedance_fraction": max(
                     r.pitch_exceedance_fraction for r in runs
+                ),
+                "peak_roll_moment_g_m": max(r.peak_roll_moment_g_m for r in runs),
+                "roll_exceedance_fraction": max(
+                    r.roll_exceedance_fraction for r in runs
                 ),
                 "radio_utilisation": round(
                     sum(r.radio_utilisation for r in runs) / len(runs), 4
@@ -1646,6 +1716,9 @@ def main(argv: list[str] | None = None) -> int:
         help="where recovered aircraft are indexed (geometry on)",
     )
     parser.add_argument("--pitch-authority-g-m", type=float, default=2000.0)
+    parser.add_argument("--magazine-width-m", type=float, default=0.0)
+    parser.add_argument("--magazine-columns", type=int, default=1)
+    parser.add_argument("--roll-authority-g-m", type=float, default=2000.0)
     parser.add_argument(
         "--radio-channels",
         type=int,
@@ -1673,8 +1746,11 @@ def main(argv: list[str] | None = None) -> int:
         traffic_holds_s=args.traffic_holds_s,
         traffic_miss_penalty=args.traffic_miss,
         magazine_span_m=args.magazine_span_m,
+        magazine_width_m=args.magazine_width_m,
+        magazine_columns=args.magazine_columns,
         stow_policy=args.stow_policy,
         pitch_authority_g_m=args.pitch_authority_g_m,
+        roll_authority_g_m=args.roll_authority_g_m,
         radio_channels=args.radio_channels,
         links_per_channel=args.links_per_channel,
         approach_link_cost=args.approach_link_cost,

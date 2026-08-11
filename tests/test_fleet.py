@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from aiur.sim.fleet import (
     LOSS_THRESHOLD_PCT,
+    TRIM_EXCEEDANCE_THRESHOLD,
     FleetParams,
     ServiceModel,
     calibrate_service,
@@ -641,11 +642,76 @@ class MagazineGeometry(unittest.TestCase):
             fleet_size=200,
             capture_heads=3,
             magazine_span_m=30.0,
+            magazine_width_m=8.0,
+            magazine_columns=4,
             stow_policy="edge",
         )
         a = simulate_fleet(params, service(0.9), seed=6)
         b = simulate_fleet(params, service(0.9), seed=6)
         self.assertEqual(a, b)
+
+    def test_a_single_column_magazine_has_no_roll(self):
+        # The default width (0) / one column keeps every slot on the
+        # centreline, so roll is identically zero however the magazine is
+        # filled — the pitch-only case, reproduced.
+        r = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=3,
+                magazine_span_m=30.0,
+                stow_policy="edge",
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertGreater(r.peak_pitch_moment_g_m, 0.0)
+        self.assertEqual(r.peak_roll_moment_g_m, 0.0)
+        self.assertEqual(r.roll_exceedance_fraction, 0.0)
+
+    def test_a_wide_magazine_rolls_under_edge_and_balanced_controls_both(self):
+        # A short wide magazine makes roll the easy axis to break. The edge
+        # policy pushes roll past authority; balanced pulls both axes in.
+        base = dict(
+            fleet_size=200,
+            capture_heads=3,
+            magazine_span_m=8.0,
+            magazine_width_m=30.0,
+            magazine_columns=20,
+            pitch_authority_g_m=800.0,
+            roll_authority_g_m=800.0,
+        )
+        edge = simulate_fleet(FleetParams(**base, stow_policy="edge"), service(), seed=1)
+        balanced = simulate_fleet(FleetParams(**base, stow_policy="balanced"), service(), seed=1)
+        self.assertGreater(edge.roll_exceedance_fraction, TRIM_EXCEEDANCE_THRESHOLD)
+        # Balanced cuts both peak moments hard.
+        self.assertLess(balanced.peak_roll_moment_g_m, edge.peak_roll_moment_g_m)
+        self.assertLess(balanced.peak_pitch_moment_g_m, edge.peak_pitch_moment_g_m)
+
+    def test_roll_joins_the_pass_criterion(self):
+        base = dict(
+            fleet_size=200,
+            capture_heads=3,
+            magazine_span_m=8.0,
+            magazine_width_m=30.0,
+            magazine_columns=20,
+            stow_policy="edge",
+            pitch_authority_g_m=1e12,  # never bind pitch — isolate roll
+            roll_authority_g_m=800.0,
+        )
+        r = simulate_fleet(FleetParams(**base), service(), seed=1)
+        self.assertGreater(r.roll_exceedance_fraction, TRIM_EXCEEDANCE_THRESHOLD)
+        self.assertFalse(r.serves_fleet)
+        # With pitch authority effectively infinite, roll is the named cause.
+        self.assertIn("roll trim", r.binding_constraint)
+
+    def test_validate_rejects_bad_lateral_geometry(self):
+        for bad in (
+            FleetParams(magazine_span_m=30.0, magazine_width_m=-1.0),
+            FleetParams(magazine_span_m=30.0, magazine_columns=0),
+            FleetParams(magazine_span_m=30.0, roll_authority_g_m=0.0),
+        ):
+            with self.assertRaises(ValueError):
+                simulate_fleet(bad, service())
 
 
 class RadioCapacity(unittest.TestCase):
