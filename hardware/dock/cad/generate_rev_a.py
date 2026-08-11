@@ -9,6 +9,20 @@ hardware.
 
 from __future__ import annotations
 
+import sys
+
+# Checked before the first builtin-generic alias below, which is what actually
+# breaks on 3.8 - and breaks with "TypeError: 'type' object is not
+# subscriptable", which names neither the requirement nor this file. CI runs
+# 3.12; 3.9 is the syntax floor.
+if sys.version_info < (3, 9):  # pragma: no cover - version guard
+    raise SystemExit(
+        f"generate_rev_a.py needs Python 3.9 or newer; this is "
+        f"{sys.version_info.major}.{sys.version_info.minor}. "
+        f"macOS may still ship 3.8 as python3 - try python3.12, or check "
+        f"python3 --version."
+    )
+
 import argparse
 import json
 import math
