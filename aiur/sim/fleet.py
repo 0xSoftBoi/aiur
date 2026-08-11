@@ -388,6 +388,30 @@ class FleetParams:
     #: from vectored thrust / distributed or movable ballast.
     pitch_authority_g_m: float = 2000.0
 
+    # ---- radio capacity ---------------------------------------------------
+    #
+    # Every airborne aircraft needs a supervisory link, and every aircraft on
+    # final needs a tight, high-rate control link. Radios are finite:
+    # Crazyradio addresses dozens, not hundreds. So the link budget is a hard
+    # ceiling on *concurrent airborne* aircraft, independent of heads, slots,
+    # charge and launch — and it is the ceiling battery swap runs into once
+    # it removes the charge limit.
+    #
+    # Off by default (``radio_channels is None``): unlimited links, so the
+    # numbers elsewhere are unchanged. Turned on, an aircraft is not launched
+    # unless a link is free, so the model never flies more than it can talk
+    # to — radio manifests as a cap on airborne count, never as a lost-link
+    # loss, because the safe design refuses to launch rather than fly blind.
+    #: Independent radios/dongles. ``None`` = no radio limit.
+    radio_channels: int | None = None
+    #: Simultaneous supervisory (loiter/transit) links one radio sustains —
+    #: the "addresses dozens" number.
+    links_per_channel: int = 20
+    #: Supervisory-link-equivalents a high-rate approach/capture link costs.
+    #: 1 means an approach is no dearer than a loiter link; >1 charges the
+    #: tight terminal control loop its extra airtime.
+    approach_link_cost: int = 1
+
     #: Max aircraft on final approach at once. ``None`` = one corridor per
     #: head, i.e. the independent-corridor assumption (no extra airspace
     #: limit), which is today's behaviour.
@@ -400,6 +424,14 @@ class FleetParams:
     @property
     def geometry_enabled(self) -> bool:
         return self.magazine_span_m is not None
+
+    @property
+    def radio_enabled(self) -> bool:
+        return self.radio_channels is not None
+
+    @property
+    def radio_budget(self) -> int:
+        return (self.radio_channels or 0) * self.links_per_channel
 
     @property
     def approach_corridors_effective(self) -> int:
@@ -487,6 +519,13 @@ class FleetParams:
                 raise ValueError("spare_packs must be >= 0")
             if self.charger_channels_effective < 1:
                 raise ValueError("swap mode needs at least one charger channel")
+        if self.radio_channels is not None:
+            if self.radio_channels < 1:
+                raise ValueError("radio_channels must be >= 1")
+            if self.links_per_channel < 1:
+                raise ValueError("links_per_channel must be >= 1")
+            if self.approach_link_cost < 1:
+                raise ValueError("approach_link_cost must be >= 1")
         if self.approach_corridors is not None and self.approach_corridors < 1:
             raise ValueError("approach_corridors must be >= 1")
         if self.traffic_holds_s < 0.0:
@@ -572,6 +611,9 @@ class FleetResult:
     #: Fraction of measured time the pitch moment exceeded pitch authority —
     #: time the dock is pitching under aircraft on approach.
     pitch_exceedance_fraction: float
+    #: Mean radio link demand as a fraction of the link budget. Zero when the
+    #: radio limit is off; near 1 means radio is the airborne ceiling.
+    radio_utilisation: float
 
     @property
     def serves_fleet(self) -> bool:
@@ -731,6 +773,21 @@ def simulate_fleet(
     on_final_integral = 0.0
     peak_on_final = 0
 
+    # Launches scheduled but not yet executed. Several are scheduled at one
+    # timestamp before any launch() fires and increments ``airborne``, so the
+    # radio gate must count them or a burst would slip past the link budget —
+    # the same admission race the corridor cap has.
+    pending_launch = 0
+
+    def radio_load() -> int:
+        """Supervisory-link-equivalents currently demanded of the radios."""
+
+        return (
+            airborne
+            + pending_launch
+            + on_final * (params.approach_link_cost - 1)
+        )
+
     def advance(t: float) -> None:
         """Integrate time-weighted metrics forward to ``t``.
 
@@ -809,20 +866,29 @@ def simulate_fleet(
     def try_launch(t: float) -> None:
         """Release every ready aircraft a free lane can take."""
 
+        nonlocal pending_launch
         for aircraft in fleet:
             if aircraft.state is not _READY:
                 continue
+            # Radio ceiling: never launch an aircraft the carrier cannot keep
+            # a link to. The aircraft stays ready and launches later, when a
+            # recovery or loss frees a link. With the radio limit off this is
+            # skipped, so the default path is unchanged.
+            if params.radio_enabled and radio_load() + 1 > params.radio_budget:
+                return
             lane = min(range(params.launch_lanes), key=lambda i: lane_free_at[i])
             release = max(t, lane_free_at[lane])
             if release >= params.horizon_s:
                 return
             lane_free_at[lane] = release + params.launch_interval_s
             aircraft.state = _LAUNCHING
+            pending_launch += 1
             schedule(release, lambda now, a=aircraft: launch(now, a))
 
     def launch(t: float, aircraft: _Aircraft) -> None:
-        nonlocal airborne, sorties, used_slots, pitch_moment_g_m
+        nonlocal airborne, sorties, used_slots, pitch_moment_g_m, pending_launch
         advance(t)
+        pending_launch -= 1
         aircraft.state = _SORTIE
         aircraft.energy_s = params.endurance_s
         aircraft.attempts = 0
@@ -882,6 +948,14 @@ def simulate_fleet(
             # disabled this never binds before free_heads does, so the
             # default path is unchanged.
             if params.traffic_enabled and on_final >= params.approach_corridors_effective:
+                break
+            # A high-rate approach link may cost more than a loiter link; if
+            # the radios cannot spare the difference, the approach waits. No
+            # effect when approach_link_cost is 1 or the radio limit is off.
+            if (
+                params.radio_enabled
+                and radio_load() + (params.approach_link_cost - 1) > params.radio_budget
+            ):
                 break
             aircraft = next_served(t)
             if aircraft is None:
@@ -972,6 +1046,10 @@ def simulate_fleet(
             # modelled constraint, so the default path is untouched.
             if params.traffic_enabled:
                 pump(t)
+            # Recovering an aircraft freed a supervisory link; a ready
+            # aircraft that was held back by the radio ceiling can now go.
+            if params.radio_enabled:
+                try_launch(t)
             return
 
         free_heads += 1
@@ -1017,6 +1095,9 @@ def simulate_fleet(
             lost_reserve += 1
         else:
             lost_retries += 1
+        # A lost aircraft also frees its link; let a radio-held aircraft go.
+        if params.radio_enabled:
+            try_launch(t)
 
     def recharged(t: float, aircraft: _Aircraft) -> None:
         advance(t)
@@ -1158,6 +1239,7 @@ def simulate_fleet(
         peak_on_final=peak_on_final,
         peak_pitch_moment_g_m=round(peak_pitch_moment_g_m, 1),
         pitch_exceedance_fraction=round(pitch_exceeded_s / measured_span, 4),
+        radio_utilisation=0.0,  # filled below when the radio limit is on
         peak_trim_error_g=round(peak_trim_error_g, 1),
         trim_exceedance_fraction=round(trim_exceeded_s / measured_span, 4),
         dock_mass_g=round(
@@ -1167,11 +1249,23 @@ def simulate_fleet(
         payload_margin_g=0.0,
     )
     carried = result.dock_mass_g + params.fleet_size * params.aircraft_mass_g
+    # Mean radio demand: loiter links for the airborne fleet plus the extra
+    # airtime the aircraft on final draw. pending_launch is transient and
+    # left out of the mean. Derived, not separately integrated, because both
+    # its terms already are.
+    if params.radio_enabled:
+        mean_load = result.mean_airborne + result.mean_on_final * (
+            params.approach_link_cost - 1
+        )
+        radio_util = round(mean_load / params.radio_budget, 4)
+    else:
+        radio_util = 0.0
     result = replace(
         result,
         payload_margin_g=round(params.payload_ceiling_g - carried, 1),
-        binding_constraint=_diagnose(result, params),
+        radio_utilisation=radio_util,
     )
+    result = replace(result, binding_constraint=_diagnose(result, params))
     return result
 
 
@@ -1238,6 +1332,16 @@ def _diagnose(result: FleetResult, params: FleetParams) -> str:
             f"battery pool ({params.spare_packs} spare packs, "
             f"{params.charger_channels_effective} chargers): recovered "
             "aircraft wait for a charged pack before they can relaunch"
+        )
+    # Radio caps concurrent airborne aircraft, so a radio-limited carrier has
+    # a full sky and an empty recovery queue — it never launched enough to
+    # build one. Checked before the empty-queue case for that reason.
+    if params.radio_enabled and result.radio_utilisation >= 0.85:
+        return (
+            f"radio capacity ({params.radio_channels} radios x "
+            f"{params.links_per_channel} links = {params.radio_budget} "
+            f"concurrent links, {100.0 * result.radio_utilisation:.0f}% used): "
+            "the carrier cannot fly more aircraft than it can talk to"
         )
     if result.loss_pct <= LOSS_THRESHOLD_PCT and result.max_queue_depth <= 1:
         return "none — the carrier serves this fleet with the queue empty"
@@ -1362,6 +1466,9 @@ def sweep_heads(
                 "peak_pitch_moment_g_m": max(r.peak_pitch_moment_g_m for r in runs),
                 "pitch_exceedance_fraction": max(
                     r.pitch_exceedance_fraction for r in runs
+                ),
+                "radio_utilisation": round(
+                    sum(r.radio_utilisation for r in runs) / len(runs), 4
                 ),
                 "binding_constraint": worst.binding_constraint,
             }
@@ -1539,6 +1646,14 @@ def main(argv: list[str] | None = None) -> int:
         help="where recovered aircraft are indexed (geometry on)",
     )
     parser.add_argument("--pitch-authority-g-m", type=float, default=2000.0)
+    parser.add_argument(
+        "--radio-channels",
+        type=int,
+        default=None,
+        help="independent radios; enables the link-budget airborne ceiling",
+    )
+    parser.add_argument("--links-per-channel", type=int, default=20)
+    parser.add_argument("--approach-link-cost", type=int, default=1)
     args = parser.parse_args(argv)
 
     base = FleetParams(
@@ -1560,6 +1675,9 @@ def main(argv: list[str] | None = None) -> int:
         magazine_span_m=args.magazine_span_m,
         stow_policy=args.stow_policy,
         pitch_authority_g_m=args.pitch_authority_g_m,
+        radio_channels=args.radio_channels,
+        links_per_channel=args.links_per_channel,
+        approach_link_cost=args.approach_link_cost,
     )
     print(
         json.dumps(

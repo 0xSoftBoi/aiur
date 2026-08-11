@@ -278,6 +278,35 @@ volume (penalty on) at the other — and a real belly sits between them, to be
 calibrated to a specific layout. What the model now refuses to let you do is
 assume the optimistic end for free.
 
+## Radio: the ceiling battery swap runs into
+
+Every airborne aircraft needs a supervisory link and every aircraft on final
+needs a tight control link, and radios are finite — Crazyradio addresses
+dozens, not hundreds. The model carries this as a link budget
+(`--radio-channels` × `--links-per-channel`), off by default. The safe design
+refuses to launch an aircraft it cannot talk to, so radio shows up as a **hard
+ceiling on concurrent airborne aircraft**, never as a lost-link loss.
+
+That ceiling is independent of heads, slots, charge and launch, which is
+exactly why it matters: it is the wall battery swap hits. Swap removes the
+charge limit and wants ~60 aircraft airborne from a 200-airframe fleet — but
+at 20 links per radio, one radio holds the sky at 20, two at 40, three at 60.
+The airborne count tracks the link budget almost exactly until enough radios
+are added that heads become the limit again. So the full chain a "hundreds of
+drones" claim has to answer is:
+
+> recharge → (battery swap) → radio links → capture heads → launch lanes → corridors → trim,
+
+and every one of them is a real resource that has to be bought. There is no
+single bottleneck to fix, and "airborne" — the number that does anything —
+is set by whichever of these is scarcest.
+
+The link budget is a scalar: it does not model channel contention, packet
+loss, interference, or the mesh/broadcast schemes a real hundred-aircraft
+system would need instead of unicast control. It says only "you cannot fly
+more than you can talk to", which is the floor of the problem, not its
+ceiling.
+
 ## What this does not say
 
 - **Terminal-traffic interaction is an overlay, off by default.** With it
@@ -292,8 +321,10 @@ assume the optimistic end for free.
   is now modelled (off by default); roll is not — slots are assumed on the
   centreline — and the pitch authority is an estimate for an undesigned
   moment budget.
-- **Radio is absent.** Crazyradio addresses dozens, not hundreds. This is a
-  real ceiling on fleet size and it is not represented.
+- **Radio is a scalar link budget, off by default.** It caps concurrent
+  airborne aircraft at a link count; it does not model channel contention,
+  packet loss, interference, or the mesh/broadcast schemes a real
+  hundred-aircraft system needs. It is the floor of the comms problem.
 - **Energy is seconds, not chemistry.** No capacity fade, no temperature.
 - **No hardware has recovered a single aircraft.** This sizes an
   architecture; it does not validate one.
@@ -302,10 +333,11 @@ assume the optimistic end for free.
 
 1. **Do not build a dock per aircraft.** Build few heads and many passive
    slots. The study puts numbers on "few": 2 for 200, 3 for 400.
-2. **Charge rate is the scaling lever, not capture rate.** Every fleet the
-   dock can serve is recharge-bound — until you break that with battery
-   swap, which then promotes capture heads to the bottleneck. There is no
-   single lever; the chain is recharge → heads → launch.
+2. **There is no single bottleneck — size the whole chain.** The binding
+   constraint walks: recharge → (battery swap) → radio links → capture heads
+   → launch lanes → corridors → trim. Fix one and the next takes over.
+   "Airborne", the number that does anything, is set by whichever is
+   scarcest, so a credible fleet plan budgets all of them, not the cheapest.
 3. **Prefer passive; price every actuated mechanism in cycles, not count.**
    Battery swap roughly doubles airborne-count-per-airframe but adds a
    second life-limited mechanism running millions of cycles a year, on top
@@ -325,5 +357,7 @@ assume the optimistic end for free.
    balanced stow policy holds attitude on the same hardware an edge-filling
    revolver pitches out of authority. Specify it as a requirement on the
    indexer, not an emergent property of whatever slot is nearest.
-8. **The remaining unmodelled effect that moves the number the unsafe way**
-   is radio capacity — Crazyradio addresses dozens, not hundreds. It is next.
+8. **Buy radios per aircraft you intend to fly, not per aircraft you own.**
+   The link budget hard-caps concurrent airborne; it is the ceiling battery
+   swap runs into, so a swap investment is wasted without the radios to use
+   the aircraft it frees.

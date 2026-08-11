@@ -50,6 +50,15 @@ def render(report: dict) -> str:
         )
     else:
         out.append("magazine: scalar trim only (geometry off — no pitch moment modelled)")
+    radios = base.get("radio_channels")
+    if radios is not None:
+        lpc = base.get("links_per_channel", 0)
+        out.append(
+            f"radio: {radios} x {lpc} = {radios * lpc} concurrent links, "
+            f"approach link cost {base.get('approach_link_cost', 1)}"
+        )
+    else:
+        out.append("radio: unlimited (link budget off — no airborne ceiling modelled)")
     out.append(f"seeds {report['seeds']}, loss threshold {report['loss_threshold_pct']}%")
     out.append("")
 

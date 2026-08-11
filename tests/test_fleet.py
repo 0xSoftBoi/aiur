@@ -648,6 +648,108 @@ class MagazineGeometry(unittest.TestCase):
         self.assertEqual(a, b)
 
 
+class RadioCapacity(unittest.TestCase):
+    """Crazyradio addresses dozens, not hundreds.
+
+    Every airborne aircraft needs a supervisory link; the radios are finite,
+    so the link budget is a hard ceiling on concurrent airborne aircraft,
+    independent of heads, slots, charge and launch. The safe design refuses
+    to launch an aircraft it cannot talk to, so radio shows up as a cap on
+    airborne count, never as a lost-link loss — and it is the ceiling battery
+    swap runs into once it removes the charge limit.
+    """
+
+    def test_radio_off_by_default_reproduces_the_model(self):
+        r = simulate_fleet(FleetParams(fleet_size=200, capture_heads=2), service(), seed=1)
+        self.assertFalse(FleetParams().radio_enabled)
+        self.assertEqual(r.radio_utilisation, 0.0)
+
+    def test_validate_rejects_bad_radio(self):
+        for bad in (
+            FleetParams(radio_channels=0),
+            FleetParams(radio_channels=1, links_per_channel=0),
+            FleetParams(radio_channels=1, approach_link_cost=0),
+        ):
+            with self.assertRaises(ValueError):
+                simulate_fleet(bad, service())
+
+    def test_link_budget_caps_concurrent_airborne(self):
+        # A budget well below the ~22-airborne charge-limited demand must cap
+        # the sky at the budget, and it must never do so by losing aircraft.
+        r = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=3,
+                radio_channels=1,
+                links_per_channel=15,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertLessEqual(r.mean_airborne, 15.0)
+        self.assertEqual(r.loss_pct, 0.0)
+        self.assertIn("radio capacity", r.binding_constraint)
+
+    def test_enough_links_lift_the_ceiling_back_to_the_charge_limit(self):
+        base = dict(fleet_size=200, capture_heads=3)
+        capped = simulate_fleet(
+            FleetParams(**base, radio_channels=1, links_per_channel=15), service(), seed=1
+        )
+        ample = simulate_fleet(
+            FleetParams(**base, radio_channels=4, links_per_channel=20), service(), seed=1
+        )
+        uncapped = simulate_fleet(FleetParams(**base), service(), seed=1)
+        self.assertLess(capped.mean_airborne, ample.mean_airborne)
+        self.assertAlmostEqual(ample.mean_airborne, uncapped.mean_airborne, delta=1.0)
+
+    def test_radio_is_the_ceiling_battery_swap_runs_into(self):
+        # Swap removes the charge limit and wants ~60 airborne here; the link
+        # budget must hold it at the budget until enough radios are added.
+        sw = dict(
+            fleet_size=200,
+            capture_heads=3,
+            energy_mode="swap",
+            spare_packs=1000,
+            charger_channels=1000,
+            swap_s=12.0,
+        )
+        for radios, cap in ((1, 20), (2, 40), (3, 60)):
+            r = simulate_fleet(
+                FleetParams(**sw, radio_channels=radios, links_per_channel=20),
+                service(),
+                seed=1,
+            )
+            self.assertLessEqual(r.mean_airborne, cap)
+            self.assertGreater(r.mean_airborne, cap - 3.0)
+            self.assertIn("radio capacity", r.binding_constraint)
+
+    def test_launch_burst_cannot_exceed_the_budget(self):
+        # The admission race the corridor cap had: many launches are
+        # scheduled at one timestamp before any increments airborne. Peak
+        # airborne must still never exceed the budget.
+        r = simulate_fleet(
+            FleetParams(
+                fleet_size=200,
+                capture_heads=4,
+                launch_lanes=8,
+                launch_interval_s=1.0,
+                radio_channels=1,
+                links_per_channel=10,
+            ),
+            service(),
+            seed=1,
+        )
+        self.assertLessEqual(r.mean_airborne, 10.0)
+
+    def test_radio_is_deterministic(self):
+        params = FleetParams(
+            fleet_size=200, capture_heads=3, radio_channels=2, links_per_channel=15
+        )
+        a = simulate_fleet(params, service(0.9), seed=8)
+        b = simulate_fleet(params, service(0.9), seed=8)
+        self.assertEqual(a, b)
+
+
 class QueueBehaviour(unittest.TestCase):
     def test_adding_heads_never_increases_losses(self):
         base = FleetParams(fleet_size=200, capture_heads=1, recharge_s=900.0)
