@@ -19,6 +19,7 @@ hand-drawn predecessor did exactly that: it still showed a Ø6 seat and a
 
 Build path, in order:
 
+0. [Build plan](p0a-build-plan.md) — what to order when, and which purchases wait on an A0 measurement
 1. [Fabrication packet](p0a-fabrication.md) — sourcing and electrical interface
 2. [Reproducible CAD pack](cad/README.md) — regenerates the printed parts
 3. [Keeper drive](keeper-drive.md) — slider-crank delivering the 13 mm stroke; guides and bracket are bench-set
