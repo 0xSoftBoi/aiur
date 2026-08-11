@@ -132,11 +132,14 @@ export const SYSTEM_LOOP = [
   },
 ] as const;
 
+/** Mirrors the gate table in hardware/dock/p0a-bench.md. Do not soften. */
 export const BENCH_GATE = [
-  ["50", "CAPTURE / RELEASE CYCLES"],
+  ["600", "LIFE-TEST CYCLES"],
+  ["≥15", "RUN-IN CYCLES / FORCE TREND LEVEL"],
   ["≥5 N", "AXIAL RETENTION / 10 S"],
   ["≥1 N", "LATERAL ±X / ±Y / 10 S"],
-  ["10", "POWER-OFF MANUAL RELEASES"],
+  ["10 + 10", "EMERGENCY RELEASES / UNLOADED + LOADED"],
+  ["≥2.0", "KEEPER FORCE MARGIN / CLOSE + OPEN"],
 ] as const;
 
 export const COMPANY = [

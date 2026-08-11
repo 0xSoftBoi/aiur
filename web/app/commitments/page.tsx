@@ -15,7 +15,7 @@ const RULES = [
   ["001", "Concept art is not evidence", "A render proves a shape, never a force, a cycle count, or a release."],
   ["002", "Targets are labelled as targets", "Numbers stay marked as exit criteria until a measurement replaces them."],
   ["003", "Missing evidence is a failed gate", "Absence of a result is treated as a negative result, not as a pending one."],
-  ["004", "Power-off still releases", "Any retention mechanism must be undoable by hand with controller and actuator power removed."],
+  ["004", "Power loss holds, it does not drop", "If the actuator loses power with an aircraft captured, it stays mechanically retained. The keeper is not the load path, and software is never permitted to release something it cannot observe."],
 ] as const;
 
 export default function CommitmentsPage() {
@@ -48,9 +48,10 @@ export default function CommitmentsPage() {
               <em>INTERFACE.</em>
             </h2>
             <p className="section-lede">
-              A Ø180 mm recovery mouth, positive mechanical keeper, two independent
-              physical contacts, and a manual release that still works with
-              controller and actuator power removed.
+              A Ø180 mm recovery mouth, a positive mechanical keeper that owns
+              retention outright, two independent physical contacts that must both
+              agree before capture is claimed, and an emergency release commanded
+              from every software state.
             </p>
             <p className="evidence-note">
               P0-A is a bench gate, not a marketing milestone. Propellers stay off.
