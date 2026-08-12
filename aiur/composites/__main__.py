@@ -22,6 +22,7 @@ import json
 
 from . import (
     allowables,
+    bonding,
     cure,
     doe,
     flatpattern,
@@ -44,6 +45,7 @@ def snapshot() -> dict[str, object]:
     traveler_report = traveler.snapshot()
     doe_report = doe.snapshot()
     pattern_report = flatpattern.snapshot()
+    bonding_report = bonding.snapshot()
 
     errors: list[str] = []
     errors.extend(f"materials: {error}" for error in material_report["errors"])  # type: ignore[union-attr]
@@ -52,8 +54,13 @@ def snapshot() -> dict[str, object]:
     errors.extend(f"traveler: {error}" for error in traveler_report["errors"])  # type: ignore[union-attr]
     errors.extend(f"doe: {error}" for error in doe_report["errors"])  # type: ignore[union-attr]
     errors.extend(f"flatpattern: {error}" for error in pattern_report["errors"])  # type: ignore[union-attr]
+    errors.extend(
+        f"bonding: {failure['joint_id']} fails {failure['check']}"
+        for failure in bonding_report["failing_checks"]  # type: ignore[union-attr]
+    )
 
     critical = list(schedule_report["critical_failures"])  # type: ignore[arg-type]
+    critical.extend(bonding_report["critical_failures"])  # type: ignore[arg-type]
 
     return {
         "article": "CARRIER-P0 composite structures",
@@ -65,6 +72,7 @@ def snapshot() -> dict[str, object]:
         "schedules": schedule_report,
         "cure": cure_report,
         "flatpattern": pattern_report,
+        "bonding": bonding_report,
         "springin": springin.snapshot(),
         "tooling": tooling.snapshot(),
         "process": process.snapshot(),

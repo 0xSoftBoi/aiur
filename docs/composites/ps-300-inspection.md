@@ -107,6 +107,21 @@ A nonconformance is *computed* from the traveler record rather than
 asserted, and the evaluator distinguishes critical findings — which reject
 the part — from minor ones, which route it to review.
 
+## 5a. What inspection cannot find
+
+Ultrasonic inspection detects a *gap*: a delamination, a void, a
+disbond with separation. It is good at those.
+
+It does not detect a **kissing bond** — two surfaces in full intimate
+contact with no adhesion across them — because there is no gap to reflect
+from. A kissing bond has near-zero strength and returns a clean scan.
+
+No inspection method available to this programme finds one reliably. The
+controls are process controls, and they are in
+[PS-400](ps-400-bonding.md): surface preparation, bondline thickness, and a
+proof test on every article. An inspection specification that did not say
+this would be implying a coverage it does not have.
+
 ## 6. Statistical control
 
 Conformance answers "did this part work". It cannot answer "will the next

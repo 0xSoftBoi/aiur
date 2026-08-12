@@ -90,8 +90,10 @@ basis value when specimens or lots fall short, whatever the arithmetic says.
 | CP-06 | ASTM D7137 | compression after impact | PW-C-193 | RTD | 6 |
 | CP-07 | ASTM D2344 | short-beam strength | PW-C-193 | ETW | 6 |
 | CP-08 | ASTM D5528 | mode I interlaminar toughness | PW-C-193 | RTD | 6 |
+| CP-09 | ASTM D5868 | adhesive lap shear | PW-C-193 | RTD | 12 |
+| CP-10 | ASTM D3167 | floating roller peel | PW-C-193 | RTD | 6 |
 
-52 specimens. Notes on the ones that are not obvious:
+70 specimens. Notes on the ones that are not obvious:
 
 **CP-03, in-plane shear.** The critical failure mode in every 45° skin in
 this programme is shear in the surface ply — it is what the throat cup's
@@ -111,6 +113,15 @@ thin-ply parts.
 **CP-07, hot/wet short beam.** The assumed 0.65 matrix-dominated hot/wet
 knockdown is the least defensible number in the package, and it is applied
 to the property that porosity already attacks.
+
+**CP-09 and CP-10, the bonded joint.** These were added after
+[PS-400](ps-400-bonding.md) was written, because writing it exposed that the
+plan had no bonded-joint coupon at all — every other coupon here
+characterises a laminate, and a bond is not a laminate. CP-09 carries twelve
+specimens because surface preparation is a factor in it rather than a fixed
+condition: half peel-ply, half abraded. The coupon that matters is not "how
+strong is this adhesive" but "how strong is it on a surface this shop
+prepared".
 
 ## Environmental knockdowns
 

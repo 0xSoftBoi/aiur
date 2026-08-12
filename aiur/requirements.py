@@ -217,6 +217,44 @@ REQUIREMENTS: tuple[Requirement, ...] = (
         "",
     ),
     Requirement(
+        "P0-CMP-006C",
+        "qualification route for every structural bonded joint",
+        "each joint either out-strengths its adherend by 1.5, or carries 2.0 on "
+        "its design load together with a proof test on every article; every "
+        "critical joint is proof tested regardless",
+        "the joint is not built; an unverifiable bond with neither route has "
+        "nothing distinguishing a good bond from a kissing bond before flight",
+        "`python -m aiur.composites.bonding`; three joints, each reporting the "
+        "route it qualifies on",
+        VerificationMethod.ANALYSIS,
+        Stage.REQUIREMENT,
+        None,
+        None,
+        ClosureStatus.IN_WORK,
+        "the routes are executable and run in CI; the adhesive properties under "
+        "them are handbook-representative, and no coupon in the current plan "
+        "measures a bonded joint at all — PS-400 records that gap",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-006D",
+        "adhesive bond workmanship on every structural joint",
+        "surface prepared and bonded within one shift, water-break clean before "
+        "bonding, bondline thickness recorded, and the article proof tested",
+        "reject the joint; a kissing bond has near-zero strength, passes "
+        "ultrasonic inspection, and is not detectable by any method this "
+        "program holds",
+        "bonding traveler records and the proof-test result per article, per "
+        "docs/composites/ps-400-bonding.md",
+        VerificationMethod.INSPECTION,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.OPEN,
+        "",
+        "",
+    ),
+    Requirement(
         "P0-CMP-007",
         "stowed strain in the deployable capture-ring boom",
         "surface strain at the stowed radius <= 50 % of the fibre-direction ultimate",

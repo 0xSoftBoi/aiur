@@ -295,6 +295,18 @@ COUPON_PLAN: tuple[PlannedCoupon, ...] = (
                   "is the least defensible number in this package"),
     PlannedCoupon("CP-08", "ASTM D5528", "mode I interlaminar toughness", "PW-C-193", "rtd", 6,
                   "delamination resistance for the bonded joints and the tine root"),
+    # The bonded joint had no coupon at all until PS-400 was written, which
+    # is how a whole failure mode goes unqualified: every other coupon here
+    # characterises a laminate, and a bond is not a laminate.
+    PlannedCoupon("CP-09", "ASTM D5868", "adhesive lap shear", "PW-C-193", "rtd", 12,
+                  "the adhesive shear strength every bonded joint is sized against. "
+                  "Twelve specimens rather than six because surface preparation is a "
+                  "factor in this test, not a fixed condition: half peel-ply, half "
+                  "abraded. The question is not how strong the adhesive is, it is how "
+                  "strong it is on a surface this shop prepared"),
+    PlannedCoupon("CP-10", "ASTM D3167", "floating roller peel", "PW-C-193", "rtd", 6,
+                  "peel is what actually fails composite bonded joints, and the "
+                  "shear-lag model used to size them does not predict it"),
 )
 
 

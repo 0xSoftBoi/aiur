@@ -29,8 +29,8 @@ blocking the most work is settled first.
 
 ## What the analysis changed
 
-Four results came out of building the models, and all four changed the
-design rather than confirming it.
+Five results came out of building the models, and all five changed the
+design or the specification rather than confirming it.
 
 **The funnel stopped being a laminate.** Sized honestly against a handling
 load across the boom pitch, a monolithic funnel skin needs 789 g/m², which
@@ -55,6 +55,16 @@ degree for every degree of that. Holding ±3° would need 43 gores. So the cup
 is built in-plane isotropic instead: its predecessor stack varied 47 % in
 axial stiffness around its own circumference, and the stack that shipped
 varies 7 %. [The numbers are here](laminate-design.md#the-cone-will-not-hold-a-fibre-angle).
+
+**A bonded joint cannot always be designed to fail its adherend.** The
+standard rule for an unverifiable bond is to out-strength what it joins, so
+an overload fails the laminate instead of the bondline. It is achievable for
+a thin adherend and arithmetically impossible for a thick one — the keeper
+tine would need a 4.8 mm bondline. Written unconditionally it would have
+left two of three joints permanently non-compliant, so there are two
+qualification routes and the second one — load margin plus a proof test on
+every article — is always available.
+[PS-400](ps-400-bonding.md) carries it.
 
 **Full cure is not reachable at the cure temperature.** The resin's
 diffusion-limited kinetics impose a conversion ceiling that rises with hold
@@ -87,6 +97,7 @@ divided by the part's area.
 | [PS-100 layup process specification](ps-100-layup.md) | material control, kitting, layup, debulk, bagging |
 | [PS-200 cure process specification](ps-200-cure.md) | qualified cycles, the pressure window, thermocouple placement |
 | [PS-300 inspection specification](ps-300-inspection.md) | acceptance limits, methods, and what each one is protecting |
+| [PS-400 bonding specification](ps-400-bonding.md) | joint sizing, the two qualification routes, and the kissing bond |
 | [Tooling](tooling.md) | tool material trade, compensation, and the spring-in loop |
 | [Experiment plan](doe-plan.md) | the four designed experiments that replace this package's targets |
 | [Allowables and the coupon plan](allowables.md) | what a basis value costs and why scatter is the driver |
@@ -103,6 +114,7 @@ python -m aiur.composites               # the whole discipline, as one gate
 python -m aiur.composites.schedules     # laminate schedules and their checks
 python -m aiur.composites.flatpattern   # flat patterns, fibre drift, nesting
 python -m aiur.composites.cure          # cure cycles against acceptance criteria
+python -m aiur.composites.bonding       # bonded joints and their qualification routes
 python -m aiur.composites.springin      # spring-in and tool compensation
 python -m aiur.composites.tooling       # tool material trade
 python -m aiur.composites.process       # constituent content and debulk model

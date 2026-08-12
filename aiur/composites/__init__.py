@@ -24,6 +24,9 @@ The modules, in the order the work happens:
 :mod:`aiur.composites.cure`
     Cure kinetics, vitrification, exotherm, viscosity, and the acceptance
     criteria a cure cycle has to pass.
+:mod:`aiur.composites.bonding`
+    Bonded joints: shear-lag sizing, why overlap length saturates, and the
+    two routes by which an unverifiable bond can be qualified.
 :mod:`aiur.composites.springin`
     Corner distortion prediction and the tool compensation loop.
 :mod:`aiur.composites.tooling`
