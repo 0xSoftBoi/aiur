@@ -89,6 +89,147 @@ class Requirement:
 
 
 REQUIREMENTS: tuple[Requirement, ...] = (
+    # ------------------------------------------------------------------
+    # Composite structures.  The dock's flight article is a thin prepreg
+    # laminate, and the discipline that produces it carries its own
+    # closure problem: the analysis is executable today and the material
+    # data underneath it is not measured, so these requirements are
+    # deliberately IN_WORK rather than closed by their own models.
+    # ------------------------------------------------------------------
+    Requirement(
+        "P0-CMP-001",
+        "structural allowables for every laminate in a flight article",
+        "B-basis values from >= 6 specimens across >= 3 material lots; A-basis on "
+        "the retention path (CS-400)",
+        "no composite part is released to a flight article on handbook lamina data",
+        "coupon campaign CP-01..CP-08 in docs/composites/allowables.md, reduced by "
+        "`python -m aiur.composites.allowables`",
+        VerificationMethod.TEST,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.OPEN,
+        "",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-002",
+        "laminate schedules against their design rules, mass allocations and load cases",
+        "every schedule symmetric, balanced, inside its areal-mass allocation, and "
+        "above its required strength ratio; rule breaks carry a written waiver",
+        "the composites gate fails and the part is not released to layup",
+        "`python -m aiur.composites.schedules`; four schedules, zero failing checks",
+        VerificationMethod.ANALYSIS,
+        Stage.REQUIREMENT,
+        None,
+        None,
+        ClosureStatus.IN_WORK,
+        "aiur/composites/schedules.py, run in CI; closure waits on P0-CMP-001, "
+        "because a rule check against unmeasured lamina data verifies the "
+        "arithmetic and not the part",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-003",
+        "cure cycle delivered to the part, measured at the part rather than the oven",
+        "cure completeness >= 0.95 of the hold temperature's ceiling; Tg - T_service "
+        ">= 30 K; part-to-oven lag <= 15 K; pressure applied inside the computed flow "
+        "window",
+        "quarantine the parts from that run; the cure the recipe describes is not the "
+        "cure the part received",
+        "part-thermocouple trace per cure run, against `python -m aiur.composites.cure`",
+        VerificationMethod.TEST,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.IN_WORK,
+        "acceptance criteria and two qualified cycles are executable; the kinetic "
+        "constants under them are handbook-representative until DOE-1 runs",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-004",
+        "constituent content of every structural panel",
+        "void fraction <= 2.0 % (1.0 % on CS-400); fibre volume fraction 0.50-0.62; "
+        "cured ply thickness within +-10 % of nominal",
+        "reject the panel; a porous laminate is a different material from the one "
+        "that was sized",
+        "panel record reduced by `aiur.composites.process.evaluate_panel`, one "
+        "density coupon per panel from the trim offcut",
+        VerificationMethod.INSPECTION,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.OPEN,
+        "",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-005",
+        "moulded angle of every functional corner after demould",
+        "within +-0.25 deg of nominal after tool compensation",
+        "correct the tool from the first-article measurement; reject subsequent "
+        "articles that miss",
+        "CMM measurement against the compensated tool angle, closed through "
+        "`aiur.composites.springin.update_from_measurement`",
+        VerificationMethod.INSPECTION,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.OPEN,
+        "",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-006",
+        "ply count and ply orientation of every laminate",
+        "verified against the schedule by a second person before the bag goes on",
+        "the part is rejected; after cure this cannot be disproved and will not be "
+        "accepted on an operator's signature",
+        "traveler hold point OP-35, evaluated by "
+        "`aiur.composites.traveler.evaluate_traveler`",
+        VerificationMethod.INSPECTION,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.OPEN,
+        "",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-007",
+        "stowed strain in the deployable capture-ring boom",
+        "surface strain at the stowed radius <= 50 % of the fibre-direction ultimate",
+        "the boom is not stowed at that radius; increase the radius or thin the laminate",
+        "`python -m aiur.composites.schedules` stowage check on CS-200; the knockdown "
+        "itself needs a stowage-hold test before flight",
+        VerificationMethod.ANALYSIS,
+        Stage.REQUIREMENT,
+        None,
+        None,
+        ClosureStatus.IN_WORK,
+        "the geometric check is executable and passes at a 16 mm stow radius; the "
+        "factor of two on ultimate strain covers creep and stress relaxation over "
+        "the stowed dwell and is an engineering target, not a measurement",
+        "",
+    ),
+    Requirement(
+        "P0-CMP-008",
+        "prepreg cumulative room-temperature out-time at layup",
+        "<= 240 h cumulative, tracked across every exposure and not reset by "
+        "returning the roll to the freezer",
+        "scrap the material; an out-time exceedance produces a porous, starved part "
+        "that passes every inspection this program can perform",
+        "out-time log per roll, checked by "
+        "`aiur.composites.traveler.evaluate_traveler`",
+        VerificationMethod.INSPECTION,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.OPEN,
+        "",
+        "",
+    ),
     Requirement(
         "P0-DOCK-001",
         "funnel entrance diameter of the as-built dock",

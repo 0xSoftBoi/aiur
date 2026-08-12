@@ -1,0 +1,11 @@
+step_id,step_type,title,spec_ref,hold_point,records,operator,inspector,date,values,notes
+OP-05,material,"material issue and thaw",PS-100,,"lot_id; roll_id; removed_from_freezer_at; bag_opened_at; cumulative_out_time_h",,,,,
+OP-10,preparation,"tool preparation",PS-100,,"tool_id; release_system; cures_since_strip",,,,,
+OP-20,layup,"ply cutting and kitting",PS-100,,"kit_id; plies_cut; operator",,,,,
+OP-30,layup,"layup with scheduled debulks",PS-100,,"debulk_cycles; vacuum_kpa; operator",,,,,
+OP-35,inspection,"layup verification",PS-300,HOLD,"verified_ply_count; verified_orientations; inspector",,,,,
+OP-40,cure,"bagging and leak check",PS-200,HOLD,"vacuum_kpa; leak_rate_kpa_per_5min; inspector",,,,,
+OP-50,cure,"cure",PS-200,,"cure_cycle_id; run_id; part_thermocouple_trace; pressure_applied_at_min; max_part_temperature_c",,,,,
+OP-60,machining,"demould and trim",PS-100,,"demould_condition; tool_condition; operator",,,,,
+OP-70,inspection,"dimensional and constituent inspection",PS-300,,"thickness_map; moulded_angle_deg; part_mass_g; coupon_density_g_cm3; inspector",,,,,
+OP-80,inspection,"acceptance",PS-300,HOLD,"void_fraction; fibre_volume_fraction; disposition; inspector",,,,,

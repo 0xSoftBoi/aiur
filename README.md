@@ -44,6 +44,27 @@ Architecture, current model findings, and the sim-to-real calibration
 contract: [docs/digital-twin.md](docs/digital-twin.md). CI runs the SIL
 gates on every push.
 
+## Composite structures
+
+The dock's flight article is a thin prepreg laminate, and its capture ring is
+a deployable that stows rolled against the keel. `aiur/composites` is that
+discipline in executable form — classical laminate theory, cure kinetics and
+vitrification, spring-in and tool compensation, constituent content and
+debulk, travelers with out-time control, basis-value statistics, and the
+designed experiments that replace the package's own engineering targets:
+
+```
+python -m aiur.composites
+```
+
+Sizing the parts honestly changed three of them: the funnel stopped being a
+laminate and became a tensioned membrane, cooldown residual stress rejected
+the keel rail's first material, and full cure turned out to be unreachable
+at the cure temperature. Documents and process specifications:
+[docs/composites/](docs/composites/README.md). The programme holds **no**
+measured allowables, so every schedule is a design study until the coupon
+plan runs, and the package says so in its own output.
+
 ## Dual-use verticals
 
 The product core (buoyant carrier + mechanically positive dock + recovery
@@ -91,6 +112,10 @@ Analysis and models:
 - [Prior-art survey](docs/prior-art.md) — DARPA Gremlins/OFFSET, ONR LOCUST,
   Perdix, Sentien Hive, LTA motherships, and academic aerial docking
 - [Mass and capture-envelope model](aiur/p0.py)
+- [Laminate design and the two structural trades](docs/composites/laminate-design.md) —
+  `python -m aiur.composites.schedules`
+- [Tooling and dimensional control](docs/composites/tooling.md) —
+  `python -m aiur.composites.tooling`
 - [Capture-chain tolerance stack](aiur/tolerance.py) — `python -m aiur.tolerance`
 - [Dock FMECA and fault trees](docs/dock-fmeca.md)
 - [Common-mode analysis](docs/common-mode.md)
@@ -113,11 +138,15 @@ Hardware:
 - [Golden-article rule](hardware/dock/golden-article.md)
 - [Dock deletion review](docs/dock-deletion-review.md)
 - [Reproducible Rev-A CAD](hardware/dock/cad/README.md)
+- [Composite process specifications](docs/composites/README.md) — layup,
+  cure, and inspection
+- [Composites shop-floor records](hardware/composites/README.md)
 - [Prototype BOM](hardware/bom.csv)
 
 Executable core:
 
 - [Fail-safe dock controller](aiur/dock_controller.py)
+- [Composite structures package](aiur/composites/) — `python -m aiur.composites`
 - [P0-A evidence reducer](aiur/p0a_evidence.py)
 - [Engineering tests](tests/)
 

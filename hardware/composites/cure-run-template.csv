@@ -1,0 +1,1 @@
+run_id,cure_cycle_id,git_commit,oven_id,tool_id,parts_loaded,part_thermocouple_ids,max_part_temperature_c,max_air_temperature_c,max_lag_k,pressure_applied_at_min,pressure_kpa,vacuum_abs_kpa,leak_rate_kpa_per_5min,cycle_deviations,operator,inspector,date,notes
