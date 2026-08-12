@@ -20,6 +20,17 @@ export const NAV = [
     ],
   },
   {
+    label: "Structures",
+    href: "/structures",
+    blurb: "Thin laminates, and what the analysis changed.",
+    links: [
+      ["What the analysis changed", "/structures#findings-title", "Seven results, none of them confirmations."],
+      ["The parts", "/structures#parts-title", "Four laminates against a mass budget."],
+      ["Defect disposition", "/structures#depth-title", "Where a defect sits decides what it costs."],
+      ["The package", "/structures#package-title", "Thirteen modules, one gate."],
+    ],
+  },
+  {
     label: "Commitments",
     href: "/commitments",
     blurb: "Evidence before claims, without exception.",
@@ -236,6 +247,7 @@ export const PAGE_ORDER = [
   ["/", "Home"],
   ["/solutions", "Solutions"],
   ["/applications", "Applications"],
+  ["/structures", "Structures"],
   ["/commitments", "Commitments"],
   ["/company", "Company"],
   ["/careers", "Careers"],

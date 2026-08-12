@@ -65,7 +65,9 @@ the keel rail's first material, a cone turned out not to hold a fibre angle
 at all — so the throat cup is built in-plane isotropic instead — and full
 cure turned out to be unreachable at the cure temperature. The design leaves
 as a generated 1:1 [ply book](hardware/composites/plybook/). Documents and process specifications:
-[docs/composites/](docs/composites/README.md). The programme holds **no**
+[docs/composites/](docs/composites/README.md). The site's structures page is
+generated from the same models — `python tools/export_composites_web.py`,
+checked for staleness in CI. The programme holds **no**
 measured allowables, so every schedule is a design study until the coupon
 plan runs, and the package says so in its own output.
 

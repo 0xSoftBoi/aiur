@@ -112,6 +112,12 @@ divided by the part's area.
 | [Defect disposition and repair](defect-disposition.md) | what a defect costs, and accept / repair / scrap |
 | [Allowables and the coupon plan](allowables.md) | what a basis value costs and why scatter is the driver |
 
+The programme's site publishes a
+[structures page](https://github.com/0xSoftBoi/aiur/blob/main/web/app/structures/page.tsx)
+built from these models: every figure on it is exported by
+`tools/export_composites_web.py`, and a test fails if the published data has
+drifted from what the models now produce.
+
 Shop-floor templates live in
 [`hardware/composites/`](../../hardware/composites/), and the generated
 1:1 ply book — flat patterns and layup sequences — in
