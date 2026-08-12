@@ -18,6 +18,9 @@ The modules, in the order the work happens:
 :mod:`aiur.composites.schedules`
     The four part laminates, their load cases, and the design rules they are
     checked against.
+:mod:`aiur.composites.flatpattern`
+    Flat-pattern development, the fibre-angle drift a cone imposes, and the
+    rotational stiffness envelope that decides whether it matters.
 :mod:`aiur.composites.cure`
     Cure kinetics, vitrification, exotherm, viscosity, and the acceptance
     criteria a cure cycle has to pass.

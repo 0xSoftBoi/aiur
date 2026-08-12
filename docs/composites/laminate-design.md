@@ -24,7 +24,7 @@ actually sizes these parts is:
 
 | part | governing case | why |
 | --- | --- | --- |
-| CS-100 throat cup | handling load | a 0.33 mm skin is destroyed by a thumb before it is troubled by an aircraft |
+| CS-100 throat cup | handling load, then fibre-angle drift | a 0.4 mm skin is destroyed by a thumb before it is troubled by an aircraft, and a cone will not hold a ply angle |
 | CS-200 boom | stowed strain | the laminate spends its life rolled to 16 mm radius |
 | CS-300 keel rail | axial stiffness, then cooldown residual stress | deflection sets the ply count; residual stress rejected the first material |
 | CS-400 keeper tine | retention-ledge geometry | thickness comes from the [capture-chain tolerance stack](../../aiur/tolerance.py), not from load |
@@ -85,6 +85,52 @@ feeds the tolerance stack.
 
 Deciding that a part should not be composite is part of owning the composite
 structures.
+
+## The cone will not hold a fibre angle
+
+The throat cup is the only conical part in the set, and a cone imposes
+something no amount of careful cutting fixes.
+
+Develop a cone flat and its meridians become radial lines fanning out from
+the apex. A ply cut with straight fibres has one fixed direction in the flat
+pattern, so the angle between that fibre and the local meridian changes by
+exactly one degree for every degree of sector angle traversed. The throat
+cup's development spans **255°**, so a ply nominally at 45° is at 45° in one
+place on the part and at every other angle somewhere else.
+
+There are only three responses:
+
+1. cut from narrow gores so each gore's drift is small — **43 gores** for a
+   ±3° tolerance on this part, which is not a manufacturing plan;
+2. accept a varying fibre angle and build a laminate that does not care;
+3. change the geometry.
+
+The throat cup takes the second route, and that is what the sixth ply is
+for. Fibre drift rotates the whole stack together, so its structural
+consequence is exactly the laminate's rotational stiffness envelope:
+
+| stack | Ex range over the drift | ratio |
+| --- | --- | --- |
+| `[G45/C45/C0/C45/G45]` — five plies, one carbon ply at 0 against two at 45 | 30.6–45.0 GPa | **1.47** |
+| `[G45/C45/C0/C0/C45/G45]` — carbon split evenly between 0 and 45 | 38.5–41.2 GPa | **1.07** |
+
+The five-ply cup would have varied by 47 % in axial stiffness around its own
+circumference, from a single laminate schedule, with nothing on any drawing
+to indicate it. The six-ply cup varies by 7 %, and that residue is entirely
+the two glass plies, which sit at 45° with nothing at 0° to balance them.
+The extra ply costs 1.4 g and buys back a 52 mm support-pitch capacity in
+place of 30 mm.
+
+A slit tube has no such problem — a cylinder develops with parallel
+meridians, so the boom's drift is zero. That is worth knowing before
+assuming the cone's answer generalises, and it is why the boom is free to be
+strongly anisotropic (its own rotational ratio is 4.2) while the cup is not.
+
+The same development answers a question the mass budget does not: an annular
+sector nests badly, and the throat cup's flat pattern wastes **52 %** of the
+prepreg it is cut from against a 0 % scrap rate for the boom's rectangle. On
+a material bought by the metre that is a real cost, and it is visible before
+anyone orders a roll.
 
 ## The keel rail and residual stress
 
@@ -172,7 +218,7 @@ grows cannot quietly exceed the dock's allocation.
 
 | budget line | budget | allocated | actual |
 | --- | --- | --- | --- |
-| active recovery dock allocation | 180.0 g | 44.5 g | 38.6 g |
+| active recovery dock allocation | 180.0 g | 44.5 g | 39.9 g |
 | wiring + mounting reserve | 100.0 g | 45.0 g | 42.3 g |
 
 ## Where the model runs out
@@ -186,3 +232,19 @@ thin-ply parts by an amount this model cannot quantify.
 Where that matters — the bonded throat flange, the trimmed boom edge, the
 tine root — the answer is a coupon, and [the experiment plan](doe-plan.md)
 names which one.
+
+## The ply book
+
+The design above becomes shop-floor paper through
+[`hardware/composites/plybook/`](../../hardware/composites/plybook/): 1:1
+flat patterns with fibre-direction arrows and the drift called out on the
+sheet, plus a layup sequence per part with the debulk points and the hold
+point on it. It is generated from the schedules and the development, so a
+drawing cannot drift away from the analysis, and a test fails if the
+committed sheets are stale.
+
+One convention is worth stating on the sheet and here, because getting it
+wrong builds a part inside out. A schedule lists plies **top-surface-first**,
+where "top" is the face away from the tool. A laminator starts **at** the
+tool. The lay-down order is therefore the schedule's list reversed, and the
+ply book prints that reversal rather than the schedule's order.

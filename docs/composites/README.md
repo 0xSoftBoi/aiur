@@ -29,7 +29,7 @@ blocking the most work is settled first.
 
 ## What the analysis changed
 
-Three results came out of building the models, and all three changed the
+Four results came out of building the models, and all four changed the
 design rather than confirming it.
 
 **The funnel stopped being a laminate.** Sized honestly against a handling
@@ -49,6 +49,13 @@ high-modulus rail stays available if the programme ever qualifies a second,
 lower-temperature resin system, and that is recorded as a deferred
 opportunity rather than quietly dropped.
 
+**A cone will not hold a fibre angle.** The throat cup's flat pattern spans
+255° of sector, and a straight fibre's angle to the local meridian drifts one
+degree for every degree of that. Holding ±3° would need 43 gores. So the cup
+is built in-plane isotropic instead: its predecessor stack varied 47 % in
+axial stiffness around its own circumference, and the stack that shipped
+varies 7 %. [The numbers are here](laminate-design.md#the-cone-will-not-hold-a-fibre-angle).
+
 **Full cure is not reachable at the cure temperature.** The resin's
 diffusion-limited kinetics impose a conversion ceiling that rises with hold
 temperature: about 0.86 at 180 °C, no matter how long the hold. Reaching
@@ -62,7 +69,7 @@ is too cold.
 
 | id | part | stack | thickness | mass | what sizes it |
 | --- | --- | --- | --- | --- | --- |
-| CS-100 | capture throat cup | `[45/45/0/45/45]` glass-faced thin ply | 0.334 mm | 6.5 g | handling load at 25 mm support pitch |
+| CS-100 | capture throat cup | `[45/45/0]s` glass-faced thin ply | 0.414 mm | 7.8 g | handling load, and the fibre drift a cone imposes |
 | CS-200 | deployable capture-ring boom | `[45]s` thin-ply fabric | 0.160 mm | 26.2 g (×12) | stowed strain at 16 mm radius |
 | CS-300 | keel rail web | `[45/0/0/0]s` tape and fabric | 1.356 mm | 42.3 g | axial stiffness, then cooldown |
 | CS-400 | keeper tine | `[45/0/0/45]s` fabric | 1.592 mm | 5.9 g (×2) | retention-ledge geometry, not load |
@@ -76,7 +83,7 @@ divided by the part's area.
 
 | document | what it is |
 | --- | --- |
-| [Laminate design](laminate-design.md) | the schedules, the load cases, the design rules, and the two trades |
+| [Laminate design](laminate-design.md) | the schedules, the load cases, the design rules, and the trades |
 | [PS-100 layup process specification](ps-100-layup.md) | material control, kitting, layup, debulk, bagging |
 | [PS-200 cure process specification](ps-200-cure.md) | qualified cycles, the pressure window, thermocouple placement |
 | [PS-300 inspection specification](ps-300-inspection.md) | acceptance limits, methods, and what each one is protecting |
@@ -84,13 +91,17 @@ divided by the part's area.
 | [Experiment plan](doe-plan.md) | the four designed experiments that replace this package's targets |
 | [Allowables and the coupon plan](allowables.md) | what a basis value costs and why scatter is the driver |
 
-Shop-floor templates live in [`hardware/composites/`](../../hardware/composites/).
+Shop-floor templates live in
+[`hardware/composites/`](../../hardware/composites/), and the generated
+1:1 ply book — flat patterns and layup sequences — in
+[`hardware/composites/plybook/`](../../hardware/composites/plybook/).
 
 ## Executable entry points
 
 ```
 python -m aiur.composites               # the whole discipline, as one gate
 python -m aiur.composites.schedules     # laminate schedules and their checks
+python -m aiur.composites.flatpattern   # flat patterns, fibre drift, nesting
 python -m aiur.composites.cure          # cure cycles against acceptance criteria
 python -m aiur.composites.springin      # spring-in and tool compensation
 python -m aiur.composites.tooling       # tool material trade

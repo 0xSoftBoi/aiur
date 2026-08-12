@@ -20,7 +20,19 @@ from __future__ import annotations
 
 import json
 
-from . import allowables, cure, doe, materials, process, schedules, spc, springin, tooling, traveler
+from . import (
+    allowables,
+    cure,
+    doe,
+    flatpattern,
+    materials,
+    process,
+    schedules,
+    spc,
+    springin,
+    tooling,
+    traveler,
+)
 
 
 def snapshot() -> dict[str, object]:
@@ -31,6 +43,7 @@ def snapshot() -> dict[str, object]:
     cure_report = cure.snapshot()
     traveler_report = traveler.snapshot()
     doe_report = doe.snapshot()
+    pattern_report = flatpattern.snapshot()
 
     errors: list[str] = []
     errors.extend(f"materials: {error}" for error in material_report["errors"])  # type: ignore[union-attr]
@@ -38,6 +51,7 @@ def snapshot() -> dict[str, object]:
     errors.extend(f"cure: {error}" for error in cure_report["errors"])  # type: ignore[union-attr]
     errors.extend(f"traveler: {error}" for error in traveler_report["errors"])  # type: ignore[union-attr]
     errors.extend(f"doe: {error}" for error in doe_report["errors"])  # type: ignore[union-attr]
+    errors.extend(f"flatpattern: {error}" for error in pattern_report["errors"])  # type: ignore[union-attr]
 
     critical = list(schedule_report["critical_failures"])  # type: ignore[arg-type]
 
@@ -50,6 +64,7 @@ def snapshot() -> dict[str, object]:
         "materials": material_report,
         "schedules": schedule_report,
         "cure": cure_report,
+        "flatpattern": pattern_report,
         "springin": springin.snapshot(),
         "tooling": tooling.snapshot(),
         "process": process.snapshot(),

@@ -57,10 +57,12 @@ designed experiments that replace the package's own engineering targets:
 python -m aiur.composites
 ```
 
-Sizing the parts honestly changed three of them: the funnel stopped being a
+Sizing the parts honestly changed four of them: the funnel stopped being a
 laminate and became a tensioned membrane, cooldown residual stress rejected
-the keel rail's first material, and full cure turned out to be unreachable
-at the cure temperature. Documents and process specifications:
+the keel rail's first material, a cone turned out not to hold a fibre angle
+at all — so the throat cup is built in-plane isotropic instead — and full
+cure turned out to be unreachable at the cure temperature. The design leaves
+as a generated 1:1 [ply book](hardware/composites/plybook/). Documents and process specifications:
 [docs/composites/](docs/composites/README.md). The programme holds **no**
 measured allowables, so every schedule is a design study until the coupon
 plan runs, and the package says so in its own output.
@@ -140,7 +142,9 @@ Hardware:
 - [Reproducible Rev-A CAD](hardware/dock/cad/README.md)
 - [Composite process specifications](docs/composites/README.md) — layup,
   cure, and inspection
-- [Composites shop-floor records](hardware/composites/README.md)
+- [Composites shop-floor records](hardware/composites/README.md) and the
+  generated [ply book](hardware/composites/plybook/) —
+  `python hardware/composites/plybook/generate_plybook.py`
 - [Prototype BOM](hardware/bom.csv)
 
 Executable core:

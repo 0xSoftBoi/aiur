@@ -197,6 +197,26 @@ REQUIREMENTS: tuple[Requirement, ...] = (
         "",
     ),
     Requirement(
+        "P0-CMP-006B",
+        "sensitivity of a conical part to the fibre-angle drift its own geometry "
+        "imposes",
+        "in-plane stiffness varying by <= 10 % over the part's full fibre-angle "
+        "drift, or a gore count that holds the angle to +-3 deg",
+        "the laminate is restacked toward in-plane isotropy; a cone cannot be made "
+        "to hold a ply angle by cutting more carefully",
+        "`python -m aiur.composites.flatpattern` rotational stiffness envelope "
+        "against the developed sector angle",
+        VerificationMethod.ANALYSIS,
+        Stage.REQUIREMENT,
+        None,
+        None,
+        ClosureStatus.IN_WORK,
+        "CS-100 closes at 7 % over a 255 deg drift; the check is executable and "
+        "runs in CI, and full closure waits on P0-CMP-001 like every other "
+        "analysis here",
+        "",
+    ),
+    Requirement(
         "P0-CMP-007",
         "stowed strain in the deployable capture-ring boom",
         "surface strain at the stowed radius <= 50 % of the fibre-direction ultimate",

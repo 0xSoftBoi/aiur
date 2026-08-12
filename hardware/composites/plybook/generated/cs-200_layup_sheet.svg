@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="190.0mm" height="67.0mm" viewBox="0 0 190.0 67.0">
+<style>
+  .outline { fill: none; stroke: #111; stroke-width: 0.5; }
+  .cutline { fill: none; stroke: #111; stroke-width: 0.8; }
+  .netline { fill: none; stroke: #888; stroke-width: 0.4; stroke-dasharray: 4 2; }
+  .fibre { stroke: #b00; stroke-width: 0.6; fill: none; }
+  .fibrehead { fill: #b00; }
+  .check { stroke: #060; stroke-width: 0.8; fill: none; }
+  .ply { fill: #d8d8d8; stroke: #111; stroke-width: 0.4; }
+  .plyalt { fill: #f2f2f2; stroke: #111; stroke-width: 0.4; }
+  text { font-family: "DejaVu Sans", "Helvetica", sans-serif; fill: #111; }
+  .title { font-size: 5px; font-weight: bold; }
+  .label { font-size: 3px; }
+  .small { font-size: 2.4px; fill: #444; }
+  .warn { font-size: 3px; fill: #b00; }
+</style>
+<rect x="0" y="0" width="190.0" height="67.0" fill="#fff"/>
+<text class="title" x="10" y="12">CS-200 deployable capture-ring boom — layup sequence</text>
+<text class="small" x="10" y="18">[45]s (PW-C-80), 0.160 mm nominal, tool side: inner mould line (male mandrel; controls the stowed radius fit)</text>
+<text class="small" x="10" y="24">lay in this order — ply 1 goes against the tool. The design stack is listed top-surface-first and this sheet is its reverse, which is the order a laminator works in.</text>
+<text class="label" x="10" y="30.0">ply</text><text class="label" x="24" y="30.0">material</text><text class="label" x="70" y="30.0">angle</text><text class="label" x="92" y="30.0">thickness</text><text class="label" x="125" y="30.0">action after</text>
+<rect class="ply" x="10" y="34.0" width="170.0" height="8.0"/>
+<text class="label" x="12" y="39.5">1</text><text class="label" x="24" y="39.5">PW-C-80</text><text class="label" x="70" y="39.5">45°</text><text class="label" x="92" y="39.5">0.080 mm</text><text class="warn" x="125" y="39.5">DEBULK</text>
+<rect class="plyalt" x="10" y="43.0" width="170.0" height="8.0"/>
+<text class="label" x="12" y="48.5">2</text><text class="label" x="24" y="48.5">PW-C-80</text><text class="label" x="70" y="48.5">45°</text><text class="label" x="92" y="48.5">0.080 mm</text><text class="warn" x="125" y="48.5">DEBULK, then bag for cure</text>
+<text class="warn" x="10" y="57.0">HOLD POINT — second person verifies ply count and every orientation before the bag goes on (PS-300)</text>
+<text class="small" x="10" y="61.0">after cure no inspection method distinguishes a ply laid at 0° from one laid at 45°</text>
+</svg>

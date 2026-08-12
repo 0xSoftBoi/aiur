@@ -22,6 +22,25 @@ drift apart. Regenerate it rather than editing it:
 python -m aiur.composites.traveler   # prints the authoritative step list
 ```
 
+## The ply book
+
+[`plybook/`](plybook/) holds the generated 1:1 flat patterns and layup
+sequences — the sheets a laminator actually works from. They are generated
+from the laminate schedules and the flat-pattern development, and a test
+fails if the committed sheets have gone stale against the analysis:
+
+```
+python hardware/composites/plybook/generate_plybook.py
+```
+
+Print at 1:1 and **measure the check line before cutting**. A printer that
+silently scales to fit turns a controlled drawing into a confident lie.
+
+The layup sheets list plies in **lay-down order, ply 1 against the tool**.
+That is the reverse of the design stack, which is written top-surface-first;
+the sheet prints the reversal so nobody has to perform it at the cutting
+table.
+
 ## Two columns that look like bureaucracy and are not
 
 **`cumulative_out_time_h`.** Prepreg advances at room temperature and the

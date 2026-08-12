@@ -263,10 +263,17 @@ class LaminateSchedule:
     part_id: str
     name: str
     description: str
-    #: Plies as the traveler lists them: **top surface first**, the side away
-    #: from the tool.  Stored that way because it is the order a laminator
-    #: lays them into a female tool and the order the traveler is signed in;
-    #: the CLT model reverses it internally.
+    #: Plies **top surface first**, where "top" is the face away from the
+    #: tool.  This is the order a drawing lists a stack and the order the CLT
+    #: model reverses internally so that ply one sits at the most negative z.
+    #:
+    #: It is deliberately **not** the order a laminator works in.  A laminator
+    #: starts against the tool, which is the *last* entry here, so lay-down
+    #: order is this tuple reversed — which is exactly ``laminate().plies``.
+    #: An earlier version of this comment claimed the two were the same
+    #: order.  They are not, and on any unsymmetric detail that error builds
+    #: the part inside out, so the ply book takes its sequence from
+    #: ``laminate().plies`` and prints which surface the tool controls.
     plies_top_down: tuple[Ply, ...]
     #: Wetted area of one shipset of this part, m^2, and the mass allocated
     #: to it from a named P0 budget line, g.  The areal-mass limit is the
@@ -320,11 +327,18 @@ CS_100_THROAT_CUP = LaminateSchedule(
         # airframe and to keep carbon off the antenna ground plane.
         Ply("PW-G-1080", 45.0),
         Ply("PW-C-80", 45.0),
+        # Equal carbon thickness at 0 and 45 is not a stiffness choice; it
+        # is what makes the laminate in-plane isotropic, which is what a
+        # conical part needs.  See the note below.
+        Ply("PW-C-80", 0.0),
         Ply("PW-C-80", 0.0),
         Ply("PW-C-80", 45.0),
         Ply("PW-G-1080", 45.0),
     ),
-    area_m2=0.012,
+    #: Area is the developed area of the cone in
+    #: ``aiur.composites.flatpattern.PART_SHAPES``, not an estimate;
+    #: ``validate_geometry`` fails if the two drift apart.
+    area_m2=0.011663,
     mass_allocation_g=8.0,
     budget_line=DOCK_BUDGET_LINE,
     min_ex_mpa=25_000.0,
@@ -345,7 +359,17 @@ CS_100_THROAT_CUP = LaminateSchedule(
     notes=(
         "Glass surface plies are structural bookkeeping as well as abrasion: "
         "they put the highest-strain, lowest-modulus material where bending "
-        "strain and impact damage are highest."
+        "strain and impact damage are highest. "
+        "The carbon plies are split evenly between 0 and 45 degrees to make "
+        "the laminate in-plane isotropic, because this is the only conical "
+        "part in the set and a cone does not let a ply hold its angle: the "
+        "development spans 255 degrees, and a straight fibre's angle to the "
+        "local meridian drifts one degree per degree of that sector. The "
+        "five-ply predecessor, with one carbon ply at 0 against two at 45, "
+        "varied by 47 % in Ex around its own circumference. This stack "
+        "varies by 7 %, and that residue is entirely the two glass plies, "
+        "which sit at 45 with nothing at 0 to balance them. See "
+        "aiur.composites.flatpattern."
     ),
 )
 

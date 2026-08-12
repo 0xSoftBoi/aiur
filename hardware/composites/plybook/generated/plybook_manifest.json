@@ -1,0 +1,70 @@
+{
+  "article": "CARRIER-P0 composite ply book",
+  "check_line_mm": 100.0,
+  "notes": [
+    "Patterns print 1:1. Measure the check line before cutting anything.",
+    "Plies are listed in lay-down order: ply 1 goes against the tool.",
+    "The cone's fibre angle drifts with position by construction; the laminate is built in-plane isotropic so that it does not matter."
+  ],
+  "parts": {
+    "CS-100": {
+      "debulk_after_plies": [
+        1,
+        3,
+        6
+      ],
+      "developed_area_m2": 0.011663,
+      "fibre_angle_drift_deg": 254.56,
+      "flat_pattern": "cs-100_flat_pattern.svg",
+      "gores_for_3deg_tolerance": 43,
+      "layup_sheet": "cs-100_layup_sheet.svg",
+      "nesting_utilisation": 0.4819,
+      "ply_count": 6,
+      "stack": "[45/45/0]s",
+      "stiffness_ratio_over_drift": 1.0706,
+      "thickness_mm": 0.414
+    },
+    "CS-200": {
+      "debulk_after_plies": [
+        1,
+        2
+      ],
+      "developed_area_m2": 0.008757,
+      "fibre_angle_drift_deg": 0.0,
+      "flat_pattern": "cs-200_flat_pattern.svg",
+      "gores_for_3deg_tolerance": 1,
+      "layup_sheet": "cs-200_layup_sheet.svg",
+      "nesting_utilisation": 1.0,
+      "ply_count": 2,
+      "stack": "[45]s (PW-C-80)",
+      "stiffness_ratio_over_drift": 1.0009,
+      "thickness_mm": 0.16
+    },
+    "CS-300": {
+      "debulk_after_plies": [
+        1,
+        3,
+        6,
+        8
+      ],
+      "layup_sheet": "cs-300_layup_sheet.svg",
+      "ply_count": 8,
+      "stack": "[45/0/0/0]s",
+      "thickness_mm": 1.356
+    },
+    "CS-400": {
+      "debulk_after_plies": [
+        1,
+        3,
+        6,
+        8
+      ],
+      "layup_sheet": "cs-400_layup_sheet.svg",
+      "ply_count": 8,
+      "stack": "[45/0/0/45]s (PW-C-193)",
+      "thickness_mm": 1.592
+    }
+  },
+  "status": "design study; the laminates are sized against handbook lamina data and no part here is released for a flight article",
+  "units": "mm"
+}

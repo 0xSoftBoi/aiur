@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="205.6mm" height="260.6mm" viewBox="0 0 205.6 260.6">
+<style>
+  .outline { fill: none; stroke: #111; stroke-width: 0.5; }
+  .cutline { fill: none; stroke: #111; stroke-width: 0.8; }
+  .netline { fill: none; stroke: #888; stroke-width: 0.4; stroke-dasharray: 4 2; }
+  .fibre { stroke: #b00; stroke-width: 0.6; fill: none; }
+  .fibrehead { fill: #b00; }
+  .check { stroke: #060; stroke-width: 0.8; fill: none; }
+  .ply { fill: #d8d8d8; stroke: #111; stroke-width: 0.4; }
+  .plyalt { fill: #f2f2f2; stroke: #111; stroke-width: 0.4; }
+  text { font-family: "DejaVu Sans", "Helvetica", sans-serif; fill: #111; }
+  .title { font-size: 5px; font-weight: bold; }
+  .label { font-size: 3px; }
+  .small { font-size: 2.4px; fill: #444; }
+  .warn { font-size: 3px; fill: #b00; }
+</style>
+<rect x="0" y="0" width="205.6" height="260.6" fill="#fff"/>
+<text class="title" x="25.0" y="12">CS-100 capture throat cup — flat pattern, 1:1</text>
+<text class="small" x="25.0" y="18">developed cone: sector 254.6°, R28.28 to R77.78 mm, 0.01166 m² per ply, 6 plies</text>
+<line class="check" x1="25.00" y1="243.56" x2="125.00" y2="243.56"/><line class="check" x1="25.00" y1="241.56" x2="25.00" y2="245.56"/><line class="check" x1="125.00" y1="241.56" x2="125.00" y2="245.56"/><text class="label" x="57.00" y="240.56">100 mm — measure before cutting</text>
+<path class="cutline" d="M 40.891 174.894 A 77.782 77.782 0 1 1 164.672 174.894 L 125.287 144.914 A 28.284 28.284 0 1 0 80.276 144.914 Z"/>
+<line class="netline" x1="80.28" y1="144.91" x2="40.89" y2="174.89"/>
+<text class="small" text-anchor="end" x="36.12" y="178.53">seam A</text>
+<line class="netline" x1="102.78" y1="99.50" x2="102.78" y2="50.00"/>
+<text class="small" text-anchor="middle" x="102.78" y="44.00">zero mark</text>
+<line class="netline" x1="125.29" y1="144.91" x2="164.67" y2="174.89"/>
+<text class="small" text-anchor="start" x="169.45" y="178.53">seam B</text>
+<line class="fibre" x1="81.57" y1="95.96" x2="123.99" y2="53.54"/><polygon class="fibrehead" points="123.99,53.54 122.18,54.38 123.15,55.35"/><text class="label" x="125.99" y="52.54">fibre as cut: 45° at the zero mark</text>
+<text class="warn" x="25.0" y="229.6">Fibre angle drifts 255° across this pattern — 127° either side of the zero mark.</text>
+<text class="small" x="25.0" y="234.1">This is a property of cones, not of the cutting. The laminate is built in-plane isotropic so it does not matter: Ex varies 7% over the full drift.</text>
+</svg>

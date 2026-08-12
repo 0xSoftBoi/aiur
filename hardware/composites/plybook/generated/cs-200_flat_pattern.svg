@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="125.0mm" height="325.0mm" viewBox="0 0 125.0 325.0">
+<style>
+  .outline { fill: none; stroke: #111; stroke-width: 0.5; }
+  .cutline { fill: none; stroke: #111; stroke-width: 0.8; }
+  .netline { fill: none; stroke: #888; stroke-width: 0.4; stroke-dasharray: 4 2; }
+  .fibre { stroke: #b00; stroke-width: 0.6; fill: none; }
+  .fibrehead { fill: #b00; }
+  .check { stroke: #060; stroke-width: 0.8; fill: none; }
+  .ply { fill: #d8d8d8; stroke: #111; stroke-width: 0.4; }
+  .plyalt { fill: #f2f2f2; stroke: #111; stroke-width: 0.4; }
+  text { font-family: "DejaVu Sans", "Helvetica", sans-serif; fill: #111; }
+  .title { font-size: 5px; font-weight: bold; }
+  .label { font-size: 3px; }
+  .small { font-size: 2.4px; fill: #444; }
+  .warn { font-size: 3px; fill: #b00; }
+</style>
+<rect x="0" y="0" width="125.0" height="325.0" fill="#fff"/>
+<text class="title" x="25.0" y="12">CS-200 deployable capture-ring boom — flat pattern, 1:1 (×12)</text>
+<text class="small" x="25.0" y="18">developed slit tube: 35.03 × 250 mm, no fibre-angle drift — a cylinder develops with parallel meridians</text>
+<rect class="cutline" x="25.00" y="35.00" width="35.03" height="250.00"/>
+<line class="check" x1="25.00" y1="308.00" x2="125.00" y2="308.00"/><line class="check" x1="25.00" y1="306.00" x2="25.00" y2="310.00"/><line class="check" x1="125.00" y1="306.00" x2="125.00" y2="310.00"/><text class="label" x="57.00" y="305.00">100 mm — measure before cutting</text>
+<line class="fibre" x1="32.61" y1="107.41" x2="52.42" y2="87.59"/><polygon class="fibrehead" points="52.42,87.59 50.61,88.44 51.58,89.40"/><text class="label" x="54.42" y="86.59">45°</text>
+<line class="fibre" x1="32.61" y1="232.41" x2="52.42" y2="212.59"/><polygon class="fibrehead" points="52.42,212.59 50.61,213.44 51.58,214.40"/><text class="label" x="54.42" y="211.59">45°</text>
+<text class="small" x="64.0" y="41.0">stows rolled to R16 mm</text>
+</svg>
