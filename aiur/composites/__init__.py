@@ -35,6 +35,9 @@ The modules, in the order the work happens:
     Fibre volume fraction, void content, debulk schedule, panel acceptance.
 :mod:`aiur.composites.traveler`
     Travelers, hold points, prepreg out-time, and computed nonconformances.
+:mod:`aiur.composites.disposition`
+    What to do with a part that came out wrong: delamination buckling,
+    waviness knockdown, scarf repair sizing, and the accept/repair/scrap call.
 :mod:`aiur.composites.allowables`
     Basis values, the coupon plan, and the cost of scatter.
 :mod:`aiur.composites.spc`

@@ -255,6 +255,27 @@ REQUIREMENTS: tuple[Requirement, ...] = (
         "",
     ),
     Requirement(
+        "P0-CMP-006E",
+        "disposition of every recorded composite defect",
+        "each defect dispositioned against a computed limit — delamination "
+        "against sublaminate buckling at its own depth, waviness against the "
+        "compressive kinking knockdown, porosity against the void limit, "
+        "misorientation against the laminate's rotational envelope",
+        "the part is not released; a defect dispositioned by appearance rather "
+        "than by analysis is not dispositioned",
+        "defect log reduced by `aiur.composites.disposition.disposition`, per "
+        "docs/composites/defect-disposition.md",
+        VerificationMethod.ANALYSIS,
+        Stage.BENCH_HIL,
+        "P0-A",
+        None,
+        ClosureStatus.IN_WORK,
+        "the disposition rules are executable and run in CI; the buckling "
+        "coefficient and the initial fibre misalignment under them are "
+        "engineering targets, and CP-06 is the coupon that anchors the first",
+        "",
+    ),
+    Requirement(
         "P0-CMP-007",
         "stowed strain in the deployable capture-ring boom",
         "surface strain at the stowed radius <= 50 % of the fibre-direction ultimate",

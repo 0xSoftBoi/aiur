@@ -50,9 +50,10 @@ The dock's flight article is a thin prepreg laminate, and its capture ring is
 a deployable that stows rolled against the keel. `aiur/composites` is that
 discipline in executable form — classical laminate theory, cure kinetics and
 vitrification, flat-pattern development, bonded-joint shear lag, spring-in
-and tool compensation, constituent content and debulk, travelers with
-out-time control, basis-value statistics, and the designed experiments that
-replace the package's own engineering targets:
+and tool compensation, constituent content and debulk, defect disposition
+and repair sizing, travelers with out-time control, basis-value statistics,
+and the designed experiments that replace the package's own engineering
+targets:
 
 ```
 python -m aiur.composites

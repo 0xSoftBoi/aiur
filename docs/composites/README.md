@@ -29,8 +29,8 @@ blocking the most work is settled first.
 
 ## What the analysis changed
 
-Five results came out of building the models, and all five changed the
-design or the specification rather than confirming it.
+Six results came out of building the models, and every one of them changed
+the design or the specification rather than confirming it.
 
 **The funnel stopped being a laminate.** Sized honestly against a handling
 load across the boom pitch, a monolithic funnel skin needs 789 g/m², which
@@ -66,6 +66,15 @@ qualification routes and the second one — load margin plus a proof test on
 every article — is always available.
 [PS-400](ps-400-bonding.md) carries it.
 
+**A shallow delamination is worse than a deep one.** The plies above a
+delamination buckle as a small plate, so the critical size follows from the
+sublaminate's own bending stiffness — and one thin ply has almost none. A
+4 mm delamination under the throat cup's outer ply needs repair; the same
+4 mm delamination at mid-thickness is acceptable. The dangerous case is the
+one hardest to detect, so acceptance limits are depth-dependent and an
+inspection record without a depth cannot be dispositioned.
+[The numbers are here](defect-disposition.md).
+
 **Full cure is not reachable at the cure temperature.** The resin's
 diffusion-limited kinetics impose a conversion ceiling that rises with hold
 temperature: about 0.86 at 180 °C, no matter how long the hold. Reaching
@@ -100,6 +109,7 @@ divided by the part's area.
 | [PS-400 bonding specification](ps-400-bonding.md) | joint sizing, the two qualification routes, and the kissing bond |
 | [Tooling](tooling.md) | tool material trade, compensation, and the spring-in loop |
 | [Experiment plan](doe-plan.md) | the four designed experiments that replace this package's targets |
+| [Defect disposition and repair](defect-disposition.md) | what a defect costs, and accept / repair / scrap |
 | [Allowables and the coupon plan](allowables.md) | what a basis value costs and why scatter is the driver |
 
 Shop-floor templates live in
@@ -118,6 +128,7 @@ python -m aiur.composites.bonding       # bonded joints and their qualification 
 python -m aiur.composites.springin      # spring-in and tool compensation
 python -m aiur.composites.tooling       # tool material trade
 python -m aiur.composites.process       # constituent content and debulk model
+python -m aiur.composites.disposition   # defect disposition and repair sizing
 python -m aiur.composites.traveler      # traveler definition and evaluation
 python -m aiur.composites.allowables    # basis values and the coupon plan
 python -m aiur.composites.spc           # capability, control charts, yield

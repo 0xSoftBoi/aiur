@@ -1,0 +1,1 @@
+defect_id,serial,part_id,git_commit,found_at_step,defect_type,size_mm,plies_above,void_fraction,wrinkle_angle_deg,misorientation_deg,location,detection_method,inspector,date,disposition,governing_quantity,actual,limit,rationale,repair_scheme,repair_traveler_ref,mrb_signature,notes

@@ -13,6 +13,7 @@ Every column exists because something in
 | [`cure-run-template.csv`](cure-run-template.csv) | every oven run | PS-200 acceptance, and DOE-1 |
 | [`tool-log-template.csv`](tool-log-template.csv) | tool build, then every cure | the spring-in compensation loop |
 | [`coupon-log-template.csv`](coupon-log-template.csv) | every test specimen | `aiur.composites.allowables.evaluate_coupon_set` |
+| [`defect-log-template.csv`](defect-log-template.csv) | every nonconformance | `aiur.composites.disposition.disposition` |
 
 `traveler-template.csv` is generated from the step list in
 `aiur.composites.traveler`, so the paper and the executable definition cannot
@@ -40,6 +41,15 @@ The layup sheets list plies in **lay-down order, ply 1 against the tool**.
 That is the reverse of the design stack, which is written top-surface-first;
 the sheet prints the reversal so nobody has to perform it at the cutting
 table.
+
+## One column that decides a disposition
+
+**`plies_above`.** A delamination's depth, not just its size. The plies
+above a delamination buckle as a small plate, and a sublaminate one ply
+thick has almost no bending stiffness — so a 4 mm delamination one ply down
+needs repair while the same 4 mm at mid-thickness is acceptable. A defect
+record without a depth cannot be dispositioned at all, and the evaluator
+says so rather than guessing.
 
 ## Two columns that look like bureaucracy and are not
 
