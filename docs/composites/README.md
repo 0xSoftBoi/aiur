@@ -119,9 +119,12 @@ built from these models: every figure on it is exported by
 drifted from what the models now produce.
 
 Shop-floor templates live in
-[`hardware/composites/`](../../hardware/composites/), and the generated
+[`hardware/composites/`](../../hardware/composites/), the generated
 1:1 ply book — flat patterns and layup sequences — in
-[`hardware/composites/plybook/`](../../hardware/composites/plybook/).
+[`hardware/composites/plybook/`](../../hardware/composites/plybook/), and the
+machine-shop tooling package — solid models, A3 sheets and an RFQ for the
+four aluminium moulds — in
+[`hardware/composites/tooling/`](../../hardware/composites/tooling/).
 
 ## Executable entry points
 

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420mm" height="297mm" viewBox="0 0 1680 1188">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#263238"/>
+    </marker>
+    <style>
+  .t{font:700 26px system-ui,sans-serif;fill:#111827}
+  .h{font:700 13px system-ui,sans-serif;fill:#111827;letter-spacing:0.04em}
+  .s{font:500 12.5px system-ui,sans-serif;fill:#4b5563}
+  .l{font:600 12.5px system-ui,sans-serif;fill:#111827}
+  .m{font:600 12.5px ui-monospace,SFMono-Regular,Menlo,monospace;fill:#111827}
+  .w{font:700 14px system-ui,sans-serif;fill:#b91c1c}
+  .body{stroke:#111827;stroke-width:2;fill:#eef2f7;stroke-linejoin:round}
+  .mould{stroke:#b91c1c;stroke-width:3.2;fill:none;stroke-linejoin:round;stroke-linecap:round}
+  .dim{stroke:#263238;stroke-width:1.2;fill:none;marker-start:url(#a);marker-end:url(#a)}
+  .ext{stroke:#9ca3af;stroke-width:1}
+  .ax{stroke:#9ca3af;stroke-width:1.2;stroke-dasharray:12 4 3 4}
+  .rule{stroke:#d1d5db;stroke-width:1}
+  .frame{stroke:#111827;stroke-width:1.6;fill:none}
+</style>
+  </defs>
+  <rect width="1680" height="1188" fill="#fff"/>
+  <rect x="40" y="40" width="1600" height="1108" class="frame"/>
+  <text x="64" y="100" class="t">CARRIER-P0 TOOLING &#8212; T-300 KEEPER TINE DIE &#8212; CAVITY HALF</text>
+  <text x="64" y="128" class="s">MOULDS CS-400 &#8212; FEMALE MOULD &#8212; A3 SHEET, DIMENSIONS IN mm &#8212; GENERATED FROM generate_tools.py</text>
+  <text x="64" y="164" class="w">MOULDING DIMENSIONS ARE COMPENSATED. SCALE FACTOR 0.996573 APPLIED. DO NOT WORK TO THE PART DRAWING.</text>
+  <text x="64" y="198" class="h">SECTION &#8212; MOULDING SURFACE IN RED &#8212; DRAWN AT 1:1</text>
+  
+  <polygon points="519.57,428.17 295.23,428.17 293.99,428.13 292.76,428.01 291.54,427.81 290.33,427.53 289.15,427.18 287.99,426.75 286.86,426.24 285.77,425.66 284.72,425.02 283.71,424.30 282.75,423.52 281.84,422.68 280.99,421.79 280.20,420.84 279.47,419.84 278.81,418.80 278.21,417.71 277.69,416.59 277.25,415.44 276.87,414.26 276.58,413.06 276.36,411.84 276.22,410.61 276.17,409.38 274.09,259.83 204.43,259.83 204.43,500.17 519.57,500.17" class="body"/><polyline points="519.57,428.17 295.23,428.17 293.99,428.13 292.76,428.01 291.54,427.81 290.33,427.53 289.15,427.18 287.99,426.75 286.86,426.24 285.77,425.66 284.72,425.02 283.71,424.30 282.75,423.52 281.84,422.68 280.99,421.79 280.20,420.84 279.47,419.84 278.81,418.80 278.21,417.71 277.69,416.59 277.25,415.44 276.87,414.26 276.58,413.06 276.36,411.84 276.22,410.61 276.17,409.38 274.09,259.83" class="mould"/>
+  <line x1="204.4" y1="574.0" x2="519.6" y2="574.0" class="dim"/><text x="362.0" y="594.0" class="m" text-anchor="middle">78.79</text><line x1="686.0" y1="259.8" x2="686.0" y2="500.2" class="dim"/><text x="696.0" y="380.0" class="m" text-anchor="start">60.09</text>
+  <text x="64" y="624" class="s">Cavity half of the matched die set, forming the outer surface of the keeper</text><text x="64" y="642" class="s">tine. The tine is the retention path, so both of its faces are tooled and</text><text x="64" y="660" class="s">neither is left to a vacuum bag.</text>
+  <text x="64" y="686" class="l">Finished envelope 78.8 x 60.1 x 28.0 mm &#8212; stock 85 x 66 x 34 mm &#8212; 61 cm&#179; finished.</text>
+  <text x="744" y="216" class="h">DIMENSION</text><text x="1244" y="216" class="h">VALUE</text><text x="1364" y="216" class="h">TOL</text><text x="1444" y="216" class="h">CLASS</text><line x1="744" y1="226" x2="1564" y2="226" class="rule"/><text x="744" y="250" class="l">enclosed corner angle</text><text x="1244" y="250" class="m">90.795 deg</text><text x="1364" y="250" class="m">&#177;0.05</text><text x="1444" y="250" class="s">moulding surface</text><text x="744" y="266" class="s">part 90 deg opened by 0.795 deg of predicted spring-in</text><text x="744" y="290" class="l">outer corner radius</text><text x="1244" y="290" class="m">4.765 mm</text><text x="1364" y="290" class="m">&#177;0.05</text><text x="1444" y="290" class="s">moulding surface</text><text x="744" y="306" class="s">inner radius plus one laminate thickness</text><text x="744" y="330" class="l">blade leg length</text><text x="1244" y="330" class="m">56.087 mm</text><text x="1364" y="330" class="m">&#177;0.25</text><text x="1444" y="330" class="s">moulding surface</text><text x="744" y="346" class="s">60 % of the developed length from the CS-400 laminate area</text><text x="744" y="370" class="l">root leg length</text><text x="1244" y="370" class="m">37.391 mm</text><text x="1364" y="370" class="m">&#177;0.25</text><text x="1444" y="370" class="s">moulding surface</text><text x="744" y="386" class="s">the remainder of the developed length</text><text x="744" y="410" class="l">die width</text><text x="1244" y="410" class="m">27.959 mm</text><text x="1364" y="410" class="m">&#177;0.25</text><text x="1444" y="410" class="s">free</text><text x="744" y="426" class="s">tine width plus margin</text><text x="744" y="450" class="l">back thickness</text><text x="1244" y="450" class="m">18.000 mm</text><text x="1364" y="450" class="m">&#177;0.25</text><text x="1444" y="450" class="s">free</text><text x="744" y="466" class="s">block envelope</text>
+  <text x="744" y="512" class="h">MATERIAL, FINISH AND SERVICE</text><text x="744" y="530" class="s">aluminium 6061 plate, T651 tooling plate. Rough, stress relieve, then finish &#8212; machining</text><text x="744" y="548" class="s">rolled plate releases residual stress, and a tool that moves after finishing has to be cut</text><text x="744" y="566" class="s">again.</text><text x="744" y="584" class="s">Moulding surface 0.4 Ra; all other machined faces 1.6 Ra.</text><text x="744" y="602" class="s">Service: 200 degC under 690 kPa, repeatedly.</text><text x="744" y="620" class="s">Model faceting lies inside the true surface by 3 micrometres. Where the model and this table</text><text x="744" y="638" class="s">disagree, the table governs.</text>
+  <text x="64" y="734" class="h">SECONDARY OPERATIONS</text><text x="64" y="760" class="s">1. 2 x 8 H7 dowel holes through the back, bored as a set with T-301</text><text x="64" y="784" class="s">2. 4 x M8 through for the closing bolts, clear of the moulding face</text><text x="64" y="808" class="s">3. 1 x 3 wide x 2 deep thermocouple groove in the back face, breaking out</text><text x="64" y="826" class="s">at the die edge</text><text x="64" y="850" class="s">4. break all edges 0.3 x 45 deg except on the moulding face</text>
+  <text x="744" y="734" class="h">NOTES</text><text x="744" y="760" class="s">1. Matched pair. The gap between the two moulding faces IS the part</text><text x="744" y="778" class="s">thickness, 1.592 mm nominal, and it is the dimension that matters more</text><text x="744" y="796" class="s">than either half on its own: cut both, close them dry, and shim-check the</text><text x="744" y="814" class="s">gap before either half is accepted.</text><text x="744" y="838" class="s">2. The enclosed corner is cut open by the predicted spring-in. Do not</text><text x="744" y="856" class="s">correct it back to 90 degrees.</text><text x="744" y="880" class="s">3. Bore the dowels and the closing-bolt holes with the two halves clamped</text><text x="744" y="898" class="s">together as a set, so they close in register.</text><text x="744" y="922" class="s">4. The solid model carries the moulding geometry and the block envelope.</text><text x="744" y="940" class="s">Dowel, bolt and thermocouple features are listed as secondary operations</text><text x="744" y="958" class="s">and are not in the model.</text>
+  <line x1="64" y1="1122" x2="1616" y2="1122" class="rule"/>
+  <text x="64" y="1144" class="s">The solid model t300.stl is the master geometry. This sheet carries tolerances, feature classes, secondary operations and notes &#8212; it does not redefine the surface.</text>
+</svg>

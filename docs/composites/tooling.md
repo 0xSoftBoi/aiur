@@ -156,3 +156,51 @@ prediction to be right — which it will not be until DOE-3 measures the term
 that is currently zero.
 
 That loop, not the equation, is what makes moulded angles repeatable.
+
+## 5. The package a shop can quote
+
+The trade, the scale factor and the corner compensation converge on four
+tools, and those are generated as a machine-shop package rather than
+described:
+
+```
+python hardware/composites/tooling/generate_tools.py
+```
+
+| tool | moulds | type | what it costs |
+| --- | --- | --- | --- |
+| T-100 | CS-100 throat cup | female, revolved cavity | 187 × 187 × 56 mm plate, 43 % removed |
+| T-200 | CS-200 boom | male mandrel | 66 × 36 × 296 mm plate |
+| T-300 | CS-400 tine | matched die, cavity half | 85 × 66 × 34 mm plate |
+| T-301 | CS-400 tine | matched die, punch half | 66 × 46 × 34 mm plate |
+
+Each tool ships a binary STL, an A3 sheet, and a row in `rfq.csv` carrying
+its stock, removal fraction, tolerances and inspection deliverable. Nothing
+in it is drawn by hand: the moulding surfaces are built from the part shapes
+in `flatpattern` and `schedules`, scaled by `compensation_factor`, and their
+corners opened by `spring_in_deg`. A laminate change moves the tools and a
+test fails if the committed drawings have not moved with it.
+
+Three things came out of generating it rather than drafting it.
+
+**The tolerance has to be classed, not quoted.** A single tolerance across a
+whole tool is what makes tooling expensive for no structural return. Each
+dimension carries a class — moulding surface, datum, sealing, free — and only
+the first two buy a CMM report. On T-100 that is four dimensions out of nine.
+
+**A part rule is not a tool rule.** The keeper tine's inner corner has to be
+at least two laminate thicknesses, or the outer plies thin over it. The tool
+is cut 0.011 mm *under* that, because the compensation shrinks it — and the
+part still lands compliant, because it grows back on demould. Checking a tool
+dimension against a part rule is exactly the confusion that scraps tools, so
+the test that guards this rule converts before it compares.
+
+**The drawing has to know it is a section.** The throat cup mould is an
+annulus about a central bore. Sectioned through the axis it is *two* regions,
+and drawing it as one closes the bore up and shows solid metal where the
+demould push-rod goes. It is the kind of quiet lie that a generated drawing
+exists to make impossible, so the generator splits the section and a test
+checks that it did.
+
+[The package and the rules that go with it](../../hardware/composites/tooling/README.md)
+are written for the shop, not for this document.

@@ -40,6 +40,8 @@ jobs:
         run: python -m aiur.composites
       - name: Published structures data is current
         run: python tools/export_composites_web.py --check
+      - name: Tooling package is current
+        run: python hardware/composites/tooling/generate_tools.py --check
       - name: Practice-adoption register
         run: python -m aiur.adoption_loop
 

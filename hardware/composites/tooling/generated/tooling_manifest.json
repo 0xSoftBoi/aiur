@@ -1,0 +1,452 @@
+{
+  "compensation": {
+    "scale_factors": {
+      "CS-100": 0.99663596,
+      "CS-200": 0.996557,
+      "CS-400": 0.99657294
+    },
+    "spring_in_deg": {
+      "CS-100 bonded flange to cone": 0.7574,
+      "CS-100 throat cup cone half-angle": 0.3787,
+      "CS-300 rail web to cap angle": 0.6983,
+      "CS-400 tine root bend": 0.7951
+    },
+    "why": "The tool defines the part at cure temperature and the part is inspected at room temperature. Aluminium moves an order of magnitude more than the laminate over that range, so a tool cut to the part drawing makes a part that misses its tolerance."
+  },
+  "cooldown_k": 160.0,
+  "corner_tolerance_deg": 0.05,
+  "cure_temperature_c": 180.0,
+  "inspection_temperature_c": 20.0,
+  "material": "aluminium 6061 plate",
+  "moulding_finish_ra_um": 0.4,
+  "notes": [
+    "The STL is the master geometry. The sheets carry tolerances, feature classes, secondary operations and notes, not a redefinition of the surface.",
+    "Every moulding dimension is compensated. A machinist who corrects one back to the part drawing scraps the tool.",
+    "Rough, stress relieve, then finish. Machining a tool out of rolled plate releases residual stress, and a tool that moves after finishing has to be cut again.",
+    "Dowel, tapped and thermocouple features are listed as secondary operations and are not in the solid models."
+  ],
+  "package": "CARRIER-P0 composite tooling",
+  "status": "design study; the laminates these tools mould are sized against handbook lamina data and hold no measured allowables",
+  "tolerances_mm": {
+    "datum": 0.05,
+    "free": 0.25,
+    "moulding_surface": 0.05
+  },
+  "tools": [
+    {
+      "bounds_mm": {
+        "max": [
+          90.279,
+          90.279,
+          49.882
+        ],
+        "min": [
+          -90.279,
+          -90.279,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "description": "Female mould forming the outer surface of the capture throat cup. The cavity is the part's aircraft-contact face, so the cavity's finish is the part's finish.",
+      "dimensions": [
+        {
+          "basis": "part throat R20 x 0.996636 thermal scale",
+          "feature_class": "moulding surface",
+          "label": "cavity throat radius",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 19.93271920175124
+        },
+        {
+          "basis": "derived from the held throat and the compensated cone angle",
+          "feature_class": "moulding surface",
+          "label": "cavity rim radius",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 55.27917216562299
+        },
+        {
+          "basis": "part depth 35 x 0.996636 thermal scale",
+          "feature_class": "moulding surface",
+          "label": "cavity depth",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 34.88225860306467
+        },
+        {
+          "basis": "part 45 deg opened by 0.379 deg of predicted spring-in",
+          "feature_class": "moulding surface",
+          "label": "cone half-angle",
+          "tolerance_mm": 0.05,
+          "unit": "deg",
+          "value_mm": 45.378705373390844
+        },
+        {
+          "basis": "sealant-tape land outboard of the cavity rim; flat and continuous",
+          "feature_class": "sealing",
+          "label": "seal land width",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 25.0
+        },
+        {
+          "basis": "flatness of the whole top annulus, not a size",
+          "feature_class": "sealing",
+          "label": "top face flatness",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 0.05
+        },
+        {
+          "basis": "H7; demould push-rod and centring pin, plugged during cure",
+          "feature_class": "datum",
+          "label": "central bore diameter",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 12.0
+        },
+        {
+          "basis": "stock envelope",
+          "feature_class": "free",
+          "label": "outside radius",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 90.27917216562298
+        },
+        {
+          "basis": "base thickness plus cavity depth",
+          "feature_class": "free",
+          "label": "overall height",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 49.88225860306467
+        }
+      ],
+      "drawing": "t100_sheet.svg",
+      "faceting_error_mm": 0.00773,
+      "finished_volume_cm3": 1109.03,
+      "mould_scale_factor": 0.99663596,
+      "mould_type": "female",
+      "name": "throat cup mould",
+      "nonmanifold_edges": 0,
+      "notes": [
+        "The cavity is a moulding surface. No stamping, scribing, engraving or witness marks anywhere inside it \u2014 the part copies them, and a copied tool mark on the aircraft-contact face is a reject.",
+        "Identification is stamped on the outside diameter only.",
+        "The seal land must be flat and continuous. A scratch across it is a vacuum leak, and a leak during cure makes a porous part that no inspection afterwards will separate from a good one cheaply.",
+        "Machine the cavity with a radial or helical toolpath, not a raster: a raster leaves a cusp pattern that prints through into a 0.4 mm laminate."
+      ],
+      "part_id": "CS-100",
+      "secondary_operations": [
+        "2 x 6 H7 dowel holes on a 140 mm bolt circle, 180 deg apart, through the top annulus into the base \u2014 they locate the trim template",
+        "4 x M6 x 12 deep tapped in the back face on a 120 mm bolt circle \u2014 handling and fixturing only",
+        "1 x 3 wide x 2 deep radial groove across the seal land, outside diameter to cavity rim \u2014 thermocouple route out from under the bag",
+        "plug the central bore flush during cure; the plug is shop-supplied",
+        "break all edges 0.3 x 45 deg except inside the cavity"
+      ],
+      "stl": "t100.stl",
+      "stock_mm": [
+        186.6,
+        186.6,
+        55.9
+      ],
+      "tool_id": "T-100",
+      "triangles": 2880
+    },
+    {
+      "bounds_mm": {
+        "max": [
+          30.0,
+          30.0,
+          290.0
+        ],
+        "min": [
+          -30.0,
+          0.0,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "description": "Male mandrel forming the inner surface of the deployable capture-ring boom. The laminate is laid over the crown and bagged down onto it.",
+      "dimensions": [
+        {
+          "basis": "part mid-surface R22.3 less half the 0.160 mm laminate, x 0.996557 thermal scale",
+          "feature_class": "moulding surface",
+          "label": "crown radius",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 22.14349655700077
+        },
+        {
+          "basis": "part section angle; a cylindrical section has no enclosed corner, so no spring-in compensation applies",
+          "feature_class": "moulding surface",
+          "label": "subtended angle",
+          "tolerance_mm": 0.1,
+          "unit": "deg",
+          "value_mm": 90.0
+        },
+        {
+          "basis": "deviation from a true circular arc, checked along the length",
+          "feature_class": "moulding surface",
+          "label": "crown radius form error",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 0.03
+        },
+        {
+          "basis": "part length; the mandrel is longer by the runout at each end",
+          "feature_class": "moulding surface",
+          "label": "moulding length",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 250.0
+        },
+        {
+          "basis": "part length plus 20 mm runout each end for bag tuck-off",
+          "feature_class": "free",
+          "label": "overall length",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 290.0
+        },
+        {
+          "basis": "stock envelope",
+          "feature_class": "free",
+          "label": "base width",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 60.0
+        },
+        {
+          "basis": "stock envelope",
+          "feature_class": "free",
+          "label": "base depth",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 30.0
+        },
+        {
+          "basis": "the mandrel is located and clamped on its base",
+          "feature_class": "datum",
+          "label": "base flatness",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 0.05
+        }
+      ],
+      "drawing": "t200_sheet.svg",
+      "faceting_error_mm": 0.01186,
+      "finished_volume_cm3": 449.65,
+      "mould_scale_factor": 0.996557,
+      "mould_type": "male",
+      "name": "boom mandrel",
+      "nonmanifold_edges": 0,
+      "notes": [
+        "The crown is a moulding surface. Machine it along the length, not across it: circumferential tool marks transfer into the part and sit transverse to the direction it is later rolled.",
+        "This tool carries a thermal scale factor and no spring-in compensation, because a cylindrical section has no enclosed corner to spring in. That is a result, not an omission.",
+        "The crown radius is the inner surface. The part's quoted radius is its mid-surface, and the difference is half a laminate thickness."
+      ],
+      "part_id": "CS-200",
+      "secondary_operations": [
+        "2 x 6 H7 dowel holes in the base, 200 mm apart on the centreline \u2014 they locate the mandrel in the layup fixture",
+        "2 x M8 through the base for clamping to the bench",
+        "blend the crown-to-shoulder transition smoothly; a step there prints through into a 0.16 mm laminate",
+        "break all edges 0.3 x 45 deg except on the crown"
+      ],
+      "stl": "t200.stl",
+      "stock_mm": [
+        66.0,
+        36.0,
+        296.0
+      ],
+      "tool_id": "T-200",
+      "triangles": 112
+    },
+    {
+      "bounds_mm": {
+        "max": [
+          60.786,
+          42.086,
+          27.959
+        ],
+        "min": [
+          -18.0,
+          -18.0,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "description": "Cavity half of the matched die set, forming the outer surface of the keeper tine. The tine is the retention path, so both of its faces are tooled and neither is left to a vacuum bag.",
+      "dimensions": [
+        {
+          "basis": "part 90 deg opened by 0.795 deg of predicted spring-in",
+          "feature_class": "moulding surface",
+          "label": "enclosed corner angle",
+          "tolerance_mm": 0.05,
+          "unit": "deg",
+          "value_mm": 90.79510767671168
+        },
+        {
+          "basis": "inner radius plus one laminate thickness",
+          "feature_class": "moulding surface",
+          "label": "outer corner radius",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 4.765088242795206
+        },
+        {
+          "basis": "60 % of the developed length from the CS-400 laminate area",
+          "feature_class": "moulding surface",
+          "label": "blade leg length",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 56.08664690550662
+        },
+        {
+          "basis": "the remainder of the developed length",
+          "feature_class": "moulding surface",
+          "label": "root leg length",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 37.39109793700441
+        },
+        {
+          "basis": "tine width plus margin",
+          "feature_class": "free",
+          "label": "die width",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 27.9588752869166
+        },
+        {
+          "basis": "block envelope",
+          "feature_class": "free",
+          "label": "back thickness",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 18.0
+        }
+      ],
+      "drawing": "t300_sheet.svg",
+      "faceting_error_mm": 0.00251,
+      "finished_volume_cm3": 60.62,
+      "mould_scale_factor": 0.99657294,
+      "mould_type": "female",
+      "name": "keeper tine die \u2014 cavity half",
+      "nonmanifold_edges": 0,
+      "notes": [
+        "Matched pair. The gap between the two moulding faces IS the part thickness, 1.592 mm nominal, and it is the dimension that matters more than either half on its own: cut both, close them dry, and shim-check the gap before either half is accepted.",
+        "The enclosed corner is cut open by the predicted spring-in. Do not correct it back to 90 degrees.",
+        "Bore the dowels and the closing-bolt holes with the two halves clamped together as a set, so they close in register.",
+        "The solid model carries the moulding geometry and the block envelope. Dowel, bolt and thermocouple features are listed as secondary operations and are not in the model."
+      ],
+      "part_id": "CS-400",
+      "secondary_operations": [
+        "2 x 8 H7 dowel holes through the back, bored as a set with T-301",
+        "4 x M8 through for the closing bolts, clear of the moulding face",
+        "1 x 3 wide x 2 deep thermocouple groove in the back face, breaking out at the die edge",
+        "break all edges 0.3 x 45 deg except on the moulding face"
+      ],
+      "stl": "t300.stl",
+      "stock_mm": [
+        84.8,
+        66.1,
+        34.0
+      ],
+      "tool_id": "T-300",
+      "triangles": 116
+    },
+    {
+      "bounds_mm": {
+        "max": [
+          60.786,
+          42.109,
+          27.959
+        ],
+        "min": [
+          1.008,
+          1.592,
+          0.0
+        ]
+      },
+      "degenerate_faces": 0,
+      "description": "Punch half of the matched die set; forms the inner surface of the keeper tine and carries the closing load into the laminate.",
+      "dimensions": [
+        {
+          "basis": "matches T-300; the pair is cut to one angle",
+          "feature_class": "moulding surface",
+          "label": "enclosed corner angle",
+          "tolerance_mm": 0.05,
+          "unit": "deg",
+          "value_mm": 90.79510767671168
+        },
+        {
+          "basis": "max(2 x laminate thickness, 3.0) x 0.996573 thermal scale",
+          "feature_class": "moulding surface",
+          "label": "inner corner radius",
+          "tolerance_mm": 0.05,
+          "unit": "mm",
+          "value_mm": 3.1730882427952056
+        },
+        {
+          "basis": "the part thickness; verify by shim with the pair closed dry",
+          "feature_class": "moulding surface",
+          "label": "closed gap to T-300",
+          "tolerance_mm": 0.03,
+          "unit": "mm",
+          "value_mm": 1.5920000000000003
+        },
+        {
+          "basis": "matches T-300",
+          "feature_class": "moulding surface",
+          "label": "blade leg length",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 56.08664690550662
+        },
+        {
+          "basis": "matches T-300",
+          "feature_class": "moulding surface",
+          "label": "root leg length",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 37.39109793700441
+        },
+        {
+          "basis": "matches T-300",
+          "feature_class": "free",
+          "label": "die width",
+          "tolerance_mm": 0.25,
+          "unit": "mm",
+          "value_mm": 27.9588752869166
+        }
+      ],
+      "drawing": "t301_sheet.svg",
+      "faceting_error_mm": 0.00167,
+      "finished_volume_cm3": 67.34,
+      "mould_scale_factor": 0.99657294,
+      "mould_type": "male",
+      "name": "keeper tine die \u2014 punch half",
+      "nonmanifold_edges": 0,
+      "notes": [
+        "Matched pair. The gap between the two moulding faces IS the part thickness, 1.592 mm nominal, and it is the dimension that matters more than either half on its own: cut both, close them dry, and shim-check the gap before either half is accepted.",
+        "The enclosed corner is cut open by the predicted spring-in. Do not correct it back to 90 degrees.",
+        "Bore the dowels and the closing-bolt holes with the two halves clamped together as a set, so they close in register.",
+        "The solid model carries the moulding geometry and the block envelope. Dowel, bolt and thermocouple features are listed as secondary operations and are not in the model."
+      ],
+      "part_id": "CS-400",
+      "secondary_operations": [
+        "dowel and closing-bolt holes bored as a set with T-300",
+        "break all edges 0.3 x 45 deg except on the moulding face"
+      ],
+      "stl": "t301.stl",
+      "stock_mm": [
+        65.8,
+        46.5,
+        34.0
+      ],
+      "tool_id": "T-301",
+      "triangles": 108
+    }
+  ],
+  "units": "mm"
+}

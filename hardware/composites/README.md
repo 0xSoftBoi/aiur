@@ -37,6 +37,22 @@ python hardware/composites/plybook/generate_plybook.py
 Print at 1:1 and **measure the check line before cutting**. A printer that
 silently scales to fit turns a controlled drawing into a confident lie.
 
+## The tooling package
+
+[`tooling/`](tooling/) holds the four aluminium moulds as a package a machine
+shop can quote and cut: a solid model and an A3 sheet per tool, one RFQ line
+each, and a manifest giving every dimension its tolerance, its feature class
+and the analysis it came from.
+
+```
+python hardware/composites/tooling/generate_tools.py
+```
+
+**These tools are deliberately not cut to the part dimensions.** Every
+moulding dimension carries the thermal-expansion compensation, and every
+corner is cut open by its predicted spring-in. The sheets say so in red.
+[Read the package notes](tooling/README.md) before sending anything out.
+
 The layup sheets list plies in **lay-down order, ply 1 against the tool**.
 That is the reverse of the design stack, which is written top-surface-first;
 the sheet prints the reversal so nobody has to perform it at the cutting
