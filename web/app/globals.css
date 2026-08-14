@@ -2314,7 +2314,8 @@ h2 em {
   overflow: hidden;
 }
 
-.render-frame img {
+.render-frame img,
+.render-frame video {
   display: block;
   width: 100%;
   height: auto;

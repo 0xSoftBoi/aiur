@@ -91,6 +91,25 @@ export default function SolutionsPage() {
             </figcaption>
           </figure>
 
+          <figure className="render-frame" data-reveal>
+            <video
+              src="/renders/carrier-p0-breakdown.mp4"
+              poster="/renders/carrier-p0-breakdown-poster.jpg"
+              controls
+              muted
+              loop
+              playsInline
+              preload="none"
+              width={1920}
+              height={1080}
+              aria-label="CARRIER-P0 assembly breakdown and belly-dock capture, rendered from the engineering geometry"
+            />
+            <figcaption className="render-caption">
+              <span>CARRIER-P0 / ASSEMBLY AND CAPTURE</span>
+              <strong>APPROACH FLOWN BY THE SIMULATOR</strong>
+            </figcaption>
+          </figure>
+
           <div className="carrier-capabilities" data-reveal aria-label="Long-term carrier capabilities">
             <div><span>01</span><strong>PERSISTENT LIFT</strong></div>
             <div><span>02</span><strong>EDGE COMPUTE</strong></div>
