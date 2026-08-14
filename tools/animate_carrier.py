@@ -31,19 +31,21 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import carrier_model as cm  # noqa: E402
 
 FPS = 30
-END_FRAME = 720
+END_FRAME = 930
 
 #: Assembly order: (group name, start frame, travel frames, explode offset).
 #: `None` as an offset means "derive it per object from which side it is on",
 #: which is how the two nacelles separate outboard instead of moving together.
 #: Each install lands inside the shot that covers it - see SHOTS.
 ASSEMBLY = [
-    ("Tail surfaces", 80, 62, (2.60, 0.0, 0.0)),
+    # 1.25 m of travel, not 2.6.  At the longer offset the fins spent the
+    # middle of their shot floating a clear body-length behind the hull, which
+    # reads as a modelling error rather than as an install.
+    ("Tail surfaces", 80, 62, (1.25, 0.0, 0.0)),
     ("Keel structure", 160, 58, (0.0, 0.0, -1.35)),
     ("Gondola", 230, 58, (0.0, -1.75, -0.85)),
     ("Propulsion", 300, 58, None),
     ("Belly dock", 370, 56, (0.0, 0.0, -1.60)),
-    ("Micro-UAV", 442, 50, (0.90, 1.30, -1.30)),
 ]
 
 #: Coverage, not a single move.  The first version of this was one unbroken
@@ -86,7 +88,53 @@ SHOTS = [
      (2.47, 0.0, -1.12), (2.47, 0.0, -1.00), 78.0, 92.0),
     (649, 720, (3.05, -1.24, -1.00), (2.55, -1.95, -0.92),
      (2.47, 0.0, -0.99), (2.47, 0.0, -1.02), 95.0, 84.0),
+    # -- cutaway ---------------------------------------------------------
+    # The envelope sections away and the interior is on screen.  Everything
+    # inside the hull is representative, not vendor-specified, and shot 11's
+    # caption says so.
+    (721, 800, (-2.6, -6.6, 1.35), (0.6, -5.6, 0.75),
+     (2.05, 0.0, 0.05), (2.35, 0.0, -0.10), 34.0, 40.0),
+    # The bay opens up and the keeper drive runs through its stroke.
+    # From the throat side, near the drive plane.  Viewed from above, the
+    # servo's 34 mm case sits squarely over a 6.5 mm crank and hides the whole
+    # linkage; from here the keeper is nearest the lens and the crank and link
+    # stand clear under the servo's standoff.
+    (801, 870, (2.5321, -0.0816, -0.9274), (2.5032, -0.0722, -0.9254),
+     (2.4430, 0.0, -0.9595), (2.4455, 0.0, -0.9600), 50.0, 62.0),
+    # Tight on the keeper closing over the probe head.
+    (871, 930, (2.4972, -0.0585, -0.9375), (2.4890, -0.0468, -0.9420),
+     (2.4560, 0.0, -0.9600), (2.4560, 0.0, -0.9600), 60.0, 75.0),
 ]
+
+#: The capture is flown by the digital twin, not by hand.  `aiur/sim` is the
+#: same deterministic model CI gates the SIL runs against, so the approach in
+#: this film is a real episode's telemetry rather than an art-directed spline -
+#: which matters, because the hand-keyed version moved the aircraft at roughly
+#: 0.22 m/s and the twin says a precision capture closes at a fiftieth of that.
+SIM_SCENARIO = "sil-p0b"
+SIM_SEED = 7
+
+#: Film frames the episode is mapped onto.  The episode runs 26.6 s and the
+#: window is 200 frames, so it plays at about 4x.  Real time would be nearly
+#: motionless on screen; the speed-up is stated in the shot's caption rather
+#: than hidden.
+SIM_WINDOW = (468, 668)
+
+#: Filled in by `main()` so the captions can quote the episode's own numbers.
+SIM_RESULT = None
+
+
+def run_sim_episode(seed=SIM_SEED):
+    """Run one SIL recovery episode and return its result."""
+
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    from aiur.sim.engine import run_episode
+    from aiur.sim.scenarios import sil_p0b
+
+    return run_episode(sil_p0b(seed=seed, record_telemetry=True), seed)
+
 
 #: Handheld micro-movement.  A camera locked to a mathematically perfect path
 #: is one of the loudest tells in CG; even a rig on rails breathes.
@@ -161,43 +209,96 @@ def animate_assembly(groups):
                 key_visible(obj, start, True)
 
 
-def animate_capture(scene_data):
-    """The approach and the keeper closing over the probe head."""
+def animate_capture(scene_data, result):
+    """Fly the aircraft along a real SIL episode's telemetry.
+
+    Telemetry carries the dock-relative position, so the trajectory is anchored
+    on the geometric capture pose and offset backwards from there: the aircraft
+    ends exactly where the probe head seats, and every earlier sample is placed
+    relative to that.  Nothing about the path is drawn by hand.
+
+    Attitude comes out of the same data.  A multirotor accelerates by tilting,
+    so pitch and roll are `atan(a / g)` on the differentiated relative
+    velocity - which is why the aircraft leans into the rendezvous and stands
+    back up as it decelerates onto the dock, instead of flying around flat.
+    """
+
+    telemetry = result.telemetry
+    if not telemetry:
+        raise ValueError("episode recorded no telemetry")
 
     mouth = Vector(scene_data["mouth"])
     root = scene_data["uav_root"]
-    keeper = scene_data["keeper"]
 
-    # Where the probe head actually ends up: the funnel throat, which is
-    # `funnel_depth` above the mouth plane.  Everything else is flying to it.
-    throat_z = mouth.z + cm.D["funnel_depth_mm"] * cm.MM
-    captured_z = throat_z - cm.UAV_PROBE_STANDOFF
-    on_final_z = mouth.z - 0.13 - cm.UAV_PROBE_STANDOFF
+    seat_plane = mouth.z + cm.D["funnel_total_height_mm"] * cm.MM
+    head_offset = cm.UAV_PROBE_STANDOFF - cm.D["probe_head_seat_diameter_mm"] * cm.MM
+    captured = Vector((mouth.x, mouth.y, seat_plane - head_offset))
 
-    path = [
-        (500, (mouth.x - 0.72, mouth.y + 0.60, mouth.z - 0.92)),
-        (552, (mouth.x - 0.30, mouth.y + 0.24, mouth.z - 0.52)),
-        (596, (mouth.x - 0.03, mouth.y + 0.04, on_final_z - 0.07)),
-        (628, (mouth.x, mouth.y, on_final_z)),
-        (668, (mouth.x, mouth.y, captured_z)),
-        (720, (mouth.x, mouth.y, captured_z)),
-    ]
-    for frame, position in path:
-        key_location(root, frame, position)
+    # Telemetry is dock-minus-drone, so drone = captured + (rel_final - rel).
+    final = telemetry[-1]
+    first_frame, last_frame = SIM_WINDOW
+    span = last_frame - first_frame
+    duration = telemetry[-1].t_s
+    step = telemetry[1].t_s - telemetry[0].t_s
 
-    # A little roll authority on the way in, levelling off for the final.
-    for frame, rot in ((500, (0.0, 0.10, 0.58)), (552, (0.0, 0.05, 0.24)),
-                       (596, (0.0, 0.0, 0.05)), (628, (0.0, 0.0, 0.0)),
-                       (720, (0.0, 0.0, 0.0))):
-        root.rotation_euler = rot
+    keeper_close_frame = last_frame
+    for index, row in enumerate(telemetry):
+        frame = first_frame + int(round(span * row.t_s / duration))
+        key_location(root, frame, (
+            captured.x + (final.rel_x_m - row.rel_x_m),
+            captured.y + (final.rel_y_m - row.rel_y_m),
+            captured.z + (final.rel_z_m - row.rel_z_m),
+        ))
+
+        if 0 < index < len(telemetry) - 1:
+            ahead, behind = telemetry[index + 1], telemetry[index - 1]
+            ax = (ahead.rel_vx_m_s - behind.rel_vx_m_s) / (2.0 * step)
+            ay = (ahead.rel_vy_m_s - behind.rel_vy_m_s) / (2.0 * step)
+        else:
+            ax = ay = 0.0
+        # rel is dock-minus-drone, so the drone's own acceleration is -a.
+        root.rotation_euler = (math.atan2(ay, 9.81), math.atan2(-ax, 9.81), 0.0)
         root.keyframe_insert("rotation_euler", frame=frame)
 
-    # Keeper: 13 mm of travel, closing once the head is seated.
-    base = Vector(keeper.location)
-    travel = Vector((cm.D["keeper_open_travel_mm"] * cm.MM, 0.0, 0.0))
-    key_location(keeper, 662, base)
-    key_location(keeper, 686, base + travel)
-    key_location(keeper, 720, base + travel)
+        if row.keeper_command == "close" and keeper_close_frame == last_frame:
+            keeper_close_frame = frame
+
+    # Hold the seated pose to the end of the film.
+    key_location(root, END_FRAME, captured)
+    root.rotation_euler = (0.0, 0.0, 0.0)
+    root.keyframe_insert("rotation_euler", frame=END_FRAME)
+
+    # The aircraft appears on cue rather than being flown in from off-stage.
+    for obj in [root] + list(scene_data["uav_parts"]):
+        key_visible(obj, 1, False)
+        key_visible(obj, first_frame, True)
+    return keeper_close_frame
+
+
+#: (frame, crank angle).  The capture close at 686 is the real event; the two
+#: later cycles are the cutaway demonstrating the drive with its housing
+#: sectioned away.
+def keeper_schedule(close_frame=666):
+    """Crank angle over time.
+
+    The capture close is where the controller actually commanded it - the twin
+    issues `close` once the seat switch S1 makes, not on a frame chosen to look
+    right.  The stroke itself takes 24 frames, which is the servo's business.
+    """
+
+    import carrier_interior as ci
+
+    return [
+        (1, ci.THETA_OPEN),
+        (close_frame - 1, ci.THETA_OPEN),
+        (close_frame + 24, ci.THETA_CLOSED),
+        (806, ci.THETA_CLOSED),
+        (824, ci.THETA_OPEN),        # cutaway: reopen to show the stroke
+        (858, ci.THETA_CLOSED),
+        (884, ci.THETA_OPEN),        # inside the funnel: one more close
+        (918, ci.THETA_CLOSED),
+        (930, ci.THETA_CLOSED),
+    ]
 
 
 def animate_rotors(fan_start=306, uav_start=448):
@@ -263,8 +364,11 @@ def animate_ghosting(materials, opaque_until=614, clear_by=658, alpha=0.20):
         mat.shadow_method = "HASHED"
         mat.use_backface_culling = False
         socket = mat.node_tree.nodes["Principled BSDF"].inputs["Alpha"]
+        # Solid again before the cutaway: from 721 the housings are sectioned
+        # geometry, and leaving them translucent as well turned the lower half
+        # of the mechanism shot into overlapping ghosts.
         for frame, value in ((opaque_until, 1.0), (clear_by, alpha),
-                             (END_FRAME, alpha)):
+                             (SHOTS[10][0] - 1, alpha), (SHOTS[10][0], 1.0)):
             socket.default_value = value
             socket.keyframe_insert("default_value", frame=frame)
 
@@ -280,7 +384,13 @@ def animate_ghosting(materials, opaque_until=614, clear_by=658, alpha=0.20):
 #: through it.  Captions are 2D and belong in front of everything, so instead
 #: the assembly shots run with DOF off (see DOF_FROM_SHOT) and the captions
 #: stay sharp because nothing is defocusing them.
-CALLOUT_DISTANCE = 1.2
+#: Captions sit at a fraction of the shot's own subject distance, not at a
+#: fixed standoff.  Parked at a flat 1.2 m the caption ended up *behind* the
+#: dock on the close cutaway shot, where the subject is 0.35 m away, and the
+#: bay fairing simply occluded half of it.  Screen position is unaffected by
+#: distance, so pulling it in front costs nothing.
+CALLOUT_SUBJECT_FRACTION = 0.45
+CALLOUT_DISTANCE_LIMITS = (0.05, 1.2)
 CALLOUT_LEFT = -0.86            # fraction of half-frame width
 CALLOUT_TITLE_Y = -0.60         # fraction of half-frame height
 CALLOUT_SUB_Y = -0.72
@@ -298,10 +408,19 @@ def frame_metrics(lens, distance):
     return half_w, half_h, half_h * 2.0
 
 
-#: Depth of field is switched on from this shot index onward.  It earns its
-#: keep on the tight capture shots and costs nothing but blurred captions on
-#: the assembly ones, which is exactly where every caption lives.
-DOF_FROM_SHOT = 6
+#: Depth of field runs over the capture shots only.  It earns its keep there
+#: and costs nothing but blurred captions everywhere else - and every caption
+#: lives in the assembly and cutaway shots at either end of that window.
+DOF_SHOT_WINDOW = (6, 9)
+
+
+def callout_distance(shot):
+    """How far in front of the lens a shot's caption sits."""
+
+    cam = Vector(shot[2])
+    aim = Vector(shot[4])
+    low, high = CALLOUT_DISTANCE_LIMITS
+    return max(low, min(high, (aim - cam).length * CALLOUT_SUBJECT_FRACTION))
 
 
 def lens_at(shot, frame):
@@ -311,28 +430,49 @@ def lens_at(shot, frame):
     return lens_a + (lens_b - lens_a) * (frame - start) / span
 
 
+def sim_caption():
+    """One line describing the episode the capture is flown from."""
+
+    if SIM_RESULT is None or not SIM_RESULT.telemetry:
+        return "%.0f mm probe standoff" % cm.D["probe_tip_height_above_prop_plane_mm"]
+    duration = SIM_RESULT.telemetry[-1].t_s
+    window = (SIM_WINDOW[1] - SIM_WINDOW[0]) / float(FPS)
+    closing = SIM_RESULT.max_contact_closing_m_s or 0.0
+    return ("SIL %s seed %d  /  %.1f s at %.0fx  /  contact %.0f mm/s"
+            % (SIM_SCENARIO, SIM_SEED, duration, duration / window, closing * 1000.0))
+
+
 def callout_specs():
-    """(title, detail) per callout, in shot order - callout i covers SHOTS[i].
+    """(shot index, title, detail) - a callout names the shot it belongs to.
 
     Every number is read from the model or the Rev-B manifest.  A breakdown
     that labels parts with invented dimensions is worse than one that labels
-    nothing at all.
+    nothing at all - which is also why the cutaway carries an explicit
+    not-specified caption rather than letting representative geometry pass as
+    vendor data.
     """
 
     dock = cm.D
     return [
-        ("ENVELOPE", "%.1f m  /  %.1f m3 helium"
+        (0, "ENVELOPE", "%.1f m  /  %.1f m3 helium"
          % (cm.ENVELOPE_LENGTH_M, cm.HELIUM_VOLUME_M3)),
-        ("TAIL SURFACES", "NACA 00%02d  /  X-config"
+        (1, "TAIL SURFACES", "NACA 00%02d  /  X-config"
          % round(cm.FIN_THICKNESS * 100)),
-        ("KEEL RAIL", "dock and gondola hardpoints"),
-        ("GONDOLA", "avionics  /  ballast  /  skids"),
-        ("PROPULSION", "2 x ducted fan  /  prop-guarded"),
-        ("BELLY DOCK", "Rev-B  /  %.0f mm mouth  /  %.0f mm throat"
+        (2, "KEEL RAIL", "dock and gondola hardpoints"),
+        (3, "GONDOLA", "avionics  /  ballast  /  skids"),
+        (4, "PROPULSION", "2 x ducted fan  /  prop-guarded"),
+        (5, "BELLY DOCK", "Rev-B  /  %.0f mm mouth  /  %.0f mm throat"
          % (dock["funnel_mouth_diameter_mm"],
             dock["funnel_throat_diameter_mm"])),
-        ("MICRO-UAV", "%.0f mm probe standoff"
-         % dock["probe_tip_height_above_prop_plane_mm"]),
+        # Quote the episode, not a design intent: this is what the run did.
+        (6, "MICRO-UAV", sim_caption()),
+        (10, "INTERIOR  \u2014  SECTION", "ballonets and rigging representative,"
+         " not vendor-specified"),
+        (11, "KEEPER DRIVE", "slider-crank  /  R%.1f  /  L%.1f  /  %.1f mm stroke"
+         % (dock["crank_radius_mm"], dock["link_length_mm"],
+            dock["keeper_open_travel_mm"])),
+        (12, "CAPTURE", "keeper closes over the \u00d8%.0f mm probe head"
+         % dock["probe_head_diameter_mm"]),
     ]
 
 
@@ -356,8 +496,8 @@ def build_callouts(camera):
     from mathutils import Matrix
 
     made = []
-    for index, (title, detail) in enumerate(callout_specs()):
-        shot = SHOTS[index]
+    for index, (shot_index, title, detail) in enumerate(callout_specs()):
+        shot = SHOTS[shot_index]
         appear, vanish = shot[0] + 8, shot[1] - 5
 
         for row, (text, mat, y_frac, height) in enumerate((
@@ -376,13 +516,14 @@ def build_callouts(camera):
             obj.matrix_parent_inverse = Matrix.Identity(4)
             obj.rotation_euler = (0.0, 0.0, 0.0)
 
+            distance = callout_distance(shot)
             for frame in (appear, vanish):
                 lens = lens_at(shot, frame)
-                half_w, half_h, full_h = frame_metrics(lens, CALLOUT_DISTANCE)
+                half_w, half_h, full_h = frame_metrics(lens, distance)
                 # Text size 1.0 gives roughly 0.7 units of cap height.
                 scale = height * full_h / 0.7
                 obj.location = (CALLOUT_LEFT * half_w, y_frac * half_h,
-                                -CALLOUT_DISTANCE)
+                                -distance)
                 obj.scale = (scale, scale, scale)
                 obj.keyframe_insert("location", frame=frame)
                 obj.keyframe_insert("scale", frame=frame)
@@ -442,9 +583,11 @@ def animate_camera():
     camera.data.dof.aperture_fstop = 9.0
     camera.data.dof.aperture_blades = 7
 
-    # Off through the captioned assembly shots, on for the capture.
+    # On for the capture window only; off for assembly and for the cutaway.
+    first, last = DOF_SHOT_WINDOW
     for frame, enabled in ((1, False),
-                           (SHOTS[DOF_FROM_SHOT][0], True)):
+                           (SHOTS[first][0], True),
+                           (SHOTS[last][1] + 1, False)):
         camera.data.dof.use_dof = enabled
         camera.data.dof.keyframe_insert("use_dof", frame=frame)
     for curve in camera.data.animation_data.action.fcurves:
@@ -480,8 +623,7 @@ def animate_camera():
 
 def main():
     scene_data = cm.build_scene()
-    cm.add_camera("cam_hero", CAMERA_PATH[0][1], CAMERA_PATH[0][2],
-                  focal_mm=CAMERA_PATH[0][3])
+    cm.add_camera("cam_hero", SHOTS[0][2], SHOTS[0][4], focal_mm=SHOTS[0][6])
 
     scene = bpy.context.scene
     scene.frame_start = 1
@@ -489,7 +631,10 @@ def main():
     scene.render.fps = FPS
 
     animate_assembly(scene_data["groups"])
-    animate_capture(scene_data)
+    global SIM_RESULT
+    SIM_RESULT = run_sim_episode()
+    scene_data["sim"] = SIM_RESULT
+    scene_data["keeper_close_frame"] = animate_capture(scene_data, SIM_RESULT)
     animate_rotors()
     animate_control_surfaces(scene_data["controls"])
     animate_ghosting(scene_data["materials"])
