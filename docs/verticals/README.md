@@ -52,6 +52,20 @@ Requirements that multiple verticals generated independently. Owning them once p
 | SHARED-003 | Dock cost-down via toy-volume injection molding of funnel/keeper (10⁴–10⁵ units); tooling, unit cost, and cycle-life statistics feed every other vertical | TOY-011, with TOY-003/012 as inputs | funnel-size-vs-noise curve from `degraded-sensor-sweep` before any tooling spend |
 | SHARED-004 | Docked contact recharge with turnaround ≤ sortie-sustaining time; P0 defers charging, but no persistent vertical closes without it | AGR-005/006, ENG-007, FIRE-014, CUAS-010 | charge/contact-fault overlays on `sil-p0b`; sortie-cycle Monte Carlo extending `sil-p0d` |
 | SHARED-005 | Multi-day helium retention and field logistics: top-up interval and lift loss compatible with each vertical's deployment model | AGR-010, ENG-005/009, FIRE-009, TOY-006/007 | deterministic leakage/ballast bookkeeping model; no test article to calibrate against yet |
+| SHARED-006\* | Onboard mission and terminal autonomy sufficient that one radio channel supervises many airborne aircraft, not one continuous link per aircraft. Anchor result: in the fleet-throughput model, radio is the tightest resource that scales one-for-one with airborne count — a continuous-link fleet needs 10 radios for 200 airborne where a lightly-supervised one needs 1–2 — and it is the ceiling that battery-swap or any other throughput fix runs into next | FIRE-011/012, CUAS-008/012 (readiness and lost-link rows each vertical wrote separately, without naming the shared radio-budget cause) | [`aiur.sim.fleet`](../fleet-throughput.md): `size_for_airborne`/`size_carrier` report `radio_channels` and flag it in `taut_constraints`; `--scouts` shows a video-heavy scout wing eating the budget a supervisory-link recovery fleet needs |
+
+\* SHARED-006 has different provenance from SHARED-001…005 above, and the
+difference matters. The first five bubbled up bottom-up: independent
+verticals hit the same wall and this table exists to own it once. SHARED-006
+runs top-down, from a fleet-scale finding no vertical has reached the scale
+to hit yet — no vertical has flown enough aircraft at once to feel a radio
+ceiling. It is included here anyway because the fleet model states it as a
+hard, falling-out-of-arithmetic constraint (every airborne aircraft draws a
+link; links do not amortise the way capture heads do — see the
+[fleet-throughput verdict](../fleet-throughput.md#the-verdict-recovery-is-the-easy-part-to-scale)),
+not because a vertical asked for it. Treat it as a requirement to design for
+before any vertical scales past a handful of aircraft, not as evidence of
+present demand.
 
 ## Program sequencing
 
@@ -74,4 +88,4 @@ Top killer per vertical, from the studies. Each is a kill criterion, not a cavea
 | Counter-UAS | Buying the picture alone: procurement is written around detect-*and-defeat*, and this study specifies no effector — so it may be a component sale into someone else's system. Tethered aerostats with surveillance radar are the fielded incumbent; the sole differentiator is the close-look sortie cycle |
 | Toys | Positioning cost: terminal nav at ≤$10 BOM, where toy-grade cm noise forces a funnel a ≤2 m envelope may not be able to carry; helium retention over shelf weeks is the second killer |
 
-Portfolio-level observation: SHARED-001 appears in every vertical's top-five risks and SHARED-002 in every outdoor one. The two twin campaigns that resolve them — `degraded-sensor-sweep` and `outdoor-gust-sweep` — are the highest-leverage unfunded work in the program.
+Portfolio-level observation: SHARED-001 appears in every vertical's top-five risks and SHARED-002 in every outdoor one. The two twin campaigns that resolve them — `degraded-sensor-sweep` and `outdoor-gust-sweep` — are the highest-leverage unfunded work in the program. SHARED-006 appears in no vertical's risk table today, for the reason given at the table above: none has flown enough aircraft to hit it. That absence is not evidence it is low-priority — it is evidence every vertical's risk table was written at single-digit fleet sizes, and none of them has reasoned about what their own scaling story costs in radios.
