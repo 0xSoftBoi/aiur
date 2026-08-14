@@ -16,7 +16,7 @@ aircraft says nothing about a carrier recovering a hundred.
 The gap matters because the intuitive answer is wrong in both directions.
 The obvious worry — mass — is not the constraint. The constraints that do
 bind are ones nobody had written down. The conclusion the sections below
-build to is in [The verdict](#the-verdict-recovery-is-the-easy-part):
+build to is in [The verdict](#the-verdict-recovery-is-the-easy-part-to-scale):
 recovery, the funded article, is the easy part; the swarm is gated by the
 two resources that do not amortise — radio and energy — and the pivot that
 unlocks "hundreds" is onboard autonomy, not a bigger dock.
@@ -467,11 +467,16 @@ supervises many:
 | 100 (light supervision) | 2 |
 | 200 (autonomous) | 1 |
 
-Autonomy is the enabling technology for a real swarm, and it is the same
-GNSS-independent relative navigation (SHARED-001) the verticals already
-need. The scout finding is the mirror image: a video-streaming whoop
-re-imposes a fat continuous link and eats the budget, so the architecture
-wants **autonomy out, not video back**.
+Autonomy is the enabling technology for a real swarm, and it draws on the
+same GNSS-independent relative navigation (SHARED-001) the verticals already
+need. This finding is now its own inheritable requirement —
+[SHARED-006](verticals/README.md#shared-derived-requirements), onboard
+mission/terminal autonomy sufficient that one radio channel supervises many
+aircraft — filed with the honest note that it runs top-down from this model,
+not bottom-up from vertical pressure: no vertical has yet flown enough
+aircraft to feel the wall this memo is describing. The scout finding is the
+mirror image: a video-streaming whoop re-imposes a fat continuous link and
+eats the budget, so the architecture wants **autonomy out, not video back**.
 
 **And one carrier is the wrong unit.** A single vehicle tops out on radio,
 lift, and being a single point of failure. Hundreds airborne over a region
