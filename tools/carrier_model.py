@@ -1014,7 +1014,11 @@ def build_dock(bay_mat, funnel_mat, keeper_mat, ring_mat):
 
     made = []
     keel_z = -hull_radius(DOCK_BAY_X, HULL_RADIUS_M) - 0.055
-    flange_z = DOCK_MOUTH_Z + (D["funnel_depth_mm"] + D["funnel_flange_thickness_mm"]) * MM
+    # The keeper plane is the top of the funnel, not the top of its flange.
+    # The lathe profile runs the O16 throat bore from z=65 up to z=73, and the
+    # probe head emerges above 73 - so a keeper at 68 sits inside the throat
+    # collar, and the drive plate above it was buried in the same 5 mm.
+    flange_z = DOCK_MOUTH_Z + D["funnel_total_height_mm"] * MM
 
     # Bay fairing bridging the keel down to the funnel flange.
     count = 16
@@ -1033,8 +1037,12 @@ def build_dock(bay_mat, funnel_mat, keeper_mat, ring_mat):
     # square).  It has to be an annulus, not a disc: the keeper works directly
     # under it at the throat, and a solid plate hides the one mechanism the
     # capture shot exists to show.
+    # Below the keeper, not above it.  At flange +5 mm this plate occupied the
+    # same millimetres as the drive plate at flange +3.1 mm and hid the whole
+    # linkage from any camera above the dock.  The real stack is funnel flange,
+    # then keeper, then drive plate; the mounting plate belongs under all three.
     made.append(annulus_plate(
-        "dock_mounting_ring", (DOCK_BAY_X, 0.0, flange_z + 0.005),
+        "dock_mounting_ring", (DOCK_BAY_X, 0.0, flange_z - 0.005),
         r_in=D["funnel_throat_diameter_mm"] * 0.5 * MM * 2.4,
         r_out=D["funnel_flange_diameter_mm"] * 0.5 * MM * 1.22,
         thickness=0.006, material=ring_mat, coll="Dock"))
@@ -1045,7 +1053,7 @@ def build_dock(bay_mat, funnel_mat, keeper_mat, ring_mat):
             bpy.ops.mesh.primitive_cylinder_add(
                 radius=D["flange_hole_diameter_mm"] * 0.5 * MM * 1.6,
                 depth=0.012, vertices=16,
-                location=(DOCK_BAY_X + hx * half, hy * half, flange_z + 0.004))
+                location=(DOCK_BAY_X + hx * half, hy * half, flange_z - 0.005))
             bolt = active()
             bolt.name = "dock_flange_bolt"
             bolt.data.materials.append(ring_mat)
@@ -1057,6 +1065,12 @@ def build_dock(bay_mat, funnel_mat, keeper_mat, ring_mat):
 
     keeper = import_dock_part("p0a_keeper", keeper_mat)
     keeper.location = (DOCK_BAY_X, 0.0, flange_z)
+    # The keeper rides the funnel rather than being animated alongside it.
+    # Left unparented it lands in the assembly group, gets fly-in keyframes on
+    # `location`, and then the slider-crank bake fights them for the same
+    # channel - which showed up as 10.9 mm of stroke instead of 13.0.
+    keeper.parent = funnel
+    keeper.matrix_parent_inverse = funnel.matrix_world.inverted()
     made.append(keeper)
 
     return made, (DOCK_BAY_X, 0.0, DOCK_MOUTH_Z), keeper
@@ -1546,8 +1560,8 @@ def build_materials():
                    clearcoat=0.45),
         "funnel": pbr("dock_funnel_m", (0.84, 0.85, 0.82, 1.0), roughness=0.50),
         "keeper": pbr("dock_keeper_m", AMBER, roughness=0.38),
-        "ring": pbr("dock_ring", (0.48, 0.50, 0.53, 1.0), roughness=0.30,
-                    metallic=0.9),
+        "ring": pbr("dock_ring", (0.17, 0.18, 0.20, 1.0), roughness=0.34,
+                    metallic=0.75),
         "carbon": pbr("uav_carbon_m", (0.030, 0.033, 0.037, 1.0),
                       roughness=0.36, clearcoat=0.5),
         "metal": pbr("uav_metal_m", (0.53, 0.55, 0.58, 1.0), roughness=0.30,
