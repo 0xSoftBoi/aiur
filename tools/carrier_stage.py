@@ -354,6 +354,20 @@ def stage_lighting(fixtures, dock=(DOCK_BAY_X, 0.0, -1.05), scale=1.0):
     # The rake is now a shaping light, not a key - the rig above does that job.
     made.append(area_light("key_rake", (7.6, -7.2, 2.6), 180.0 * scale, 3.0,
                            (2.4, 0.0, -0.2)))
+
+    # Wall wash.  The tight shots push in until the floor and truss fall
+    # outside the frame, and with nothing lit behind the subject the whole
+    # background collapsed to black - which threw away the hall in exactly the
+    # shots that matter most.  Washing the far walls puts a lit surface behind
+    # the action and gives the vehicle an edge to separate against, without
+    # moving a single camera off the mechanism.
+    # Kept low.  At 620 W the far wall came up bright enough to compete with a
+    # white envelope, trading a black background for a flat one; the job here
+    # is a dim gradient to separate against, not a second key.
+    made.append(area_light("wall_wash_far", (2.6, 5.6, -0.4), 240.0 * scale,
+                           4.5, (2.6, 9.4, -0.6)))
+    made.append(area_light("wall_wash_end", (10.4, -1.0, 0.2), 170.0 * scale,
+                           4.0, (13.3, -1.0, 0.0)))
     return made
 
 
