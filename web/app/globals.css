@@ -1380,20 +1380,28 @@ h2 em {
 .careers {
   padding: clamp(90px, 12vw, 180px) 0;
   background-color: #0d0f0f;
-  background-position: center;
-  background-size: cover;
+  overflow: hidden;
+}
+
+/* next/image with `fill` needs an explicitly stacked, sized ancestor - the
+   section already provides the size via padding, this adds the stacking. */
+.careers-bg {
+  z-index: 0;
+  object-fit: cover;
+  object-position: center;
 }
 
 .careers::before {
   position: absolute;
   inset: 0;
+  z-index: 1;
   content: "";
   background: linear-gradient(90deg, rgba(8, 9, 9, 0.95) 0%, rgba(8, 9, 9, 0.78) 52%, rgba(8, 9, 9, 0.42) 100%);
 }
 
 .careers-inner {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .careers h2 {
@@ -2291,6 +2299,58 @@ h2 em {
   background: transparent;
   border-color: var(--signal);
   color: var(--signal);
+}
+
+/* Render frame -------------------------------------------------------------- */
+/* Shares the drawing plate's register (bordered box, mono caption row) but not
+   its title block: these are illustrative renders from the animated scene,
+   not dimensioned interface-control drawings, and shouldn't claim the same
+   precision. */
+
+.render-frame {
+  margin: clamp(40px, 5vw, 64px) 0 0;
+  border: 1px solid var(--line);
+  background: #0a0b0b;
+  overflow: hidden;
+}
+
+.render-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.render-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  font: 650 9px/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6c7370;
+}
+
+.render-caption strong {
+  font-weight: 650;
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+
+.paper-section .render-frame {
+  border-color: var(--dark-line);
+  background: var(--paper-soft);
+}
+
+.paper-section .render-caption {
+  border-top-color: var(--dark-line);
+  color: #6a706d;
+}
+
+.paper-section .render-caption strong {
+  color: var(--ink);
 }
 
 /* Drawing plate ------------------------------------------------------------ */
