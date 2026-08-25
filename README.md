@@ -44,6 +44,12 @@ Architecture, current model findings, and the sim-to-real calibration
 contract: [docs/digital-twin.md](docs/digital-twin.md). CI runs the SIL
 gates on every push.
 
+A separate, unexecuted scaffold wires the same real dock controller and
+mechanism model into NVIDIA Isaac Sim for higher-fidelity rigid-body/contact
+visualization — an addition to the twin above, not a replacement for it, and
+not run by anything in this repository:
+[docs/isaac-sim-integration.md](docs/isaac-sim-integration.md).
+
 ## Dual-use verticals
 
 The product core (buoyant carrier + mechanically positive dock + recovery
@@ -84,6 +90,9 @@ Program definition:
 Analysis and models:
 
 - [Digital twin](docs/digital-twin.md) and the [package](aiur/sim/)
+- [Isaac Sim integration scaffold](docs/isaac-sim-integration.md) and the
+  [package](aiur/isaacsim/) — unexecuted; not a gate, not a replacement for
+  the twin above
 - [Capture-architecture trade study](docs/capture-architecture-trade.md) —
   `python -m aiur.sim.design_study | python tools/report_study.py`
 - [Fleet-throughput study](docs/fleet-throughput.md) —
