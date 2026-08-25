@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { PageHead } from "@/components/page-head";
@@ -77,6 +78,22 @@ export default function CommitmentsPage() {
               <strong>TARGETS / NOT CLAIMED RESULTS</strong>
             </div>
           </div>
+        </div>
+
+        <div className="shell">
+          <figure className="render-frame" data-reveal>
+            <Image
+              src="/renders/dock-section.png"
+              alt="Simulated capture approach with software-in-the-loop episode telemetry overlaid: seed, elapsed time, and contact closing speed"
+              width={1920}
+              height={1080}
+              sizes="(max-width: 900px) 100vw, 900px"
+            />
+            <figcaption className="render-caption">
+              <span>SIMULATION OUTPUT, NOT CONCEPT ART — SEE RULE 001</span>
+              <strong>SIL / DIGITAL TWIN</strong>
+            </figcaption>
+          </figure>
         </div>
       </section>
 

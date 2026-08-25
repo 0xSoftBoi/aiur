@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { PageHead } from "@/components/page-head";
@@ -81,6 +82,20 @@ export default function CompanyPage() {
               </article>
             ))}
           </div>
+
+          <figure className="render-frame" data-reveal>
+            <Image
+              src="/renders/dock-capture-detail.png"
+              alt="The keeper closing on the seated probe head, the moment P0-A's gate measures"
+              width={1920}
+              height={1080}
+              sizes="(max-width: 900px) 100vw, 900px"
+            />
+            <figcaption className="render-caption">
+              <span>P0-A / WHAT THE GATE MEASURES</span>
+              <strong>RENDERED, NOT PHOTOGRAPHED</strong>
+            </figcaption>
+          </figure>
 
           <div className="section-foot">
             <Link className="button" href="/careers">

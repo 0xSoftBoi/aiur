@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { CARRIER_SPEC } from "@/lib/carrier-spec";
@@ -127,11 +128,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section
-        className="careers"
-        aria-labelledby="careers-title"
-        style={{ backgroundImage: "url(/renders/dock-hero.png)" }}
-      >
+      <section className="careers" aria-labelledby="careers-title">
+        <Image
+          src="/renders/dock-hero.png"
+          alt="CARRIER-P0 profile in the test hall, gondola and propulsion visible"
+          fill
+          sizes="100vw"
+          className="careers-bg"
+        />
         <div className="shell careers-inner">
           <p className="kicker">Careers</p>
           <h2 id="careers-title">Join the adventure</h2>

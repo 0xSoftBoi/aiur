@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { AppCard } from "@/components/app-card";
@@ -49,6 +50,20 @@ export default function ApplicationsPage() {
               on this page is a delivered capability.
             </p>
           </div>
+
+          <figure className="render-frame" data-reveal>
+            <Image
+              src="/renders/carrier-v1-approach.png"
+              alt="The micro-UAV on approach to the belly dock, rendered from a real SIL episode"
+              width={1920}
+              height={1080}
+              sizes="(max-width: 900px) 100vw, 900px"
+            />
+            <figcaption className="render-caption">
+              <span>ONE VEHICLE, EVERY DOMAIN ABOVE</span>
+              <strong>RENDERED, NOT PHOTOGRAPHED</strong>
+            </figcaption>
+          </figure>
 
           <div className="section-foot">
             <Link className="button" href="/solutions">

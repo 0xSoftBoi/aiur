@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { PageHead } from "@/components/page-head";
@@ -75,6 +76,39 @@ export default function SolutionsPage() {
             energy, deployment, and recovery layer. Small mission aircraft can stay
             small because the expensive capabilities live somewhere persistent.
           </p>
+
+          <figure className="render-frame" data-reveal>
+            <Image
+              src="/renders/carrier-v1-hero.png"
+              alt="CARRIER-P0 rendered from the animated scene: hull, gondola, propulsion, and belly dock"
+              width={1920}
+              height={1080}
+              sizes="(max-width: 900px) 100vw, 900px"
+            />
+            <figcaption className="render-caption">
+              <span>CARRIER-P0 / GENERAL ARRANGEMENT</span>
+              <strong>RENDERED, NOT PHOTOGRAPHED</strong>
+            </figcaption>
+          </figure>
+
+          <figure className="render-frame" data-reveal>
+            <video
+              src="/renders/carrier-p0-breakdown.mp4"
+              poster="/renders/carrier-p0-breakdown-poster.jpg"
+              controls
+              muted
+              loop
+              playsInline
+              preload="none"
+              width={1920}
+              height={1080}
+              aria-label="CARRIER-P0 assembly breakdown and belly-dock capture, rendered from the engineering geometry"
+            />
+            <figcaption className="render-caption">
+              <span>CARRIER-P0 / ASSEMBLY AND CAPTURE</span>
+              <strong>APPROACH FLOWN BY THE SIMULATOR</strong>
+            </figcaption>
+          </figure>
 
           <div className="carrier-capabilities" data-reveal aria-label="Long-term carrier capabilities">
             <div><span>01</span><strong>PERSISTENT LIFT</strong></div>
