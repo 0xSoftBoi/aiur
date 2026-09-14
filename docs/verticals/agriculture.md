@@ -42,7 +42,7 @@ The carrier's only defensible niche: leaf-level inspection at high cadence needs
 
 ## Concept of operations
 
-Canonical mission: fungal-pressure scouting over a 40 ha vineyard block. All phases assume the outdoor-scaled carrier, not the 4.5 m P0 article.
+Canonical mission: fungal-pressure scouting over a 40 ha vineyard block. All phases assume the outdoor-scaled carrier, not the 3.5 m P0 article.
 
 1. Pre-flight: carrier on mooring mast at farmstead; helium top-up check, mass audit, config identity recorded per the promotion contract.
 2. Launch and transit to the block; cruise 2–4 km at low altitude.
@@ -63,7 +63,7 @@ All rows Status = engineering target. None are measured. Wind and noise targets 
 
 | ID | Observable | Target | Driver |
 | --- | --- | --- | --- |
-| AGR-001 | Carrier station-keeping error in sustained wind | hold ≤10 m radius in W m/s sustained; W to be established, placeholder ≥8 m/s | 4.5 m P0 envelope is unflyable outdoors above light breeze; outdoor carrier is a scaling milestone |
+| AGR-001 | Carrier station-keeping error in sustained wind | hold ≤10 m radius in W m/s sustained; W to be established, placeholder ≥8 m/s | 3.5 m P0 envelope is unflyable outdoors above light breeze; outdoor carrier is a scaling milestone |
 | AGR-002 | Capture success rate vs wind level at the dock | ≥90% at the declared operating wind limit; collapse wind level to be found | outdoor-gust-sweep exists to find where capture collapses |
 | AGR-003 | Terminal relative position error, GNSS-independent | ≤30 mm 1σ lateral at funnel entry (180 mm funnel) | shared derived requirement: no Lighthouse outdoors; vision/UWB/IR beacon trade open |
 | AGR-004 | Carrier on-station endurance | ≥6 h loiter incl. dock + recharge power | daily scouting window; P0 reference endurance is 45–60 min |
@@ -101,7 +101,7 @@ Considerations to verify with counsel/FAA engagement, not legal conclusions.
 
 Ranked. Killers first.
 
-1. Outdoor wind tolerance. A 4.5 m envelope is unflyable outdoors in more than light breeze; drag scales with frontal area while control authority is thrust-limited. The outdoor carrier is a scaling milestone with its own envelope, propulsion, and gate ladder — none of it funded. If the `outdoor-gust-sweep` collapse wind level lands below typical daytime agricultural winds, the vertical dies here.
+1. Outdoor wind tolerance. A 3.5 m envelope is unflyable outdoors in more than light breeze; drag scales with frontal area while control authority is thrust-limited. The outdoor carrier is a scaling milestone with its own envelope, propulsion, and gate ladder — none of it funded. If the `outdoor-gust-sweep` collapse wind level lands below typical daytime agricultural winds, the vertical dies here.
 2. Economics vs manual quadcopter. A grower flying a $2k quadcopter 20 min/day covers most current scouting needs at near-zero marginal cost. The carrier concept only pays when required cadence × labor cost exceeds carrier capex + helium + maintenance. No cost model exists yet; building one is prerequisite to any funding ask.
 3. GNSS-independent terminal navigation. mm-grade relative positioning outdoors, on a moving carrier, in gusts, against sun glare and dust, with a grams-scale sensor budget on the aircraft. Trade (vision/UWB/IR beacon) is open; `degraded-sensor-sweep` bounds the requirement but does not produce the sensor.
 4. Capture dynamics in turbulence. P0 closes at ≤0.20 m/s against a quasi-static dock. A gust-excited dock is a moving target with its own spectrum; relative-motion capture may need funnel, probe, or control-law redesign — which re-enters the loop at P0-A, not at flight.

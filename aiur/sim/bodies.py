@@ -16,8 +16,10 @@ moving suspended-dock bench article: the dock moves on a programmed path and
 has no gas envelope to strike.
 
 Parameter provenance: masses marked "vendor" come from published Bitcraze
-figures already cited in docs/prototype-p0.md.  Every dynamic coefficient is
-an engineering estimate pending calibration against measured flight data.
+figures already cited in docs/prototype-p0.md; the carrier's length and
+helium volume come from the vendor article selected in ``aiur.envelope``.
+Every dynamic coefficient is an engineering estimate pending calibration
+against measured flight data.
 """
 
 from __future__ import annotations
@@ -26,6 +28,14 @@ from dataclasses import dataclass, field
 import math
 import random
 
+from ..envelope import (
+    P0_ARTICLE,
+    P0_SEMI_MAJOR_M,
+    P0_SEMI_MINOR_M,
+    ROOM_TEMPERATURE_C,
+    air_density_kg_m3,
+    spheroid_semi_minor_m,
+)
 from .vec import Vec3, ZERO
 
 
@@ -90,32 +100,65 @@ class DroneBody:
         self.velocity = ZERO
 
 
+#: Vertical distance from the hull's lowest point to the funnel mouth: keel
+#: rail, dock bay, and the funnel itself.  Fixed hardware, so it does not
+#: scale with the hull.  Engineering estimate.
+DOCK_STANDOFF_BELOW_HULL_M = 0.286
+
+#: Effective mass over displaced air mass.  A buoyant hull accelerates the
+#: air around it, so the mass the station-keeping loop pushes against is the
+#: vehicle plus an added-mass allowance of roughly a third.  Engineering
+#: estimate, unchanged from the 4.5 m calibration (9.0 kg on 5.5 m3).
+ADDED_MASS_FACTOR = 1.34
+
+#: Linear drag coefficient the 4.5 m calibration carried, and the frontal
+#: area it was set at; drag on a hull scales with frontal area, so a smaller
+#: hull inherits the coefficient through this ratio.  Engineering estimate.
+_REFERENCE_DRAG_N_PER_M_S = 1.5
+_REFERENCE_SEMI_MINOR_M = spheroid_semi_minor_m(4.5, 5.5)
+
+
+def _carrier_effective_mass_kg() -> float:
+    return ADDED_MASS_FACTOR * P0_ARTICLE.helium_volume_m3 * air_density_kg_m3(ROOM_TEMPERATURE_C)
+
+
+def _carrier_linear_drag_n_per_m_s() -> float:
+    return _REFERENCE_DRAG_N_PER_M_S * (P0_SEMI_MINOR_M / _REFERENCE_SEMI_MINOR_M) ** 2
+
+
 @dataclass(frozen=True)
 class CarrierParams:
-    """4.5 m indoor helium carrier surrogate parameters.
+    """Indoor helium carrier surrogate parameters for the P0 article.
 
-    The envelope semi-axes reproduce the documented 5.5 m^3 volume as a
-    prolate spheroid (2.25 x 0.764 x 0.764 m).  Effective mass includes an
-    added-mass allowance: a buoyant hull accelerates the air around it.
-    All dynamic values are engineering estimates.
+    Geometry comes from ``aiur.envelope.P0_ARTICLE`` (3.5 m, ~4 m^3 as the
+    vendor quotes it): the envelope semi-axes are the volume-matched prolate
+    spheroid (1.75 x 0.739 x 0.739 m), the dock hangs a fixed standoff under
+    the hull, and effective mass and drag are scaled from the 4.5 m
+    calibration by displaced volume and frontal area.  Thrust is the vendor's
+    motor set and does not change with the hull.  All dynamic values are
+    engineering estimates.
 
     Known omission: the model assumes neutral trim in every configuration.
-    Physically, capturing or releasing a 37 g aircraft changes dead weight
-    by ~0.36 N — more than the 0.3 N vertical thrust budget — so the real
-    carrier must re-trim (ballast/thrust bias) across a launch/recovery
-    cycle.  The twin does not model that transient; it is flagged in
-    docs/digital-twin.md for bench correlation.
+    Physically, capturing or releasing a ~48 g aircraft (airframe, deck and
+    probe) changes dead weight by ~0.47 N — more than the 0.3 N vertical
+    thrust budget — so the real carrier must re-trim (ballast/thrust bias)
+    across a launch/recovery cycle.  The twin does not model that transient;
+    it is flagged in docs/digital-twin.md for bench correlation.
     """
 
-    effective_mass_kg: float = 9.0
-    linear_drag_n_per_m_s: float = 1.5
+    effective_mass_kg: float = field(default_factory=_carrier_effective_mass_kg)
+    linear_drag_n_per_m_s: float = field(default_factory=_carrier_linear_drag_n_per_m_s)
     station_kp_n_per_m: float = 0.4
     station_kd_n_per_m_s: float = 1.2
     max_lateral_thrust_n: float = 0.4
     max_vertical_thrust_n: float = 0.3
-    envelope_semi_axes_m: Vec3 = field(default_factory=lambda: Vec3(2.25, 0.764, 0.764))
+    envelope_semi_axes_m: Vec3 = field(
+        default_factory=lambda: Vec3(P0_SEMI_MAJOR_M, P0_SEMI_MINOR_M, P0_SEMI_MINOR_M)
+    )
     #: Dock funnel entrance sits on the structural rail below the hull.
-    dock_offset_m: Vec3 = field(default_factory=lambda: Vec3(0.0, 0.0, -1.05))
+    dock_offset_m: Vec3 = field(
+        default_factory=lambda: Vec3(0.0, 0.0, -(P0_SEMI_MINOR_M + DOCK_STANDOFF_BELOW_HULL_M))
+    )
     #: Ground tether for P0-C style operations; slack below this length.
     tether_length_m: float = 3.4
     tether_stiffness_n_per_m: float = 5.0

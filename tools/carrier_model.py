@@ -7,10 +7,17 @@ vehicle as real geometry: a body-of-revolution hull on a low-drag airship
 profile, airfoil-section tail surfaces, a lofted gondola fairing, and vectored
 propulsion nacelles with actual duct and blade geometry.
 
-The dimensioned parts stay dimensioned.  Envelope length and helium volume are
-still the published 4.5 m / 5.5 m3, the dock is still the real Rev-B
+The dimensioned parts stay dimensioned.  Envelope length and helium volume
+are the vendor figures for the article selected in ``aiur.envelope`` (3.5 m,
+~4 m3 - see docs/carrier-sizing.md), the dock is still the real Rev-B
 fabrication STL, and the micro-UAV still carries the 110 mm probe standoff.
 What changes is everything the old file left as a placeholder.
+
+Vehicle-scale geometry - fin stations, keel, gondola, nacelle and dock-bay
+stations - is expressed as fractions of envelope length, so the model follows
+the spec when the article changes.  The fractions reproduce the layout that
+was composed by eye on the 4.5 m article; fixed hardware (the dock, the
+ducts, the aircraft) keeps its metric size.
 
 Hull form
 ---------
@@ -33,8 +40,18 @@ Axis convention matches render_carrier: Blender Z-up, vehicle nose toward +X.
 """
 
 import math
+import os
+import sys
 
 import bpy
+
+# The hull profile and the article dimensions live in the engineering package,
+# so the render, the twin and the mass budget share one definition.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
+from aiur.envelope import DEFAULT_PROFILE, P0_ARTICLE  # noqa: E402
 
 
 # --- context shim ------------------------------------------------------------
@@ -47,13 +64,17 @@ def active():
 
 
 # --- published spec ----------------------------------------------------------
-ENVELOPE_LENGTH_M = 4.5
-HELIUM_VOLUME_M3 = 5.5
+#: Vendor figures for the selected article; the sizing behind the selection
+#: is docs/carrier-sizing.md and `python -m aiur.envelope`.
+ENVELOPE_LENGTH_M = P0_ARTICLE.length_m
+HELIUM_VOLUME_M3 = P0_ARTICLE.helium_volume_m3
 
-#: Fraction of length at which the hull reaches maximum diameter.  Forward of
-#: mid-body is what separates an airship from a balloon.
-MAX_SECTION_X = 0.25
-
+#: The hull profile is `aiur.envelope.DEFAULT_PROFILE`; the names below are
+#: kept for readers of this file and for the callout text.
+#:
+#: MAX_SECTION_X: fraction of length at which the hull reaches maximum
+#: diameter.  Forward of mid-body is what separates an airship from a balloon.
+#:
 #: Aft-body shape: r = R * (1 - k * t**AFT_POWER) ** AFT_FULLNESS, t in [0, 1].
 #: AFT_POWER > 1 makes the curve leave the maximum section flat; AFT_FULLNESS
 #: below 1 keeps volume in the mid-body while still closing to a fine tail.
@@ -62,30 +83,19 @@ MAX_SECTION_X = 0.25
 #: tail off far too fast: Cp fell to 0.40, and holding 5.5 m3 at that fullness
 #: forced the diameter out to 1.97 m - the hull got fatter to pay for a tail
 #: that had no volume in it.
-AFT_POWER = 2.5
-AFT_FULLNESS = 0.70
-
-#: The tail does not close to a mathematical point - there is a tail cone
-#: fitting there.  Radius as a fraction of maximum radius.
-TAIL_RADIUS_FRAC = 0.035
+#:
+#: TAIL_RADIUS_FRAC: the tail does not close to a mathematical point - there
+#: is a tail cone fitting there.  Radius as a fraction of maximum radius.
+MAX_SECTION_X = DEFAULT_PROFILE.max_section_frac
+AFT_POWER = DEFAULT_PROFILE.aft_power
+AFT_FULLNESS = DEFAULT_PROFILE.aft_fullness
+TAIL_RADIUS_FRAC = DEFAULT_PROFILE.tail_radius_frac
 
 
 def hull_radius(x, radius, length=ENVELOPE_LENGTH_M):
     """Hull radius at station `x`, measured aft from the nose."""
 
-    x_max = MAX_SECTION_X * length
-    if x <= 0.0 or x >= length:
-        return 0.0
-    if x < x_max:
-        # Elliptical nose: blunt at the tip, tangent-continuous at the shoulder.
-        u = (x_max - x) / x_max
-        return radius * math.sqrt(max(0.0, 1.0 - u * u))
-    t = (x - x_max) / (length - x_max)
-    # `k` is set so the curve lands exactly on TAIL_RADIUS_FRAC at t = 1: the
-    # tail cone fitting gets a real radius to attach to without the taper being
-    # scaled down along its whole length to get there.
-    k = 1.0 - TAIL_RADIUS_FRAC ** (1.0 / AFT_FULLNESS)
-    return radius * (max(0.0, 1.0 - k * t ** AFT_POWER)) ** AFT_FULLNESS
+    return radius * DEFAULT_PROFILE.radius_frac(x / length)
 
 
 #: Number of gores the envelope is built from.  Real fabric envelopes are cut
@@ -131,7 +141,7 @@ def solve_hull_radius(volume=HELIUM_VOLUME_M3, length=ENVELOPE_LENGTH_M, steps=4
     numerical integration at unit radius gives the answer directly.  The
     quilting has to be integrated too: bulging every gore outward adds real
     volume, and ignoring it would quietly inflate the envelope past the
-    published 5.5 m3 while still claiming to hit it.
+    published volume while still claiming to hit it.
 
     Averaged over azimuth, (1 + q)^2 has mean 1 + A*span + 0.375*(A*span)^2,
     using mean(across) = 1/2 and mean(across^2) = 3/8 for the raised cosine.
@@ -229,7 +239,7 @@ def fabric_material(name, base_color, weave_scale=420.0, bump=0.055,
                     sheen=0.6, roughness=0.62):
     """Envelope fabric: woven bump plus roughness break-up.
 
-    A flat Principled surface on a 4.5 m envelope reads as vinyl no matter how
+    A flat Principled surface on a metres-long envelope reads as vinyl no matter how
     good the lighting is, because there is nothing at all between the silhouette
     and the pixel level.  Two noise textures fix that: a fine one driving a bump
     for the weave, and a coarse one breaking up roughness so the highlight
@@ -470,11 +480,13 @@ def build_envelope_detail(seam_mat, batten_mat):
 #: of the vehicle, and a bottom-centre fin would sit in the approach corridor
 #: the aircraft has to fly up.  X-config keeps the ventral centreline clear.
 FIN_ROLL_DEG = (45.0, 135.0, 225.0, 315.0)
-FIN_ROOT_LE_X = 3.16
-FIN_ROOT_CHORD = 1.10
-FIN_TIP_CHORD = 0.54
-FIN_SWEEP = 0.38
-FIN_SPAN = 0.60
+#: Fin planform as fractions of envelope length (composed at 4.5 m as
+#: 3.16 / 1.10 / 0.54 / 0.38 / 0.60 m).
+FIN_ROOT_LE_X = 0.7022 * ENVELOPE_LENGTH_M
+FIN_ROOT_CHORD = 0.2444 * ENVELOPE_LENGTH_M
+FIN_TIP_CHORD = 0.1200 * ENVELOPE_LENGTH_M
+FIN_SWEEP = 0.0844 * ENVELOPE_LENGTH_M
+FIN_SPAN = 0.1333 * ENVELOPE_LENGTH_M
 #: Fraction of chord where the fixed fin ends and the moving surface begins.
 FIN_HINGE = 0.68
 FIN_THICKNESS = 0.12
@@ -671,12 +683,16 @@ def build_strut(name, x, y, z0, z1, chord, material, coll, thickness=0.16):
 #: dock bay sits aft of it.  The old layout put the gondola directly on top of
 #: the dock's approach corridor, which is the one volume on the vehicle that has
 #: to stay empty.
-KEEL_X0 = 1.28
-KEEL_X1 = 3.02
-DOCK_BAY_X = 2.47
+#: Stations as fractions of envelope length (composed at 4.5 m as
+#: 1.28 / 3.02 / 2.47 m).
+KEEL_X0 = 0.2844 * ENVELOPE_LENGTH_M
+KEEL_X1 = 0.6711 * ENVELOPE_LENGTH_M
+DOCK_BAY_X = 0.5489 * ENVELOPE_LENGTH_M
 
-GONDOLA_X = 1.44
-GONDOLA_LENGTH = 0.88
+#: The gondola is the vendor's electronics cabin: its station and length
+#: follow the hull, its section is fixed hardware.
+GONDOLA_X = 0.3200 * ENVELOPE_LENGTH_M
+GONDOLA_LENGTH = 0.1956 * ENVELOPE_LENGTH_M
 GONDOLA_HALF_WIDTH = 0.16
 GONDOLA_HALF_HEIGHT = 0.12
 
@@ -786,7 +802,8 @@ def build_gondola(shell_mat, glass_mat, strut_mat):
 
 
 # --- propulsion --------------------------------------------------------------
-NACELLE_X = 2.30
+#: Nacelle station follows the hull (2.30 m at 4.5 m); the duct is hardware.
+NACELLE_X = 0.5111 * ENVELOPE_LENGTH_M
 NACELLE_LENGTH = 0.30
 DUCT_RADIUS = 0.115
 BLADE_COUNT = 5
@@ -953,9 +970,13 @@ MANIFEST = json.load(open(os.path.join(GENERATED, "p0a_rev_b_manifest.json")))
 D = MANIFEST["design"]
 MM = 0.001
 
-#: Mouth plane of the funnel, matching the site model's ventral station.  The
-#: dock hangs below the keel on a bay, which is the volume the bay fairing fills.
-DOCK_MOUTH_Z = -1.0375
+#: Mouth plane of the funnel.  The dock hangs below the keel on a bay, which
+#: is the volume the bay fairing fills; the mouth sits a fixed standoff under
+#: the hull at the bay station (0.3286 m: keel rail, bay and funnel, which are
+#: hardware and do not scale).  At 4.5 m this reproduced the site model's
+#: -1.0375 m ventral station.
+DOCK_MOUTH_STANDOFF_M = 0.3286
+DOCK_MOUTH_Z = -(hull_radius(DOCK_BAY_X, HULL_RADIUS_M) + DOCK_MOUTH_STANDOFF_M)
 
 
 def import_dock_part(stem, material, coll="Dock"):
@@ -1296,8 +1317,8 @@ def area_light(name, location, energy, size, target, coll="Lighting"):
     return put(light, coll)
 
 
-def build_lighting(centre=(2.25, 0.0, -0.2), dock=(DOCK_BAY_X, 0.0, -1.05),
-                   scale=1.0):
+def build_lighting(centre=(ENVELOPE_LENGTH_M / 2.0, 0.0, -0.2),
+                   dock=(DOCK_BAY_X, 0.0, DOCK_MOUTH_Z), scale=1.0):
     """Key, fill, rim and a dedicated belly bounce.
 
     The belly bounce is not optional.  The dock hangs underneath, so any rig
@@ -1322,8 +1343,8 @@ def build_lighting(centre=(2.25, 0.0, -0.2), dock=(DOCK_BAY_X, 0.0, -1.05),
         # hanging out of it - technically shadowed correctly, and useless.
         area_light("belly_bounce", (3.4, -2.6, -3.0), 135.0 * scale, 2.6, dock),
         area_light("dock_accent", (1.5, -1.4, -2.2), 42.0 * scale, 0.9, dock),
-        area_light("keel_fill", (2.4, -3.2, -1.5), 75.0 * scale, 2.0,
-                   (2.3, 0.0, -0.80)),
+        area_light("keel_fill", (NACELLE_X + 0.1, -3.2, -1.5), 75.0 * scale, 2.0,
+                   (NACELLE_X, 0.0, -0.80)),
     ]
 
 
@@ -1450,10 +1471,11 @@ def build_nav_lights(materials):
     """Port red, starboard green, white tail and a top anti-collision beacon."""
 
     made = []
+    length = ENVELOPE_LENGTH_M
     specs = [
-        ("nav_port", 1.62, math.radians(200.0), materials["nav_red"]),
-        ("nav_stbd", 1.62, math.radians(-20.0), materials["nav_green"]),
-        ("nav_top", 2.10, math.radians(90.0), materials["nav_beacon"]),
+        ("nav_port", 0.36 * length, math.radians(200.0), materials["nav_red"]),
+        ("nav_stbd", 0.36 * length, math.radians(-20.0), materials["nav_green"]),
+        ("nav_top", 0.4667 * length, math.radians(90.0), materials["nav_beacon"]),
     ]
     for name, x, theta, mat in specs:
         r = hull_surface(x, theta) + 0.004
@@ -1478,7 +1500,8 @@ def build_nav_lights(materials):
     return made
 
 
-def build_hull_marking(text, material, x=1.55, size=0.20):
+def build_hull_marking(text, material, x=0.3444 * ENVELOPE_LENGTH_M,
+                       size=0.0444 * ENVELOPE_LENGTH_M):
     """Programme marking on the envelope flank, wrapped onto the hull.
 
     Built as text, converted to a mesh and shrink-wrapped radially onto the

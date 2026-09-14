@@ -94,6 +94,18 @@ function makeMicroDrone(materials: {
   return group;
 }
 
+/**
+ * Hull-relative layout. The vehicle-scale geometry (seams, tail, rail) is
+ * placed as fractions of the spheroid semi-axes so it follows the spec; the
+ * fixed-size hardware (gondola, pods, dock, aircraft) keeps its metric size
+ * and hangs a fixed standoff under the hull.
+ */
+const HULL_A = CARRIER_SPEC.envelopeLengthM / 2;
+const HULL_B = EQUIVALENT_ENVELOPE_DIAMETER_M / 2;
+const RAIL_Y = -(HULL_B + 0.026);
+const DOCK_X = 0.098 * HULL_A;
+const FUNNEL_Y = -(HULL_B + 0.241);
+
 function addCarrier(scene: THREE.Scene) {
   const carrier = new THREE.Group();
   carrier.name = "CARRIER-P0";
@@ -121,19 +133,14 @@ function addCarrier(scene: THREE.Scene) {
   const orangeMaterial = new THREE.MeshBasicMaterial({ color: AMBER });
 
   const hull = new THREE.Mesh(new THREE.SphereGeometry(1, 72, 36), hullMaterial);
-  hull.scale.set(
-    CARRIER_SPEC.envelopeLengthM / 2,
-    EQUIVALENT_ENVELOPE_DIAMETER_M / 2,
-    EQUIVALENT_ENVELOPE_DIAMETER_M / 2,
-  );
+  hull.scale.set(HULL_A, HULL_B, HULL_B);
   carrier.add(hull);
 
   // Circumferential construction seams make the volume readable without a
   // fake sci-fi wireframe. Their radii follow the same prolate spheroid.
-  [-1.55, -0.78, 0, 0.78, 1.55].forEach((x) => {
-    const a = CARRIER_SPEC.envelopeLengthM / 2;
-    const b = EQUIVALENT_ENVELOPE_DIAMETER_M / 2;
-    const radius = b * Math.sqrt(1 - (x * x) / (a * a));
+  [-0.69, -0.35, 0, 0.35, 0.69].forEach((fraction) => {
+    const x = fraction * HULL_A;
+    const radius = HULL_B * Math.sqrt(1 - fraction * fraction);
     const seam = new THREE.Mesh(
       new THREE.TorusGeometry(radius, 0.004, 5, 64),
       seamMaterial,
@@ -145,30 +152,31 @@ function addCarrier(scene: THREE.Scene) {
 
   // Tail surfaces. These are intentionally simple visual geometry; the vendor
   // envelope length/volume and P0 dock/UAV dimensions remain the scale anchors.
+  const finChord = 0.276 * HULL_A;
   const finHorizontal = new THREE.Mesh(
-    new THREE.BoxGeometry(0.62, 0.025, 1.1),
+    new THREE.BoxGeometry(finChord, 0.025, 1.44 * HULL_B),
     darkMaterial,
   );
-  finHorizontal.position.x = -1.83;
+  finHorizontal.position.x = -0.813 * HULL_A;
   finHorizontal.rotation.z = -0.09;
   const finVertical = new THREE.Mesh(
-    new THREE.BoxGeometry(0.62, 0.9, 0.025),
+    new THREE.BoxGeometry(finChord, 1.18 * HULL_B, 0.025),
     darkMaterial,
   );
-  finVertical.position.set(-1.82, 0.16, 0);
+  finVertical.position.set(-0.809 * HULL_A, 0.21 * HULL_B, 0);
   finVertical.rotation.z = -0.13;
   carrier.add(finHorizontal, finVertical);
 
   const rail = new THREE.Mesh(
-    new THREE.BoxGeometry(1.62, 0.035, 0.09),
+    new THREE.BoxGeometry(0.72 * HULL_A, 0.035, 0.09),
     structuralMaterial,
   );
-  rail.position.y = -0.79;
+  rail.position.y = RAIL_Y;
   const gondola = new THREE.Mesh(
     new THREE.BoxGeometry(0.82, 0.17, 0.32),
     darkMaterial,
   );
-  gondola.position.set(0.1, -0.87, 0);
+  gondola.position.set(0.044 * HULL_A, RAIL_Y - 0.08, 0);
   carrier.add(rail, gondola);
 
   // Vendor baseline is a dual vector-motor platform. Keep both propulsion pods
@@ -179,7 +187,7 @@ function addCarrier(scene: THREE.Scene) {
       structuralMaterial,
     );
     motor.rotation.z = Math.PI / 2;
-    motor.position.set(-0.08, -0.81, z);
+    motor.position.set(-0.036 * HULL_A, RAIL_Y - 0.02, z);
     const rotor = new THREE.Mesh(
       new THREE.TorusGeometry(0.074, 0.006, 8, 32),
       darkMaterial,
@@ -207,18 +215,18 @@ function addCarrier(scene: THREE.Scene) {
       side: THREE.DoubleSide,
     }),
   );
-  funnel.position.set(0.22, -1.005, 0);
+  funnel.position.set(DOCK_X, FUNNEL_Y, 0);
   carrier.add(funnel);
 
   const throat = new THREE.Mesh(
     new THREE.CylinderGeometry(0.008, 0.008, 0.055, 18),
     structuralMaterial,
   );
-  throat.position.set(0.22, -0.947, 0);
+  throat.position.set(DOCK_X, FUNNEL_Y + 0.058, 0);
   carrier.add(throat);
 
   const status = new THREE.Mesh(new THREE.SphereGeometry(0.013, 12, 12), orangeMaterial);
-  status.position.set(0.47, -0.88, 0.168);
+  status.position.set(DOCK_X + 0.25, RAIL_Y - 0.09, 0.168);
   carrier.add(status);
 
   scene.add(carrier);
@@ -396,8 +404,9 @@ export function CarrierScene() {
     const drones = [droneA, droneB];
     drones.forEach((drone) => scene.add(drone));
 
-    const dockedA = new THREE.Vector3(0.22, -1.145, 0);
-    const dockedB = new THREE.Vector3(-0.12, -1.27, -0.2);
+    // Aircraft A hangs on the dock; B waits on its stow point aft of it.
+    const dockedA = new THREE.Vector3(DOCK_X, FUNNEL_Y - 0.14, 0);
+    const dockedB = new THREE.Vector3(DOCK_X - 0.34, FUNNEL_Y - 0.265, -0.2);
     const sortieA = new THREE.Vector3(1.55, -0.1, 1.15);
     const sortieB = new THREE.Vector3(0.65, 0.75, 1.75);
     droneA.position.copy(dockedA);

@@ -41,8 +41,15 @@ OUT_DIR = dock.OUT_DIR
 MM = dock.MM
 
 # --- carrier-spec.ts ---------------------------------------------------------
-ENVELOPE_LENGTH_M = 4.5
-HELIUM_VOLUME_M3 = 5.5
+# Length and volume are the vendor figures for the article selected in
+# aiur/envelope.py, the same numbers carrier-spec.ts carries.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+from aiur.envelope import P0_ARTICLE  # noqa: E402
+
+ENVELOPE_LENGTH_M = P0_ARTICLE.length_m
+HELIUM_VOLUME_M3 = P0_ARTICLE.helium_volume_m3
 DOCK_MOUTH_M = 0.18
 DOCK_DEPTH_M = 0.065
 DRONE_MOTOR_DIAGONAL_M = 0.1
@@ -57,6 +64,14 @@ _SEMI_MAJOR_M = ENVELOPE_LENGTH_M / 2.0
 EQUIVALENT_ENVELOPE_DIAMETER_M = 2.0 * math.sqrt(
     HELIUM_VOLUME_M3 / ((4.0 / 3.0) * math.pi * _SEMI_MAJOR_M)
 )
+_SEMI_MINOR_M = EQUIVALENT_ENVELOPE_DIAMETER_M / 2.0
+
+#: Hull-relative layout, mirroring carrier-scene.tsx: vehicle-scale geometry
+#: as fractions of the semi-axes, fixed hardware at a fixed standoff under
+#: the hull.  The fractions reproduce the layout composed at 4.5 m.
+RAIL_Y = -(_SEMI_MINOR_M + 0.026)
+DOCK_X = 0.098 * _SEMI_MAJOR_M
+FUNNEL_Y = -(_SEMI_MINOR_M + 0.241)
 
 # Site palette.
 WHITE = (0.86, 0.87, 0.84, 1.0)
@@ -210,22 +225,26 @@ def build_carrier(collect=False):
 
     # Circumferential construction seams: they make the volume readable without
     # a sci-fi wireframe, and they follow the same spheroid the hull does.
-    for station in (-1.55, -0.78, 0.0, 0.78, 1.55):
-        radius = semi_minor * math.sqrt(1.0 - (station ** 2) / (_SEMI_MAJOR_M ** 2))
-        torus(f"seam_{station}", radius, 0.004, site(station, 0.0, 0.0), seam_mat,
+    a = _SEMI_MAJOR_M
+    for fraction in (-0.69, -0.35, 0.0, 0.35, 0.69):
+        station = fraction * a
+        radius = semi_minor * math.sqrt(1.0 - fraction ** 2)
+        torus(f"seam_{fraction}", radius, 0.004, site(station, 0.0, 0.0), seam_mat,
               rotation=(0.0, math.pi / 2.0, 0.0))
 
-    box("fin_horizontal", (0.62, 1.1, 0.025), site(-1.83, 0.0, 0.0), dark_mat,
-        rotation=(0.0, -0.09, 0.0))
-    box("fin_vertical", (0.62, 0.025, 0.9), site(-1.82, 0.16, 0.0), dark_mat,
+    fin_chord = 0.276 * a
+    box("fin_horizontal", (fin_chord, 1.44 * semi_minor, 0.025),
+        site(-0.813 * a, 0.0, 0.0), dark_mat, rotation=(0.0, -0.09, 0.0))
+    box("fin_vertical", (fin_chord, 0.025, 1.18 * semi_minor),
+        site(-0.809 * a, 0.21 * semi_minor, 0.0), dark_mat,
         rotation=(0.0, -0.13, 0.0))
 
-    box("rail", (1.62, 0.09, 0.035), site(0.0, -0.79, 0.0), structural_mat)
-    box("gondola", (0.82, 0.32, 0.17), site(0.1, -0.87, 0.0), dark_mat)
+    box("rail", (0.72 * a, 0.09, 0.035), site(0.0, RAIL_Y, 0.0), structural_mat)
+    box("gondola", (0.82, 0.32, 0.17), site(0.044 * a, RAIL_Y - 0.08, 0.0), dark_mat)
 
     # Dual vector-motor platform, kept visually subordinate to the envelope.
     for offset in (-0.42, 0.42):
-        pod_at = site(-0.08, -0.81, offset)
+        pod_at = site(-0.036 * a, RAIL_Y - 0.02, offset)
         cylinder("pod", 0.085, 0.19, pod_at, structural_mat,
                  rotation=(0.0, math.pi / 2.0, 0.0), verts=24)
         torus("pod_rotor", 0.074, 0.006, pod_at + Vector((0.1, 0.0, 0.0)), dark_mat,
@@ -234,7 +253,7 @@ def build_carrier(collect=False):
     # The dock, as the real Rev-B geometry rather than the site's stand-in cone.
     # The funnel part is authored mouth-down with its mouth at part z=0, so
     # placing it at the mouth plane puts the throat where the site draws it.
-    mouth_plane = site(0.22, -1.005 - DOCK_DEPTH_M / 2.0, 0.0)
+    mouth_plane = site(DOCK_X, FUNNEL_Y - DOCK_DEPTH_M / 2.0, 0.0)
     funnel_mat = dock.material("dock_funnel", WHITE, roughness=0.5)
     funnel = dock.import_part("p0a_funnel", funnel_mat)
     funnel.location = mouth_plane
@@ -260,7 +279,7 @@ def build_materials():
 
 
 def add_lighting():
-    """Rig sized for a 4.5 m vehicle, not the 0.18 m dock."""
+    """Rig sized for a metres-long vehicle, not the 0.18 m dock."""
 
     world = bpy.data.worlds.new("World")
     bpy.context.scene.world = world
@@ -280,7 +299,7 @@ def add_lighting():
         )
         return light
 
-    # Inverse-square puts a 4.5 m subject at ~6 m in the low thousands of watts.
+    # Inverse-square puts a vehicle-sized subject at ~6 m in the low thousands of watts.
     # The first pass used 24 kW and rendered a graphite envelope as paper white,
     # which loses both the seams and the material.
     area("key", (5.0, -6.5, 5.5), 3200.0, 5.0)
@@ -289,10 +308,10 @@ def add_lighting():
     # The dock is on the belly, which a key light from above puts in full
     # shadow: the one frame that shows a capture was the one frame lit worst.
     # This is a soft bounce from below-front, not a second key.
-    area("belly", (1.6, -2.4, -2.6), 260.0, 2.2, target=(0.22, 0.0, -1.05))
+    area("belly", (1.6, -2.4, -2.6), 260.0, 2.2, target=(DOCK_X, 0.0, FUNNEL_Y - 0.045))
 
 
-#: v1 is the article the programme is actually building: a 4.5 m indoor helium
+#: v1 is the article the programme is actually building: a 3.5 m indoor helium
 #: platform, one belly dock, one to two micro-UAVs, tethered and prop-guarded.
 #: Nothing in these frames is aspirational — the dock is the real Rev-B
 #: fabrication geometry and the probe standoff is the dimensioned 110 mm.  The

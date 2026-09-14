@@ -54,7 +54,24 @@ ASSEMBLY = [
 #: own framing and a move inside it, cut hard at the boundaries.
 #:
 #: (start, end, cam_start, cam_end, aim_start, aim_end, lens_start, lens_end)
-SHOTS = [
+#:
+#: These positions were framed by eye on the 4.5 m article, whose dock bay
+#: sat at x = 2.47 m with the funnel mouth at z = -1.0375 m.  The vehicle is
+#: now built from the article in `aiur.envelope`, so every camera and aim
+#: point is translated by the dock's displacement (see `DOCK_SHIFT` below):
+#: the dock is the same hardware and keeps its framing exactly, and the wide
+#: vehicle shots keep their composition on a hull that is shorter.  Re-frame
+#: by hand when the film is next rendered; the shots have not been re-cut for
+#: the 3.5 m article yet.
+_FRAMED_DOCK = (2.47, 0.0, -1.0375)
+DOCK_SHIFT = (cm.DOCK_BAY_X - _FRAMED_DOCK[0], 0.0, cm.DOCK_MOUTH_Z - _FRAMED_DOCK[2])
+
+
+def _follow_dock(point):
+    return tuple(p + d for p, d in zip(point, DOCK_SHIFT))
+
+
+_SHOTS_AS_FRAMED = [
     # -- assembly --------------------------------------------------------
     # Establish the hall first, so the vehicle has somewhere to be.
     (1, 74, (-6.2, -9.0, 2.9), (-5.1, -8.1, 2.1),
@@ -104,6 +121,12 @@ SHOTS = [
     # Tight on the keeper closing over the probe head.
     (871, 930, (2.4972, -0.0585, -0.9375), (2.4890, -0.0468, -0.9420),
      (2.4560, 0.0, -0.9600), (2.4560, 0.0, -0.9600), 60.0, 75.0),
+]
+
+SHOTS = [
+    (start, end, _follow_dock(cam_a), _follow_dock(cam_b),
+     _follow_dock(aim_a), _follow_dock(aim_b), lens_a, lens_b)
+    for start, end, cam_a, cam_b, aim_a, aim_b, lens_a, lens_b in _SHOTS_AS_FRAMED
 ]
 
 #: The capture is flown by the digital twin, not by hand.  `aiur/sim` is the

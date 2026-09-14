@@ -277,16 +277,35 @@ REQUIREMENTS: tuple[Requirement, ...] = (
     Requirement(
         "P0-MASS-003",
         "total carried mass allocation against the vendor-rated payload",
-        "<= 1.0 kg rated payload, with the baseline allocation <= 425.4 g",
-        "cut allocation before adding hardware; never spend the rated-payload reserve",
-        "executable mass budget in aiur/p0.py",
+        "<= 0.5 kg rated payload of the 3.5 m article, with the baseline "
+        "allocation <= 425.4 g and a reserve of >= 10% of the rating and >= one "
+        "aircraft's dead-weight step (47.7 g)",
+        "cut allocation before adding hardware; if the reserve rule no longer "
+        "closes, step up to the next catalog article (4.5 m, 1.0 kg) rather "
+        "than spending the reserve",
+        "executable mass budget and article selection in aiur/p0.py and aiur/envelope.py",
         VerificationMethod.ANALYSIS,
         Stage.REQUIREMENT,
         None,
         None,
         ClosureStatus.CLOSED,
-        "aiur/p0.py baseline_p0_budget + tests/test_p0.py payload-margin case; "
-        "allocation only — re-open when measured article masses exist",
+        "aiur/p0.py baseline_p0_budget + selected_article, tests/test_p0.py and "
+        "tests/test_envelope.py; allocation only — re-open when measured article "
+        "masses exist, and re-run selection before the carrier is ordered",
+    ),
+    Requirement(
+        "P0-MASS-004",
+        "measured free lift of the delivered carrier at neutral trim, complete "
+        "P0 payload fitted",
+        ">= the vendor's rated payload minus the fitted payload, i.e. the "
+        "reserve rule closes on the measured vehicle, not on the catalog figure",
+        "do not fly the recovery campaign; re-run article selection against "
+        "the measured figure and re-order or reduce allocation",
+        "P0-C readiness: weighed ballast at neutral trim with the payload "
+        "fitted, helium purity and room temperature recorded",
+        VerificationMethod.TEST,
+        Stage.TETHERED_FLIGHT,
+        "P0-C",
     ),
     Requirement(
         "P0-SAFE-001",
