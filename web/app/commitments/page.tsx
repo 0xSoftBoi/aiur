@@ -4,18 +4,19 @@ import Link from "next/link";
 import { PageHead } from "@/components/page-head";
 import { Pager } from "@/components/pager";
 import { BENCH_GATE } from "@/lib/site-content";
+import { STRATO_SPEC } from "@/lib/strato-spec";
 
 export const metadata: Metadata = {
   title: "Commitments",
   description:
-    "Evidence before claims: the P0-A bench gate, its exit criteria, and the rules that govern them.",
+    "Evidence before claims: the S0-A bench and cold-chamber gate, its exit criteria, and the rules that govern them.",
 };
 
 const RULES = [
-  ["001", "Concept art is not evidence", "A render proves a shape, never a force, a cycle count, or a release."],
-  ["002", "Targets are labelled as targets", "Numbers stay marked as exit criteria until a measurement replaces them."],
+  ["001", "Concept art is not evidence", "A render proves a shape, never a temperature, a link margin, or a landing. A picture from altitude with no position tag is concept art."],
+  ["002", "Targets are labelled as targets", "Numbers stay marked as model results or exit criteria until a measurement replaces them."],
   ["003", "Missing evidence is a failed gate", "Absence of a result is treated as a negative result, not as a pending one."],
-  ["004", "Power loss holds, it does not drop", "If the actuator loses power with an aircraft captured, it stays mechanically retained. The keeper is not the load path, and software is never permitted to release something it cannot observe."],
+  ["004", "Termination does not need the computer", "If the payload computer freezes at −55 °C, the flight still ends on its own timer and its own power. Software is never the only way down."],
 ] as const;
 
 export default function CommitmentsPage() {
@@ -31,7 +32,7 @@ export default function CommitmentsPage() {
             <strong>and will not claim</strong>
           </>
         }
-        lede="The first article is deliberately unglamorous. Everything Aiur claims has to survive contact with a bench before it appears anywhere else."
+        lede="The first article is deliberately unglamorous. Everything Aiur claims has to survive a cold chamber before it appears anywhere else."
       />
 
       <section className="evidence" id="interface" aria-labelledby="evidence-title">
@@ -39,30 +40,30 @@ export default function CommitmentsPage() {
           <div className="evidence-copy">
             <div className="section-meta light-meta">
               <span>01 / PHYSICAL TRUTH</span>
-              <span>REV-A / BENCH</span>
+              <span>S0-A / BENCH + CHAMBER</span>
             </div>
             <p className="eyebrow">THE HARD PART FIRST</p>
             <h2 id="evidence-title">
-              THE RECOVERY
+              THE FLIGHT
               <br />
-              <em>INTERFACE.</em>
+              <em>PACKAGE.</em>
             </h2>
             <p className="section-lede">
-              A Ø180 mm recovery mouth, a positive mechanical keeper that owns
-              retention outright, two independent physical contacts that must both
-              agree before capture is claimed, and an emergency release commanded
-              from every software state.
+              A package under {STRATO_SPEC.payloadAllocationKg.toFixed(1)} kg with an imager,
+              two independent trackers on separate power, a parachute drop-tested
+              to {STRATO_SPEC.landingRateLimitMps.toFixed(0)} m/s, and a flight
+              termination demonstrated with the payload computer switched off.
             </p>
             <p className="evidence-note">
-              P0-A is a bench gate, not a marketing milestone. Propellers stay off.
+              S0-A is a chamber gate, not a marketing milestone. Nothing flies.
               Missing evidence is a failed gate.
             </p>
           </div>
 
-          <div className="gate-panel" data-reveal aria-label="P0-A exit criteria">
+          <div className="gate-panel" data-reveal aria-label="S0-A exit criteria">
             <div className="gate-head">
-              <span>P0-A / EXIT CRITERIA</span>
-              <strong>BENCH CAPTURE</strong>
+              <span>S0-A / EXIT CRITERIA</span>
+              <strong>BENCH + COLD CHAMBER</strong>
             </div>
             <div className="gate-grid">
               {BENCH_GATE.map(([value, label]) => (
@@ -83,41 +84,41 @@ export default function CommitmentsPage() {
       <section className="plate-section" aria-labelledby="plate-title">
         <div className="shell">
           <div className="section-meta light-meta">
-            <span>02 / CONTROLLED GEOMETRY</span>
-            <span>REV-B / SCREENING ARTICLE</span>
+            <span>02 / THE CLIMB</span>
+            <span>STANDARD ATMOSPHERE / MODEL</span>
           </div>
           <div className="section-head">
-            <h2 id="plate-title">The drawing is generated, not drawn</h2>
+            <h2 id="plate-title">The ladder is computed, not drawn</h2>
             <p className="section-lede">
-              Every callout below is emitted by the same script that writes the
-              STLs the printer receives. A dimension on this sheet cannot
-              disagree with the part that gets made.
+              Every altitude on this sheet is emitted by the same script that
+              sizes the balloon, the canopy, and the battery. A number here
+              cannot disagree with the model the article is built against.
             </p>
           </div>
 
           <figure className="plate" data-reveal>
             <div className="plate-sheet">
               <img
-                src="/p0a_cross_section_rev_b_dark.svg"
-                alt="Dimensioned cross-section of the P0-A Rev-B recovery interface: Ø180 mm funnel mouth, Ø16 mm throat, 65 mm depth, Ø12 mm probe belt, Ø9 mm seat, 5.2 mm keeper slot, 110 mm probe tip standoff above the rotor plane."
+                src="/strato-altitude-ladder.svg"
+                alt={`STRATO-P0 altitude ladder: airliner cruise and the standard-atmosphere tropopause near 11 km, the ${STRATO_SPEC.thresholdAltitudeM / 1000} km stratospheric threshold with a ${Math.round(STRATO_SPEC.horizonDistanceKm)} km horizon and ${STRATO_SPEC.nadirGsdM} m nadir GSD, the predicted burst at ${(STRATO_SPEC.predictedBurstAltitudeM / 1000).toFixed(1)} km about ${Math.round(STRATO_SPEC.timeToBurstMin)} minutes after release, and a parachute descent to a landing within 15 km of prediction.`}
               />
             </div>
             <figcaption className="plate-block">
-              <div><span>DRAWING</span><strong>P0A-XS-REV-B</strong></div>
-              <div><span>REVISION</span><strong>B</strong></div>
-              <div><span>UNITS</span><strong>MILLIMETRES</strong></div>
-              <div><span>SOURCE</span><strong>generate_rev_a.py</strong></div>
-              <div><span>COMMIT</span><strong>ab364ba</strong></div>
-              <div><span>STATUS</span><strong>SCREENING ARTICLE</strong></div>
+              <div><span>DIAGRAM</span><strong>STRATO-LADDER</strong></div>
+              <div><span>ATMOSPHERE</span><strong>US 1976</strong></div>
+              <div><span>UNITS</span><strong>KILOMETRES</strong></div>
+              <div><span>SOURCE</span><strong>aiur/strato.py</strong></div>
+              <div><span>BURST</span><strong>{(STRATO_SPEC.predictedBurstAltitudeM / 1000).toFixed(1)} KM</strong></div>
+              <div><span>STATUS</span><strong>MODEL / NOT MEASURED</strong></div>
             </figcaption>
           </figure>
 
           <div className="note-band">
             <span>WHAT THIS SHEET IS NOT</span>
             <p>
-              First-article fit geometry, not production interface control
-              dimensions and not a flight-qualified part. The physical fit owns
-              the final geometry; this sheet owns what gets printed to test it.
+              A reference-condition prediction, not a forecast and not a flight
+              record. The launch-day sounding owns the real profile; this sheet
+              owns what the article is sized to survive.
             </p>
           </div>
         </div>

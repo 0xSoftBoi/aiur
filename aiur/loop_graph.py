@@ -18,6 +18,11 @@ class Stage(str, Enum):
     SIL = "sil"
     BENCH_HIL = "bench_hil"
     TETHERED_FLIGHT = "tethered_flight"
+    #: Untethered flight of an article that has passed its tethered gate.
+    #: Added for STRATO-P0: a sounding balloon's only real test is a free
+    #: flight, and the loop needs a stage that says so rather than pretending
+    #: a 30 km ascent is "tethered flight" with a long rope.
+    FREE_FLIGHT = "free_flight"
     DEBRIEF = "debrief"
     DISPOSITION = "disposition"
 
@@ -34,6 +39,8 @@ ENGINEERING_LOOP: tuple[Edge, ...] = (
     Edge(Stage.SIL, Stage.BENCH_HIL, "model_and_fault_injection_pass"),
     Edge(Stage.BENCH_HIL, Stage.TETHERED_FLIGHT, "bench_gate_pass"),
     Edge(Stage.TETHERED_FLIGHT, Stage.DEBRIEF, "run_set_complete_or_aborted"),
+    Edge(Stage.TETHERED_FLIGHT, Stage.FREE_FLIGHT, "tethered_gate_pass"),
+    Edge(Stage.FREE_FLIGHT, Stage.DEBRIEF, "run_set_complete_or_aborted"),
     Edge(Stage.DEBRIEF, Stage.DISPOSITION, "evidence_packet_complete"),
     Edge(Stage.DISPOSITION, Stage.REQUIREMENT, "advance_or_change_requirement"),
     Edge(Stage.DISPOSITION, Stage.SIL, "model_or_software_changed"),
@@ -41,6 +48,11 @@ ENGINEERING_LOOP: tuple[Edge, ...] = (
     Edge(
         Stage.DISPOSITION,
         Stage.TETHERED_FLIGHT,
+        "repeat_exact_configuration_for_more_evidence",
+    ),
+    Edge(
+        Stage.DISPOSITION,
+        Stage.FREE_FLIGHT,
         "repeat_exact_configuration_for_more_evidence",
     ),
 )
@@ -158,7 +170,7 @@ KILL_PATH_CRITERIA: tuple[Criterion, ...] = (
     ),
 )
 
-GATES: tuple[Gate, ...] = (
+P0_GATES: tuple[Gate, ...] = (
     Gate(
         "P0-A",
         "bench capture",
@@ -342,6 +354,202 @@ GATES: tuple[Gate, ...] = (
 )
 
 
+#: Flight-termination criteria for STRATO-P0, held to the same standard as
+#: the carrier kill path: demonstrated before the run set, never failing when
+#: commanded, and working with the payload computer powered off — because
+#: "the computer froze at -55 °C" is exactly the case termination exists for.
+TERMINATION_CRITERIA: tuple[Criterion, ...] = (
+    Criterion(
+        "termination_command_trials",
+        ">=",
+        10,
+        "flight termination commanded at least ten times before the run set",
+    ),
+    Criterion(
+        "termination_failures",
+        "==",
+        0,
+        "flight termination never fails when commanded",
+        safety=True,
+    ),
+    Criterion(
+        "termination_verified_with_payload_computer_off",
+        "==",
+        1,
+        "flight termination demonstrated with the payload computer powered off",
+        safety=True,
+    ),
+)
+
+#: Minimum altitude that counts as stratospheric for the S0-C gate.  Mirrors
+#: aiur.strato.STRATOSPHERE_THRESHOLD_M; kept literal here so the gate
+#: definition has no import dependency on the model it judges.
+STRATOSPHERE_THRESHOLD_M = 20_000
+
+STRATO_GATES: tuple[Gate, ...] = (
+    Gate(
+        "S0-A",
+        "payload bench and cold chamber",
+        Stage.BENCH_HIL,
+        (
+            Criterion(
+                "payload_package_mass_kg",
+                "<=",
+                1.814,
+                "payload package stays under the 4 lb regulatory ceiling",
+                "kg",
+                safety=True,
+            ),
+            Criterion(
+                "cold_soak_hours",
+                ">=",
+                3,
+                "payload operated through a cold soak at least as long as the flight",
+                "h",
+            ),
+            Criterion(
+                "cold_soak_min_temp_c",
+                "<=",
+                -55,
+                "cold soak reached the standard-atmosphere float temperature",
+                "degC",
+            ),
+            Criterion(
+                "cold_soak_functional_dropouts",
+                "==",
+                0,
+                "no imaging, tracking, or termination dropout during the soak",
+            ),
+            Criterion(
+                "imaging_chain_captures",
+                ">=",
+                100,
+                "end-to-end captures stored and thumbnailed during the soak",
+            ),
+            Criterion(
+                "telemetry_link_trials",
+                ">=",
+                10,
+                "bench telemetry link exercised before flight",
+            ),
+            Criterion(
+                "telemetry_link_failures",
+                "==",
+                0,
+                "no bench telemetry link failure",
+            ),
+            Criterion(
+                "parachute_descent_rate_m_s",
+                "<=",
+                5.0,
+                "drop-tested descent rate at the landing-speed limit",
+                "m/s",
+                safety=True,
+            ),
+            *TERMINATION_CRITERIA,
+        ),
+    ),
+    Gate(
+        "S0-B",
+        "tethered ascent",
+        Stage.TETHERED_FLIGHT,
+        (
+            Criterion("tethered_flights", ">=", 3, "at least three tethered ascents"),
+            Criterion(
+                "end_to_end_images_downlinked",
+                ">=",
+                30,
+                "images captured aloft and received on the ground",
+            ),
+            Criterion(
+                "position_report_gap_max_s",
+                "<=",
+                60,
+                "no tracking gap longer than a minute while aloft",
+                "s",
+            ),
+            Criterion(
+                "parachute_deployments",
+                ">=",
+                1,
+                "termination fired aloft and the parachute deployed",
+            ),
+            Criterion(
+                "parachute_failures", "==", 0, "no parachute deployment failure", safety=True
+            ),
+            Criterion(
+                "crew_contacts",
+                "==",
+                0,
+                "no contact between the balloon, line, or package and a person",
+                safety=True,
+            ),
+            *TERMINATION_CRITERIA,
+        ),
+    ),
+    Gate(
+        "S0-C",
+        "stratospheric sounding",
+        Stage.FREE_FLIGHT,
+        (
+            Criterion(
+                "sounding_flights",
+                ">=",
+                2,
+                "at least two free flights of the same configuration",
+            ),
+            Criterion(
+                "max_altitude_m",
+                ">=",
+                STRATOSPHERE_THRESHOLD_M,
+                "the package reached the stratosphere",
+                "m",
+            ),
+            Criterion(
+                "geotagged_frames_above_threshold",
+                ">=",
+                50,
+                "observation frames with a valid position tag above the threshold",
+            ),
+            Criterion(
+                "telemetry_gap_max_s",
+                "<=",
+                300,
+                "no telemetry gap longer than five minutes in flight",
+                "s",
+            ),
+            Criterion("payload_recovered", "==", 1, "the package was recovered"),
+            Criterion(
+                "landing_error_km",
+                "<=",
+                15.0,
+                "landing inside the pre-launch prediction",
+                "km",
+            ),
+            Criterion(
+                "airspace_authorisation_on_file",
+                "==",
+                1,
+                "airspace coordination for the launch recorded before release",
+                safety=True,
+            ),
+            Criterion(
+                "third_party_contacts",
+                "==",
+                0,
+                "no contact with a person, vehicle, or structure not in the crew",
+                safety=True,
+            ),
+            *TERMINATION_CRITERIA,
+        ),
+    ),
+)
+
+#: Every hardware gate the loop knows.  The P0 ladder is the parked carrier
+#: lineage; the S0 ladder is the funded observation article.
+GATES: tuple[Gate, ...] = (*P0_GATES, *STRATO_GATES)
+
+
 @dataclass(frozen=True)
 class GateVerdict:
     gate_id: str
@@ -441,9 +649,31 @@ def validate_loop_graph() -> tuple[str, ...]:
                 f"{edge.source.value} via {edge.event}"
             )
 
-    gate_ids = [gate.gate_id for gate in GATES]
-    if gate_ids != ["P0-A", "P0-B", "P0-C", "P0-D"]:
+    free_flight_entries = [
+        edge for edge in ENGINEERING_LOOP if edge.target is Stage.FREE_FLIGHT
+    ]
+    allowed_free_flight_entries = {
+        (Stage.TETHERED_FLIGHT, "tethered_gate_pass"),
+        (Stage.DISPOSITION, "repeat_exact_configuration_for_more_evidence"),
+    }
+    for edge in free_flight_entries:
+        if (edge.source, edge.event) not in allowed_free_flight_entries:
+            errors.append(
+                "free flight has an unsafe shortcut from "
+                f"{edge.source.value} via {edge.event}"
+            )
+
+    p0_ids = [gate.gate_id for gate in P0_GATES]
+    if p0_ids != ["P0-A", "P0-B", "P0-C", "P0-D"]:
         errors.append("P0 gates must remain ordered P0-A through P0-D")
+    strato_ids = [gate.gate_id for gate in STRATO_GATES]
+    if strato_ids != ["S0-A", "S0-B", "S0-C"]:
+        errors.append("S0 gates must remain ordered S0-A through S0-C")
+    if [gate.gate_id for gate in GATES] != p0_ids + strato_ids:
+        errors.append("GATES must list the P0 ladder followed by the S0 ladder")
+    all_ids = [gate.gate_id for gate in GATES]
+    if len(all_ids) != len(set(all_ids)):
+        errors.append("gate ids must be unique across ladders")
 
     for gate in GATES:
         metrics = [criterion.metric for criterion in gate.criteria]

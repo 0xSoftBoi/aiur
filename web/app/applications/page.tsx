@@ -9,7 +9,7 @@ import { APPLICATIONS } from "@/lib/site-content";
 export const metadata: Metadata = {
   title: "Applications",
   description:
-    "Where a persistent airborne carrier pays: energy, emergency response, industry, maritime, environment, defence.",
+    "Where a view from 20 km pays: environment, emergency response, agriculture, energy, maritime, science.",
 };
 
 export default function ApplicationsPage() {
@@ -25,7 +25,7 @@ export default function ApplicationsPage() {
             <strong>is useful</strong>
           </>
         }
-        lede="The carrier is useful wherever the limiting factor is not the aircraft but everything the aircraft has to leave behind."
+        lede="The package is useful wherever a regional picture is worth more today than a sharper one next week."
       />
 
       <section className="applications" aria-label="Application areas">
@@ -44,9 +44,10 @@ export default function ApplicationsPage() {
           <div className="note-band" data-reveal>
             <span>SCOPE NOTE</span>
             <p>
-              These are the domains the architecture is aimed at, not deployments
-              Aiur has flown. The current article is a bench recovery gate; nothing
-              on this page is a delivered capability.
+              These are the domains the package is aimed at, not deployments
+              Aiur has flown. The current article is a bench and cold-chamber gate;
+              nothing on this page is a delivered capability. Every area is
+              observation only: sensing, imaging, and reporting, never an effector.
             </p>
           </div>
 

@@ -997,6 +997,214 @@ HAZARDS: tuple[Hazard, ...] = (
         acceptance=None,
         status=HazardStatus.MITIGATION_SELECTED,
     ),
+    # ---- STRATO-P0: the observation article.  Different regime, different
+    # ---- exposure: the public, other aircraft, and a package falling from
+    # ---- 30 km instead of a crew standing under a tethered hull.
+    Hazard(
+        id="HAZ-013",
+        title="Payload package descends onto a person, vehicle, or structure",
+        description=(
+            "The package, balloon remnant, and line come down somewhere other "
+            "than open ground, or come down too fast where they land."
+        ),
+        cause=(
+            "Parachute failure or entanglement with the burst balloon remnant; "
+            "an ascent or wind profile that differs from the prediction and "
+            "moves the landing zone over a populated area; launch on a day "
+            "the prediction did not cover."
+        ),
+        effect=(
+            "Injury to a person under the descent, damage to a vehicle or "
+            "roof, and the program's first third-party exposure."
+        ),
+        severity=Severity.CRITICAL,
+        probability=Probability.OCCASIONAL,
+        mitigations=(
+            "Package under the 4 lb single-package ceiling (S0-MASS-002); a "
+            "light package is the mitigation the regulation itself relies on.",
+            "Canopy sized for <= 5 m/s at sea level and drop-tested, not "
+            "calculated only (aiur.strato canopy_area_for_landing_m2).",
+            "Parachute rigged above the package on its own line so a burst "
+            "remnant cannot foul it; deployment demonstrated on the tether.",
+            "Pre-launch trajectory prediction committed before release, "
+            "with a launch site chosen so the predicted landing ellipse is "
+            "over open ground; no release when it is not.",
+            "Flight termination that can end the flight early if the track "
+            "diverges toward a populated area.",
+        ),
+        verification=(
+            "S0-A criterion parachute_descent_rate_m_s; S0-B criterion "
+            "parachute_failures; S0-C criteria landing_error_km and "
+            "third_party_contacts; requirements S0-SAFE-003, S0-SAFE-004, "
+            "S0-SAFE-006."
+        ),
+        residual_severity=Severity.CRITICAL,
+        residual_probability=Probability.REMOTE,
+        acceptance=None,
+        status=HazardStatus.MITIGATION_SELECTED,
+    ),
+    Hazard(
+        id="HAZ-014",
+        title="Conflict with a manned aircraft during ascent or descent",
+        description=(
+            "The balloon or its package passes through airspace in use by "
+            "manned traffic without that traffic knowing it is there."
+        ),
+        cause=(
+            "Launch without the notice or authorisation the jurisdiction "
+            "requires; launch site or window inside an airway, approach path, "
+            "or controlled airspace; a package too small to be seen or "
+            "painted on radar."
+        ),
+        effect=(
+            "Ingestion or windscreen strike on a manned aircraft; at worst "
+            "loss of that aircraft."
+        ),
+        severity=Severity.CATASTROPHIC,
+        probability=Probability.REMOTE,
+        mitigations=(
+            "Airspace coordination on file before release, with the launch "
+            "window and predicted trajectory attached (S0-SAFE-005); no "
+            "release without it.",
+            "Launch site selected away from airports, airways, and approach "
+            "paths, and recorded as a planning constraint.",
+            "Package and balloon under the regulatory exemption thresholds, "
+            "which exist because such a package is unlikely to disable an "
+            "aircraft.",
+            "Continuous position reporting so the track can be given to the "
+            "authority on request.",
+            "Flight termination to end the flight if the track diverges "
+            "toward airspace it was not cleared for.",
+        ),
+        verification=(
+            "S0-C criteria airspace_authorisation_on_file and "
+            "telemetry_gap_max_s; requirement S0-SAFE-005; termination "
+            "covered by termination_verified_with_payload_computer_off on "
+            "S0-A, S0-B, and S0-C."
+        ),
+        residual_severity=Severity.CATASTROPHIC,
+        residual_probability=Probability.IMPROBABLE,
+        acceptance=None,
+        status=HazardStatus.MITIGATION_SELECTED,
+    ),
+    Hazard(
+        id="HAZ-015",
+        title="Package lost: no recovery, imagery and lithium cells left in the field",
+        description=(
+            "The flight ends and the package is not found, or is found where "
+            "it cannot be retrieved."
+        ),
+        cause=(
+            "Tracker silent from cold, power, or link loss; landing far from "
+            "the prediction; landing in water, forest canopy, or private land "
+            "without access."
+        ),
+        effect=(
+            "Loss of the article and its evidence; lithium primary cells and "
+            "electronics abandoned in the environment; the flight cannot "
+            "count toward any gate."
+        ),
+        severity=Severity.MARGINAL,
+        probability=Probability.PROBABLE,
+        mitigations=(
+            "Two independent trackers on separate power, one of them a "
+            "low-rate beacon that needs no ground station in range.",
+            "Landing prediction and launch-site selection biased toward "
+            "accessible open ground.",
+            "Imagery downlinked as thumbnails in flight so a lost package "
+            "does not lose the whole observation record.",
+            "Contact details and a return request on the package exterior.",
+        ),
+        verification=(
+            "S0-C criteria payload_recovered, telemetry_gap_max_s, and "
+            "landing_error_km; requirements S0-FLT-002 and S0-LINK-001."
+        ),
+        residual_severity=Severity.MARGINAL,
+        residual_probability=Probability.OCCASIONAL,
+        acceptance=None,
+        status=HazardStatus.MITIGATION_SELECTED,
+    ),
+    Hazard(
+        id="HAZ-016",
+        title="Cold-induced power loss silences tracking and disables termination",
+        description=(
+            "Below about -40 degC the package's battery or electronics stop, "
+            "taking the tracker and the termination path with them."
+        ),
+        cause=(
+            "Cells chosen on room-temperature capacity; insulation that "
+            "keeps the imager warm but not the tracker; a termination path "
+            "that shares the payload computer's power rail."
+        ),
+        effect=(
+            "A silent, unterminatable balloon on a track nobody can follow — "
+            "the precondition for HAZ-013, HAZ-014, and HAZ-015 at once."
+        ),
+        severity=Severity.MARGINAL,
+        probability=Probability.PROBABLE,
+        mitigations=(
+            "Lithium primary cells rated for the flight temperature, with "
+            "the cold-capacity fraction measured on S0-A rather than taken "
+            "from a datasheet curve (aiur.strato sounding_battery_wh).",
+            "Cold soak at the standard-atmosphere float temperature for at "
+            "least the flight duration with zero functional dropouts.",
+            "Termination on its own timer and power, demonstrated with the "
+            "payload computer off.",
+        ),
+        verification=(
+            "S0-A criteria cold_soak_min_temp_c, cold_soak_functional_dropouts, "
+            "and termination_verified_with_payload_computer_off; requirements "
+            "S0-ENV-001, S0-ENV-002, S0-PWR-001, S0-SAFE-002."
+        ),
+        residual_severity=Severity.MARGINAL,
+        residual_probability=Probability.REMOTE,
+        acceptance=None,
+        status=HazardStatus.MITIGATION_SELECTED,
+    ),
+    Hazard(
+        id="HAZ-017",
+        title="Launch handling: line entanglement, uncontrolled release, or cylinder mishandling",
+        description=(
+            "A crew member is caught by the load line at release, the balloon "
+            "gets away before the package is attached, or the helium cylinder "
+            "is mishandled during the fill."
+        ),
+        cause=(
+            "Gusty fill site; a fill with the package untethered; loose line "
+            "underfoot; an unsecured cylinder or a regulator opened onto an "
+            "unrestrained balloon."
+        ),
+        effect=(
+            "Line burn or a crew member lifted or pulled; a free balloon with "
+            "no package, tracker, or termination; a toppled cylinder."
+        ),
+        severity=Severity.MARGINAL,
+        probability=Probability.OCCASIONAL,
+        mitigations=(
+            "Fill and launch procedure with a surface-wind limit and a "
+            "crew placement that keeps hands and feet clear of the line.",
+            "Balloon and package restrained to a ground anchor until the "
+            "release call; the tethered ascents rehearse the release.",
+            "Gloves on the fill and launch crew; cylinder chained upright.",
+            "Helium only; no hydrogen at any stage of the program.",
+        ),
+        verification=(
+            "S0-B criterion crew_contacts across at least three tethered "
+            "ascents (tethered_flights); requirement S0-FLT-004."
+        ),
+        residual_severity=Severity.MARGINAL,
+        residual_probability=Probability.REMOTE,
+        acceptance=None,
+        status=HazardStatus.MITIGATION_SELECTED,
+    ),
+)
+
+#: Standing scope sentence for STRATO-P0 acceptances, distinct from the P0
+#: one: a different exposure (the public and other aircraft rather than a
+#: crew under a hull) is a different decision.
+S0_ACCEPTANCE_SCOPE = (
+    "STRATO-P0 sounding regime: one unmanned free balloon under the "
+    "exemption thresholds, daylight, coordinated launch site, helium only"
 )
 
 

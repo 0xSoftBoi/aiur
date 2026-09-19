@@ -15,8 +15,24 @@ from .p0 import (
     gross_static_lift_kg,
     payload_margin_kg,
 )
+from .strato import (
+    LiftingGas,
+    Optic,
+    SoundingBalloon,
+    StratoP0Targets,
+    baseline_strato_budget,
+    float_altitude_m,
+    standard_atmosphere,
+)
 
 __all__ = [
+    "LiftingGas",
+    "Optic",
+    "SoundingBalloon",
+    "StratoP0Targets",
+    "baseline_strato_budget",
+    "float_altitude_m",
+    "standard_atmosphere",
     "DockController",
     "DockInputs",
     "DockOutput",

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { CARRIER_SPEC } from "@/lib/carrier-spec";
+import { STRATO_SPEC } from "@/lib/strato-spec";
 import { AppCard } from "@/components/app-card";
 import { APPLICATIONS, NEWS, REPO_URL } from "@/lib/site-content";
 
@@ -9,20 +9,22 @@ export default function Home() {
     <>
       <section className="hero shell" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <p className="eyebrow"><span>AIUR / 001</span> PERSISTENT AIRBORNE INFRASTRUCTURE</p>
+          <p className="eyebrow"><span>AIUR / 002</span> STRATOSPHERIC OBSERVATION</p>
           <h1 id="hero-title">
-            Stay up.
+            Go up.
             <br />
-            <strong>Come back.</strong>
+            <strong>Look down.</strong>
           </h1>
           <p className="lede">
-            Aiur builds carrier systems that launch and recover autonomous
-            aircraft without a runway, a net, or a crew on the ground.
+            Aiur builds small observation packages that climb into the
+            stratosphere, look down over a five-hundred-kilometre horizon,
+            report what they see, and come back.
           </p>
           <p className="hero-proof">
-            One article on the bench today, four gates to get through, and the
-            whole design record in public. Every number below is an exit
-            criterion, not a result we are claiming.
+            No aircraft, no dock, no deployable payload. One article to build,
+            three gates to get through, and the whole design record in public.
+            Every number below is a model result or an exit criterion, not a
+            flight we are claiming.
           </p>
           <div className="hero-actions">
             <a className="button" href={REPO_URL} target="_blank" rel="noreferrer">
@@ -39,26 +41,26 @@ export default function Home() {
             <span className="status-dot" />
             BUILDING NOW
           </div>
-          <strong>CARRIER-P0</strong>
-          <p>Recovery first. Indoor helium article. Micro-UAV class. No claimed flight demo.</p>
+          <strong>STRATO-P0</strong>
+          <p>Observation first. Latex sounding article. Sub-kilogram package. Helium only. No claimed flight.</p>
         </aside>
 
-        <div className="spec-rail" data-reveal aria-label="Carrier P0 reference dimensions">
+        <div className="spec-rail" data-reveal aria-label="STRATO-P0 reference figures">
           <div>
-            <span>REFERENCE AIRFRAME</span>
-            <strong>{CARRIER_SPEC.envelopeLengthM.toFixed(1)} M</strong>
+            <span>STRATOSPHERIC THRESHOLD</span>
+            <strong>{(STRATO_SPEC.thresholdAltitudeM / 1000).toFixed(0)} KM</strong>
           </div>
           <div>
-            <span>HELIUM VOLUME</span>
-            <strong>{CARRIER_SPEC.heliumVolumeM3.toFixed(1)} M³</strong>
+            <span>HORIZON FROM THERE</span>
+            <strong>{Math.round(STRATO_SPEC.horizonDistanceKm)} KM</strong>
           </div>
           <div>
-            <span>VENDOR-RATED PAYLOAD</span>
-            <strong>≤{CARRIER_SPEC.ratedPayloadKg.toFixed(1)} KG</strong>
+            <span>PACKAGE CEILING</span>
+            <strong>≤{STRATO_SPEC.payloadCeilingKg.toFixed(1)} KG</strong>
           </div>
           <div>
-            <span>REV-A DOCK MOUTH</span>
-            <strong>Ø{Math.round(CARRIER_SPEC.dockMouthDiameterM * 1000)} MM</strong>
+            <span>NADIR GSD / REF. OPTIC</span>
+            <strong>{STRATO_SPEC.nadirGsdM.toFixed(1)} M</strong>
           </div>
         </div>
       </section>
@@ -67,9 +69,9 @@ export default function Home() {
         <div className="shell">
           <p className="kicker">Our mission</p>
           <h2 className="statement" data-reveal id="mission-title">
-            A small aircraft can only go as far as the thing that gets it back.
-            So we are building <strong>that thing first</strong>, on a bench,
-            before anyone claims it works in flight.
+            A satellite is a schedule. A balloon is a decision. We are building
+            the cheapest package that can make <strong>that decision pay</strong>,
+            in a cold chamber, before anyone claims it works in flight.
           </h2>
         </div>
       </section>
@@ -78,13 +80,13 @@ export default function Home() {
         <div className="shell">
           <div className="section-meta light-meta">
             <span>01 / APPLICATIONS</span>
-            <span>WHERE THE LOOP PAYS</span>
+            <span>WHERE THE VIEW PAYS</span>
           </div>
           <div className="section-head">
             <h2 id="applications-title">Where this is useful</h2>
             <p className="section-lede">
-              The carrier is useful wherever the limiting factor is not the aircraft
-              but everything the aircraft has to leave behind.
+              The package is useful wherever a regional picture is worth more
+              today than a sharper one next week.
             </p>
           </div>
 
@@ -106,18 +108,18 @@ export default function Home() {
         <div className="shell">
           <div className="section-meta">
             <span>02 / THE SYSTEM</span>
-            <span>AUTONOMY × INFRASTRUCTURE</span>
+            <span>ALTITUDE × EVIDENCE</span>
           </div>
-          <p className="thesis-kicker">A drone is an aircraft. Persistence is a system.</p>
+          <p className="thesis-kicker">Altitude is cheap. Coming back with the picture is the job.</p>
           <h2 id="thesis-title">
-            LAUNCHING IS EASY.
+            GETTING UP IS EASY.
             <br />
-            <em>RECOVERY CLOSES THE LOOP.</em>
+            <em>RETURNING CLOSES THE LOOP.</em>
           </h2>
           <p className="section-lede dark-lede">
-            Endurance, energy, backhaul, and fleet coordination all get harder at
-            the edge. Aiur moves infrastructure with the mission instead of making
-            every aircraft carry the entire problem alone.
+            Cold, power, tracking, termination, and the landing all get harder
+            above the tropopause. Aiur treats each one as a gate with a number,
+            not as a risk to carry into the first free flight.
           </p>
           <div className="section-foot">
             <Link className="text-link dark-link" href="/solutions">
@@ -130,14 +132,14 @@ export default function Home() {
       <section
         className="careers"
         aria-labelledby="careers-title"
-        style={{ backgroundImage: "url(/renders/dock-hero.png)" }}
+        style={{ backgroundImage: "url(/strato-altitude-ladder.svg)" }}
       >
         <div className="shell careers-inner">
           <p className="kicker">Careers</p>
           <h2 id="careers-title">Join the adventure</h2>
           <p className="section-lede">
             Aiur is small, physical, and unglamorous by design. If you would rather
-            close a loop on a bench than draw one on a slide, this is the place.
+            close a loop in a cold chamber than draw one on a slide, this is the place.
           </p>
           <Link className="button" href="/careers">
             Work with us <span aria-hidden="true">→</span>
@@ -155,7 +157,7 @@ export default function Home() {
             <h2 id="news-title">What changed recently</h2>
             <p className="section-lede">
               The public record is the product record. Design decisions, gates,
-              geometry, and evidence tooling live in the engineering repository.
+              models, and evidence tooling live in the engineering repository.
             </p>
           </div>
 

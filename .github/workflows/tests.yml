@@ -28,7 +28,9 @@ jobs:
           python-version: "3.12"
       - name: Run engineering tests
         run: python -m unittest discover -s tests -v
-      - name: Print P0 budget
+      - name: Print STRATO-P0 model (atmosphere, ascent, observation, budgets)
+        run: python -m aiur.strato
+      - name: Print P0 budget (parked carrier lineage)
         run: python -m aiur.p0
       - name: Requirement closure matrix
         run: python -m aiur.requirements

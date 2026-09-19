@@ -2,21 +2,21 @@ export const NAV = [
   {
     label: "Solutions",
     href: "/solutions",
-    blurb: "One loop: deploy, coordinate, recover, repeat.",
+    blurb: "One package: climb, observe, report, return.",
     links: [
-      ["The carrier loop", "/solutions#loop", "Four steps, each earned before the next."],
-      ["Carrier north star", "/solutions#carrier", "Compute, comms, energy, and recovery aloft."],
+      ["The flight loop", "/solutions#loop", "Four steps, each earned before the next."],
+      ["Float north star", "/solutions#float", "Persistent observation from 20 km."],
     ],
   },
   {
     label: "Applications",
     href: "/applications",
-    blurb: "Where the limiting factor is not the aircraft.",
+    blurb: "Where the view from 20 km is the product.",
     links: [
-      ["Energy", "/applications#energy", "Corridors, substations, offshore assets."],
-      ["Emergency response", "/applications#emergency-response", "Sensing that stays overhead."],
-      ["Maritime", "/applications#maritime", "Recovery onto a moving deck."],
-      ["All six areas", "/applications", "Industry, environment, defence."],
+      ["Environment", "/applications#environment", "Fire, coast, and watershed at regional scale."],
+      ["Emergency response", "/applications#emergency-response", "A picture when the ground is dark."],
+      ["Maritime", "/applications#maritime", "A five-hundred-kilometre horizon."],
+      ["All six areas", "/applications", "Agriculture, energy, science."],
     ],
   },
   {
@@ -24,7 +24,7 @@ export const NAV = [
     href: "/commitments",
     blurb: "Evidence before claims, without exception.",
     links: [
-      ["Recovery interface", "/commitments#interface", "The P0-A bench article."],
+      ["The flight package", "/commitments#interface", "The S0-A bench and chamber gate."],
       ["Exit criteria", "/commitments#interface", "Targets, labelled as targets."],
       ["Design rules", "/commitments#rules", "What may be published, and when."],
     ],
@@ -35,7 +35,7 @@ export const NAV = [
     blurb: "Manufacturer and operator, one team.",
     links: [
       ["Structure", "/company#structure", "Two roles, no wall between them."],
-      ["Programme gates", "/company#program", "P0-A through P0-D."],
+      ["Programme gates", "/company#program", "S0-A through S0-C."],
       ["What changed recently", "/resources#news", "Each entry links to the change itself."],
     ],
   },
@@ -44,7 +44,7 @@ export const NAV = [
     href: "/careers",
     blurb: "Small, physical, unglamorous by design.",
     links: [
-      ["What we look for", "/careers#roles", "Mechanism, controls, test, simulation."],
+      ["What we look for", "/careers#roles", "Envelope, avionics, test, modelling."],
       ["How to apply", "/careers#apply", "The repository is the front door."],
     ],
   },
@@ -55,12 +55,11 @@ export const REPO_URL = "https://github.com/0xSoftBoi/aiur";
 export const APPLICATIONS = [
   {
     id: "01",
-    slug: "energy",
-    accent: "#ff6428",
-    title: "Energy",
+    slug: "environment",
+    accent: "#5d9b6d",
+    title: "Environment",
     copy:
-      "Persistent inspection of transmission corridors, substations, and offshore assets without a crew convoy per sortie.",
-    image: "/renders/carrier-v1-hero.png",
+      "Fire perimeter, smoke, coastline, and watershed observed at regional scale, on a cadence a launch decides rather than an orbit.",
   },
   {
     id: "02",
@@ -68,130 +67,125 @@ export const APPLICATIONS = [
     accent: "#e8442b",
     title: "Emergency response",
     copy:
-      "Communications and sensing that stay overhead while ground infrastructure is degraded or absent.",
-    image: "/renders/carrier-v1-approach.png",
+      "A picture of a whole region within hours of a launch, when ground infrastructure is degraded or absent and the satellite pass is tomorrow.",
   },
   {
     id: "03",
-    slug: "industry-and-logistics",
+    slug: "agriculture",
     accent: "#c8823a",
-    title: "Industry and logistics",
+    title: "Agriculture",
     copy:
-      "Repeated survey and transfer loops over sites that are far from any runway, hangar, or maintenance bay.",
-    image: "/renders/carrier-v1-profile.png",
+      "Crop condition across a district in one flight, at a ground sample distance that separates a field's rows from its headland.",
   },
   {
     id: "04",
+    slug: "energy",
+    accent: "#ff6428",
+    title: "Energy",
+    copy:
+      "Transmission corridors, pipeline rights-of-way, and remote sites covered end to end from a single ascent, without a crew convoy.",
+  },
+  {
+    id: "05",
     slug: "maritime",
     accent: "#3f8fa8",
     title: "Maritime",
     copy:
-      "Launch and recovery over water, where a landing site is a moving deck rather than a prepared surface.",
-    image: "/renders/dock-hero.png",
-  },
-  {
-    id: "05",
-    slug: "environment",
-    accent: "#5d9b6d",
-    title: "Environment",
-    copy:
-      "Long-duration monitoring of forest, coastline, and watershed at a cadence that periodic flights cannot hold.",
-    image: "/renders/dock-section.png",
+      "Coastal domain awareness from a horizon five hundred kilometres away, from a package that costs less than one patrol sortie.",
   },
   {
     id: "06",
-    slug: "defence-and-security",
+    slug: "science",
     accent: "#7a7fa6",
-    title: "Defence and security",
+    title: "Science and atmosphere",
     copy:
-      "Fleet coordination at the edge, with the expensive layers kept aloft instead of duplicated in every aircraft.",
-    image: "/renders/dock-capture-detail.png",
+      "In-situ stratospheric sampling alongside imaging: temperature, pressure, and the aerosol column the ground never sees directly.",
   },
 ] as const;
 
 export const SYSTEM_LOOP = [
   {
     index: "01",
-    title: "DEPLOY",
-    copy: "Release mission aircraft from persistent infrastructure already in the air.",
+    title: "CLIMB",
+    copy: "A sub-kilogram package under a helium balloon reaches 20 km in about an hour.",
   },
   {
     index: "02",
-    title: "COORDINATE",
-    copy: "Keep mission state, communications, and eventually edge compute with the carrier.",
+    title: "OBSERVE",
+    copy: "Geotagged frames over a ten-kilometre swath, with a five-hundred-kilometre horizon in view.",
   },
   {
     index: "03",
-    title: "RECOVER",
-    copy: "Bring the aircraft back through a physical interface that can seat, retain, verify, and release.",
+    title: "REPORT",
+    copy: "Thumbnails downlinked in flight, so a lost package does not lose the whole record.",
   },
   {
     index: "04",
-    title: "REPEAT",
-    copy: "Turn a one-way sortie into a reusable loop, then add energy and fleet scale.",
+    title: "RETURN",
+    copy: "Termination on its own power, a parachute drop-tested to five metres a second, and a predicted landing.",
   },
 ] as const;
 
-/** Mirrors the gate table in hardware/dock/p0a-bench.md. Do not soften. */
+/** Mirrors the S0-A gate in aiur/loop_graph.py. Do not soften. */
 export const BENCH_GATE = [
-  ["600", "LIFE-TEST CYCLES"],
-  ["≥15", "RUN-IN CYCLES / FORCE TREND LEVEL"],
-  ["≥5 N", "AXIAL RETENTION / 10 S"],
-  ["≥1 N", "LATERAL ±X / ±Y / 10 S"],
-  ["10 + 10", "EMERGENCY RELEASES / UNLOADED + LOADED"],
-  ["≥2.0", "KEEPER FORCE MARGIN / CLOSE + OPEN"],
+  ["≤1.814 KG", "PACKAGE MASS / 4 LB CEILING"],
+  ["≥3 H", "COLD SOAK / ≤ −55 °C"],
+  ["0", "FUNCTIONAL DROPOUTS / SOAK"],
+  ["≥100", "STORED CAPTURES / IMAGING CHAIN"],
+  ["10 + 0", "TERMINATION TRIALS / FAILURES"],
+  ["≤5 M/S", "DROP-TESTED DESCENT"],
 ] as const;
 
 export const COMPANY = [
   {
     role: "Manufacturer",
-    title: "We build the carrier",
+    title: "We build the package",
     copy:
-      "Envelope, gondola, and the recovery interface are designed in the open, dimensioned in CAD, and fabricated to a published Rev pack.",
+      "Enclosure, imager, trackers, termination, and parachute are designed in the open, budgeted in an executable model, and built to a published allocation.",
     facts: [
-      ["1", "ACTIVE ARTICLE / CARRIER-P0"],
-      ["Rev-B", "CAPTURE GEOMETRY"],
+      ["1", "ACTIVE ARTICLE / STRATO-P0"],
+      ["850 G", "BASELINE PACKAGE ALLOCATION"],
     ],
   },
   {
     role: "Operator",
     title: "We fly the loop",
     copy:
-      "The same team runs the bench, the moving dock, and eventually the tethered carrier, so the operating record and the design record are one record.",
+      "The same team runs the chamber, the tether, and the free flight, so the operating record and the design record are one record.",
     facts: [
-      ["4", "PROGRAM GATES / P0-A → P0-D"],
+      ["3", "PROGRAM GATES / S0-A → S0-C"],
       ["100%", "PUBLIC ENGINEERING LOG"],
     ],
   },
 ] as const;
 
 export const PROGRAM = [
-  ["P0-A", "BENCH CAPTURE", "ACTIVE", "Positive retention + independent physical truth"],
-  ["P0-B", "MOVING DOCK", "LOCKED", "Earn dynamic approach only after the bench gate"],
-  ["P0-C", "TETHERED CARRIER", "LOCKED", "Integrate the recovery article with buoyant lift"],
-  ["P0-D", "TWO AIRCRAFT", "LOCKED", "Prove separation, sequencing, and repeated recovery"],
+  ["S0-A", "BENCH + COLD CHAMBER", "ACTIVE", "Mass, cold soak, imaging chain, termination, drop test"],
+  ["S0-B", "TETHERED ASCENT", "LOCKED", "Earn the air only after the chamber gate"],
+  ["S0-C", "STRATOSPHERIC SOUNDING", "LOCKED", "Two free flights, one configuration, ≥ 20 km"],
+  ["S1", "PERSISTENT FLOAT", "GATED", "A fixed-volume envelope, only once S0-C is boring"],
 ] as const;
 
 export const NEWS = [
   {
+    date: "September 2026",
+    tag: "Program",
+    title: "Programme re-pointed at the stratosphere",
+    copy: "STRATO-P0: no aircraft, no dock, pure observation. Executable ascent, geometry, and budget model with S0 gates.",
+    href: `${REPO_URL}/blob/main/docs/prototype-strato-p0.md`,
+  },
+  {
     date: "August 2026",
     tag: "Engineering",
     title: "Rev-A fabrication pack published",
-    copy: "Reproducible CAD, fabrication geometry, and strict evidence reduction.",
+    copy: "Reproducible CAD, fabrication geometry, and strict evidence reduction for the carrier lineage.",
     href: `${REPO_URL}/pull/3`,
-  },
-  {
-    date: "July 2026",
-    tag: "Design",
-    title: "P0-A bench article dimensioned",
-    copy: "A recovery interface with explicit pass / fail criteria, ahead of any motion.",
-    href: `${REPO_URL}/pull/2`,
   },
   {
     date: "July 2026",
     tag: "Program",
     title: "CARRIER-P0 programme opened",
-    copy: "Closed-loop architecture, payload budget, and the evidence gates that govern it.",
+    copy: "Closed-loop architecture, payload budget, and the evidence gates that the current programme inherits.",
     href: `${REPO_URL}/pull/1`,
   },
 ] as const;
@@ -200,15 +194,15 @@ export const FOOTER_NAV = [
   {
     heading: "Solutions",
     links: [
-      ["The system loop", "/solutions#loop"],
-      ["Recovery interface", "/commitments#interface"],
-      ["Carrier north star", "/solutions#carrier"],
+      ["The flight loop", "/solutions#loop"],
+      ["The flight package", "/commitments#interface"],
+      ["Float north star", "/solutions#float"],
     ],
   },
   {
     heading: "Applications",
     links: [
-      ["Energy", "/applications#energy"],
+      ["Environment", "/applications#environment"],
       ["Emergency response", "/applications#emergency-response"],
       ["Maritime", "/applications#maritime"],
     ],

@@ -13,15 +13,15 @@ export const metadata: Metadata = {
 const WHAT_WE_LOOK_FOR = [
   {
     id: "01",
-    title: "Mechanism designers",
+    title: "Payload and thermal",
     copy:
-      "People who can take a retention requirement to fabricated hardware, and who treat a failed cycle as data rather than embarrassment.",
+      "People who can take a mass allocation and a −55 °C soak to a package that keeps imaging, tracking, and terminating, and who treat a dropout as data rather than embarrassment.",
   },
   {
     id: "02",
-    title: "Flight and controls",
+    title: "Avionics and links",
     copy:
-      "Guidance for an approach that ends in a physical interface, not a waypoint. Bench first, motion later.",
+      "Trackers on separate power, a termination path that needs no computer, and a downlink whose margin is budgeted before it is trusted. Chamber first, tether later.",
   },
   {
     id: "03",
@@ -31,9 +31,9 @@ const WHAT_WE_LOOK_FOR = [
   },
   {
     id: "04",
-    title: "Simulation",
+    title: "Modelling",
     copy:
-      "A digital twin that stays honest about what it does not model, and that loses arguments to the bench.",
+      "An atmosphere, ascent, and geometry model that stays honest about what it does not model, and that loses arguments to the flight log.",
   },
 ] as const;
 

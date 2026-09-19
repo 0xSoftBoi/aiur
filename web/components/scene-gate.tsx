@@ -1,16 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-
-import { CarrierSceneLoader } from "@/components/carrier-scene-loader";
-
 /**
- * The live carrier scene is the home page's argument for itself. Behind an
- * interior page it is just a large grey airframe competing with the type, so
- * it renders on "/" only.
+ * The live Three.js scene renders the carrier-lineage airframe: a 4.5 m hull
+ * with a belly dock and two micro-UAVs. That is the parked programme, not the
+ * observation article, so the scene is switched off rather than shown behind
+ * copy it contradicts. The component and its loader are kept with the
+ * lineage; re-enable here if a balloon scene replaces it.
  */
 export function SceneGate() {
-  const pathname = usePathname();
-  if (pathname !== "/") return null;
-  return <CarrierSceneLoader />;
+  return null;
 }

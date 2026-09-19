@@ -14,7 +14,7 @@ export function SiteFooter() {
             </span>
             AIUR
           </Link>
-          <p>Persistent airborne infrastructure for autonomous aircraft.</p>
+          <p>Stratospheric observation, built the unglamorous way.</p>
         </div>
 
         {FOOTER_NAV.map((column) => (
@@ -36,7 +36,7 @@ export function SiteFooter() {
       </div>
 
       <div className="shell footer-bottom">
-        <span>© 2026 AIUR / CARRIER-P0</span>
+        <span>© 2026 AIUR / STRATO-P0</span>
         <span>Targets shown are exit criteria, not claimed results.</span>
       </div>
     </footer>

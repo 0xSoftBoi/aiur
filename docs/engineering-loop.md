@@ -1,9 +1,11 @@
-# CARRIER-P0 closed-loop engineering graph
+# Closed-loop engineering graph
 
 Status: working program contract  
-Scope: CARRIER-P0 through P0-D
+Scope: STRATO-P0 through S0-C (funded); CARRIER-P0 through P0-D (parked lineage, gates retained)
 
 This is the operating loop for the prototype. A capability only advances when a measured evidence packet closes the current gate. A demo, video, or successful one-off attempt is not a gate by itself.
+
+The loop was written for CARRIER-P0 and is kept unchanged for STRATO-P0 with one addition: a **free flight** stage after tethered flight, because a sounding balloon's only real test is untethered and the graph should say so rather than call a 30 km ascent "tethered flight with a long rope". Free flight is entered only from a passed tethered gate or from a disposition that repeats an exact configuration — the same rule that already protected tethered flight.
 
 The shape intentionally matches the public rapid-autonomy pattern of model/sim → operation → debrief/learn, while adding explicit bench/HIL promotion and safety constraints for this vehicle. Anduril publicly describes a mission cycle spanning modeling and simulation, mission operations, and data-driven debrief/learning; this document does not claim to reproduce any private Anduril process.
 
@@ -16,15 +18,18 @@ flowchart TD
     R["Requirement + kill criterion"] --> S["SIL / model + fault injection"]
     S --> B["Bench / HIL"]
     B --> F["Tethered flight"]
+    F --> FF["Free flight"]
     F --> D["Debrief + aligned evidence"]
+    FF --> D
     D --> X{"Disposition"}
     X -->|"advance / requirement change"| R
     X -->|"model or software change"| S
     X -->|"hardware / instrumentation change"| B
     X -->|"same immutable config; more evidence"| F
+    X -->|"same immutable config; more evidence"| FF
 ```
 
-The key rule is simple: **if hardware, software, calibration, or safety configuration changes, the article does not jump directly back to flight.** Re-entry happens at the lowest stage that can expose the new failure mode. Direct `Disposition → Flight` is reserved for collecting more evidence with the exact same configuration.
+The key rule is simple: **if hardware, software, calibration, or safety configuration changes, the article does not jump directly back to flight.** Re-entry happens at the lowest stage that can expose the new failure mode. Direct `Disposition → Flight` (tethered or free) is reserved for collecting more evidence with the exact same configuration.
 
 The executable form of this graph and its gate criteria lives in [`aiur/loop_graph.py`](../aiur/loop_graph.py). CI checks the graph for unsafe flight shortcuts and evaluates the gate logic.
 
@@ -93,7 +98,17 @@ The minimum time-aligned recovery telemetry is:
 
 Video is useful corroboration, but telemetry is the primary gate evidence.
 
-## P0 gate ladder
+## S0 gate ladder (STRATO-P0, funded)
+
+| Gate | Article | Promotion evidence | Stop / fail condition |
+| --- | --- | --- | --- |
+| S0-A | flight package on the bench and in a cold chamber | package ≤ 1.814 kg; ≥ 3 h soak to ≤ −55 °C with zero functional dropouts; ≥ 100 stored captures; ≥ 10 link trials with zero failures; ≥ 10 termination trials with zero failures, and termination demonstrated with the payload computer off; drop-tested descent ≤ 5 m/s | any dropout, termination failure, link failure, or a package over the ceiling |
+| S0-B | flight configuration on a tether | ≥ 3 ascents; ≥ 30 images received aloft; no position gap > 60 s; termination fired aloft with the parachute deploying; zero crew contacts | parachute failure, crew contact, termination failure, or a tracking gap |
+| S0-C | free flight to the stratosphere | ≥ 2 flights of one configuration; ≥ 20,000 m; ≥ 50 geotagged frames above the threshold; no telemetry gap > 300 s; package recovered; landing within 15 km of the prediction; airspace coordination on file; zero third-party contacts | third-party contact, loss of the package, a launch without coordination, or incomplete evidence |
+
+S0 gates are sequential. The detail behind each row is in [prototype-strato-p0.md](prototype-strato-p0.md).
+
+## P0 gate ladder (CARRIER-P0, parked)
 
 | Gate | Article | Promotion evidence | Stop / fail condition |
 | --- | --- | --- | --- |

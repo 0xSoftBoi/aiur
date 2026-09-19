@@ -1,6 +1,6 @@
 # Dual-use verticals
 
-Status: exploratory concept studies — no funded milestone in this directory. CARRIER-P0 remains the only funded article. Every number in these studies is an engineering target or an open question routed to the digital twin.
+Status: exploratory concept studies written for the carrier lineage — no funded milestone in this directory. The funded article is now [STRATO-P0](../prototype-strato-p0.md), a stratospheric observation package with no aircraft and no dock; these studies are retained as the record of what the carrier core was aimed at, and their sensing/monitoring/mapping scope is the part that carries over. Every number in them is an engineering target or an open question routed to the digital twin.
 
 Studies:
 

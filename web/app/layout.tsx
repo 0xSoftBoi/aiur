@@ -10,16 +10,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "AIUR — Airborne Infrastructure",
+    default: "AIUR — Stratospheric Observation",
     template: "%s — AIUR",
   },
   description:
-    "A lighter-than-air carrier built to deploy, coordinate, and recover autonomous aircraft.",
+    "Small lighter-than-air packages that climb into the stratosphere, observe, report, and come back.",
   metadataBase: new URL("https://aiur.vercel.app"),
   openGraph: {
-    title: "AIUR — Airborne Infrastructure",
+    title: "AIUR — Stratospheric Observation",
     description:
-      "The carrier is the infrastructure. CARRIER-P0 is the first recovery article.",
+      "Go up, look down, come back. STRATO-P0 is the first observation article.",
     type: "website",
   },
 };

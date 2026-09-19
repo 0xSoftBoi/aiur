@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" role="img" aria-labelledby="t d">
+  <title id="t">STRATO-P0 altitude ladder</title>
+  <desc id="d">Sea level to 35 km. Airliner cruise near 11 km, the standard-atmosphere tropopause at 11 km, the program's 20 km stratospheric threshold, and the reference article's predicted burst at 33.8 km. Figures from python -m aiur.strato in the 1976 standard atmosphere.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#05060a"/>
+      <stop offset="0.55" stop-color="#0b1626"/>
+      <stop offset="1" stop-color="#1f3350"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2a24"/>
+      <stop offset="1" stop-color="#14130f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="640" fill="url(#sky)"/>
+  <rect x="0" y="600" width="1200" height="40" fill="url(#ground)"/>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="#d9d4c7">
+    <!-- altitude axis: 0 km at y=600, 35 km at y=40 (16 px per km) -->
+    <line x1="120" y1="40" x2="120" y2="600" stroke="#8a857a" stroke-width="1"/>
+    <g stroke="#3a3f4a" stroke-dasharray="4 8">
+      <line x1="120" y1="440" x2="1080" y2="440"/>
+      <line x1="120" y1="424" x2="1080" y2="424"/>
+      <line x1="120" y1="280" x2="1080" y2="280"/>
+      <line x1="120" y1="59" x2="1080" y2="59"/>
+    </g>
+    <g fill="#8a857a">
+      <text x="24" y="605">0 KM</text>
+      <text x="24" y="445">10 KM</text>
+      <text x="24" y="285">20 KM</text>
+      <text x="24" y="125">30 KM</text>
+    </g>
+    <g stroke="#8a857a"><line x1="112" y1="440" x2="128" y2="440"/><line x1="112" y1="280" x2="128" y2="280"/><line x1="112" y1="120" x2="128" y2="120"/></g>
+
+    <!-- annotations -->
+    <text x="140" y="435">AIRLINER CRUISE / ~11 KM</text>
+    <text x="140" y="418" fill="#8a857a">TROPOPAUSE (STANDARD ATMOSPHERE) / 11 KM / −56.5 °C</text>
+    <line x1="120" y1="280" x2="1080" y2="280" stroke="#ff6428" stroke-width="2"/>
+    <text x="140" y="270" fill="#ff6428" font-weight="700">STRATOSPHERIC THRESHOLD / 20 KM / HORIZON 505 KM / NADIR GSD 1.92 M</text>
+    <line x1="120" y1="59" x2="1080" y2="59" stroke="#d9d4c7" stroke-width="1.5"/>
+    <text x="140" y="80">PREDICTED BURST / 33.8 KM / ~90 MIN AFTER RELEASE</text>
+
+    <!-- ascent trace: constant-gas-mass sounding balloon, ascent rate creeping up -->
+    <path d="M 300 600 C 380 470, 460 330, 560 200 S 720 90, 790 59" fill="none" stroke="#ff6428" stroke-width="2.5"/>
+    <!-- balloon growing with altitude -->
+    <circle cx="300" cy="580" r="10" fill="none" stroke="#d9d4c7"/>
+    <circle cx="470" cy="330" r="22" fill="none" stroke="#d9d4c7"/>
+    <circle cx="640" cy="140" r="38" fill="none" stroke="#d9d4c7"/>
+    <circle cx="790" cy="59" r="48" fill="none" stroke="#d9d4c7" stroke-dasharray="3 5"/>
+    <!-- package -->
+    <rect x="296" y="596" width="8" height="8" fill="#ff6428"/>
+    <rect x="466" y="356" width="8" height="8" fill="#ff6428"/>
+    <rect x="636" y="182" width="8" height="8" fill="#ff6428"/>
+    <!-- descent under parachute -->
+    <path d="M 800 110 C 860 260, 900 420, 940 600" fill="none" stroke="#8a857a" stroke-width="1.5" stroke-dasharray="6 6"/>
+    <path d="M 812 100 a 14 14 0 0 1 28 0 l -14 16 z" fill="none" stroke="#8a857a"/>
+    <text x="960" y="560" fill="#8a857a">LANDING ≤ 5 M/S</text>
+    <text x="960" y="580" fill="#8a857a">≤ 15 KM FROM PREDICTION</text>
+
+    <!-- provenance -->
+    <text x="140" y="625" fill="#8a857a">SOURCE python -m aiur.strato · 1976 STANDARD ATMOSPHERE · MODEL, NOT MEASURED</text>
+  </g>
+</svg>

@@ -8,7 +8,7 @@ import { COMPANY, PROGRAM } from "@/lib/site-content";
 export const metadata: Metadata = {
   title: "Company",
   description:
-    "Aiur is both the manufacturer of the carrier and the operator of the loop it makes possible.",
+    "Aiur is both the manufacturer of the observation package and the operator of the flights it makes possible.",
 };
 
 export default function CompanyPage() {
@@ -24,7 +24,7 @@ export default function CompanyPage() {
             <strong>and operator</strong>
           </>
         }
-        lede="Aiur designs the carrier and runs the loop it makes possible. Nothing is handed over a wall, so no claim outlives the evidence behind it."
+        lede="Aiur designs the package and flies the loop it makes possible. Nothing is handed over a wall, so no claim outlives the evidence behind it."
       />
 
       <section className="company paper-section" id="structure" aria-label="Company structure">
@@ -66,9 +66,9 @@ export default function CompanyPage() {
             <em>DEGREE OF FREEDOM.</em>
           </h2>
           <p className="section-lede dark-lede">
-            Aiur advances only when the previous interface produces evidence.
-            Bench retention comes before motion. Motion comes before carrier integration.
-            One aircraft comes before two.
+            Aiur advances only when the previous gate produces evidence.
+            The cold chamber comes before the tether. The tether comes before free flight.
+            Two sounding flights come before any float.
           </p>
 
           <div className="program-list" data-reveal>
