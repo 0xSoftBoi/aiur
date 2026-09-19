@@ -580,7 +580,7 @@ HAZARDS: tuple[Hazard, ...] = (
             "loss of aircraft control near the hull."
         ),
         effect=(
-            "Envelope tear, loss of lift, uncontrolled descent of a 4.5 m "
+            "Envelope tear, loss of lift, uncontrolled descent of a 3.5 m "
             "carrier and its payload onto occupied floor space; release of the "
             "envelope's helium inventory into the room; loss of the only "
             "carrier article."
@@ -862,8 +862,8 @@ HAZARDS: tuple[Hazard, ...] = (
             "No gate criterion and no instrument measures this today, which is "
             "why the residual probability is a judgement rather than a number. "
             "Reviewed at the P0-C readiness review before the first helium "
-            "fill; the envelope inventory (roughly 3 m3, engineering estimate "
-            "for a 4.5 m hull) and the room volume are recorded there."
+            "fill; the envelope inventory (roughly 4 m3, the vendor's figure "
+            "for the 3.5 m hull) and the room volume are recorded there."
         ),
         residual_severity=Severity.CATASTROPHIC,
         residual_probability=Probability.IMPROBABLE,
@@ -964,7 +964,7 @@ HAZARDS: tuple[Hazard, ...] = (
             "equipment."
         ),
         cause=(
-            "Room airflow or an HVAC transient moving a buoyant 4.5 m hull "
+            "Room airflow or an HVAC transient moving a buoyant 3.5 m hull "
             "faster than a station-holding micro-UAV expects (twin finding 4); "
             "thrust-limited station-keeping that cannot arrest the drift; "
             "tether geometry that permits a pendulum swing."

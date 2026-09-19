@@ -42,8 +42,9 @@ Known missing physics, flagged for bench correlation: vehicle attitude
 dynamics, propeller downwash recirculating off the hull during terminal
 approach, aero interaction between aircraft, envelope deformation, any
 systematic (non-white) positioning error structure, and the carrier trim
-transient on capture/release — a 37 g aircraft changes carrier dead weight
-by ~0.36 N, more than the modeled 0.3 N vertical thrust budget, so the real
+transient on capture/release — a ~48 g aircraft as flown (airframe, deck and
+probe) changes carrier dead weight by ~0.47 N, more than the modeled 0.3 N
+vertical thrust budget, so the real
 vehicle must re-trim across every cycle while the twin assumes it already
 has.
 
@@ -127,11 +128,14 @@ disturbance in the exact volume where capture happens, which the survey in
 decided aerial recovery, and which the scene-uniform air model could not
 express until `CarrierWakeParams` was added.
 
-Model findings as of 2026-08-08 (seed 1, 30 episodes/bin; simulation
-results, not vehicle performance):
+Model findings as of 2026-09-14 (seed 1, 30 episodes/bin, on the 3.5 m
+article; simulation results, not vehicle performance). The carrier was
+re-sized from 4.5 m to 3.5 m on that date ([carrier-sizing.md](carrier-sizing.md));
+every sweep below was re-run on both parameter sets at the same commit and
+the 3.5 m article reproduces the 4.5 m results within sampling noise:
 
 - **Outdoor wind**: capture rate for the P0-scale article is 100% in calm
-  air, ~90% at 0.5 m/s mean wind, ~10% at 1.0 m/s, and 0% at 1.5 m/s and
+  air, ~93% at 0.5 m/s mean wind, ~3% at 1.0 m/s, and 0% at 1.5 m/s and
   above — where the tethered carrier also becomes a hazard to its own
   aircraft, drifting faster than the evasion reflex can escape. This is the
   executable form of the claim that outdoor operation is a scaling
@@ -141,9 +145,9 @@ results, not vehicle performance):
   ~63% with heavy abort churn at 30× (σ ≈ 90 mm, the scale of the funnel
   radius). Toy-grade or GNSS-grade terminal navigation therefore demands
   either a better relative sensor or a larger capture funnel (SHARED-001).
-- **Carrier wake** (12 episodes/bin, seed 1): capture is 100% through 0.10
-  m/s of belly-dock downwash, then collapses — 75% at 0.15, 50% at 0.20,
-  and 0% at 0.40 m/s. The collapse lands exactly on the terminal
+- **Carrier wake** (30 episodes/bin, seed 1): capture is 100% through 0.05
+  m/s of belly-dock downwash and ~97% at 0.10, then collapses — 73% at
+  0.15, 67% at 0.20, and 0% at 0.40 m/s. The collapse lands exactly on the terminal
   approach-speed budget (≤0.10 m/s target, 0.20 m/s ceiling): a drone pushed
   down faster than it closes cannot reach the seat, which is the same
   mechanism that beat the XF-85 Goblin and cost DARPA Gremlins nine

@@ -11,7 +11,7 @@ The scaling argument that motivates this module is short enough to state.
 Payload mass is not the wall: a guarded Crazyflie Brushless is 37 g, so two
 hundred of them is 7.4 kg of airframe.
 
-Do not reach that conclusion by scaling envelope skin off a 4.5 m indoor
+Do not reach that conclusion by scaling envelope skin off the 3.5 m indoor
 blimp, which flatters the answer badly.  The honest anchor is a real
 vehicle: Flying Whales' LCA60T is 200 m long, ~200,000 m³ of helium in 14
 cells, ~210 t of gross lift, 100 t of structure and 60 t of payload — a

@@ -2,6 +2,12 @@
 
 The model intentionally separates theoretical buoyancy from the vendor-rated
 usable payload. Flight hardware is budgeted against the rated payload.
+
+The reference article is the smallest catalog airship that closes the
+two-aircraft budget under an explicit reserve policy; ``aiur.envelope`` holds
+the catalog, the reserve rule, and the physics, and ``selected_article``
+re-derives the choice from the live budget so a budget change that outgrows
+the vehicle fails a test instead of being discovered on a scale.
 """
 
 from __future__ import annotations
@@ -11,16 +17,28 @@ import json
 import math
 from typing import Iterable
 
+from .envelope import (
+    P0_ARTICLE,
+    RC_ZEPPELIN_INDOOR,
+    ReservePolicy,
+    VendorArticle,
+    select_article,
+)
+
 SEA_LEVEL_AIR_DENSITY_KG_M3 = 1.225
 HELIUM_DENSITY_KG_M3 = 0.164
 
 
 @dataclass(frozen=True)
 class CarrierSpec:
-    """Reference carrier values for the first flight article."""
+    """Reference carrier values for the first flight article.
 
-    envelope_volume_m3: float = 5.5
-    rated_payload_kg: float = 1.0
+    Defaults are the vendor figures for ``aiur.envelope.P0_ARTICLE``.
+    """
+
+    envelope_length_m: float = P0_ARTICLE.length_m
+    envelope_volume_m3: float = P0_ARTICLE.helium_volume_m3
+    rated_payload_kg: float = P0_ARTICLE.rated_payload_kg
 
 
 @dataclass(frozen=True)
@@ -117,17 +135,72 @@ def baseline_p0_budget() -> tuple[PayloadItem, ...]:
     )
 
 
+def aircraft_dead_weight_step_kg(
+    items: Iterable[PayloadItem] | None = None,
+) -> float:
+    """Mass of one aircraft as flown: the dead-weight step the carrier sees
+    when one aircraft is released or captured.
+
+    Everything in the budget that is carried per aircraft (quantity 2 on the
+    two-aircraft baseline) counts; the carrier-side items do not.
+    """
+
+    if items is None:
+        items = baseline_p0_budget()
+    per_aircraft = [item for item in items if item.quantity == 2]
+    return sum(item.mass_kg_each for item in per_aircraft)
+
+
+def reserve_policy(items: Iterable[PayloadItem] | None = None) -> ReservePolicy:
+    """The P0 reserve rule: 10% of the rating, and never less than one
+    aircraft's dead-weight step, so the vehicle can be trimmed through a
+    complete release/recovery cycle on ballast alone."""
+
+    return ReservePolicy(fraction_of_rating=0.10,
+                         floor_kg=aircraft_dead_weight_step_kg(items))
+
+
+def selected_article(
+    items: Iterable[PayloadItem] | None = None,
+    *,
+    conservative: bool = False,
+) -> VendorArticle | None:
+    """Smallest catalog article that closes the budget under the reserve rule.
+
+    ``conservative`` selects against the lowest payload figure the vendor
+    quotes.  P0 procurement must obtain the rating in writing for the
+    delivered article; until then the two answers bracket the decision.
+    """
+
+    if items is None:
+        items = baseline_p0_budget()
+    items = tuple(items)
+    return select_article(
+        payload_mass_kg(items), reserve_policy(items), RC_ZEPPELIN_INDOOR,
+        conservative=conservative,
+    )
+
+
 def _summary() -> dict[str, object]:
     carrier = CarrierSpec()
     items = baseline_p0_budget()
     dock = DockEnvelope()
+    policy = reserve_policy(items)
+    chosen = selected_article(items)
+    fallback = selected_article(items, conservative=True)
     return {
         "carrier": asdict(carrier),
+        "article": P0_ARTICLE.model,
         "ideal_gross_static_lift_kg": round(
             gross_static_lift_kg(carrier.envelope_volume_m3), 4
         ),
         "baseline_payload_mass_kg": round(payload_mass_kg(items), 4),
         "rated_payload_margin_kg": round(payload_margin_kg(carrier, items), 4),
+        "reserve_policy": asdict(policy),
+        "required_reserve_kg": round(policy.required_reserve_kg(carrier.rated_payload_kg), 4),
+        "reserve_closes": policy.closes(carrier.rated_payload_kg, payload_mass_kg(items)),
+        "smallest_article_vendor_high_figure": chosen.model if chosen else None,
+        "smallest_article_vendor_low_figure": fallback.model if fallback else None,
         "dock": asdict(dock),
         "items": [
             {

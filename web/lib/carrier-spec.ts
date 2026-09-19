@@ -1,14 +1,16 @@
 /**
  * Metric values used by the live Three.js model.
  *
- * The vendor publishes length and helium volume but not envelope diameter. The
- * renderer therefore uses a volume-matched prolate spheroid; its derived
+ * Length, helium volume and rated payload mirror the vendor article selected
+ * in aiur/envelope.py (RC-Zeppelin 3.5 m indoor; docs/carrier-sizing.md).
+ * The vendor publishes length and helium volume but not envelope diameter.
+ * The renderer therefore uses a volume-matched prolate spheroid; its derived
  * diameter is a visualization parameter, not a frozen airframe dimension.
  */
 export const CARRIER_SPEC = {
-  envelopeLengthM: 4.5,
-  heliumVolumeM3: 5.5,
-  ratedPayloadKg: 1.0,
+  envelopeLengthM: 3.5,
+  heliumVolumeM3: 4.0,
+  ratedPayloadKg: 0.5,
   dockMouthDiameterM: 0.18,
   dockThroatDiameterM: 0.016,
   dockDepthM: 0.065,

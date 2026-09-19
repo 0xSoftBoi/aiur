@@ -12,7 +12,7 @@ CARRIER-P0 exists to answer the architecture's highest-risk question:
 
 > Can a buoyant carrier repeatedly launch a small autonomous aircraft and recover it onto a moving belly dock?
 
-The first flight article is an indoor helium platform built around a ~4.5 m airship, one active recovery dock, and one to two micro-UAVs.
+The first flight article is an indoor helium platform built around a 3.5 m airship (the smallest catalog article that closes the mass budget for a Crazyflie-class aircraft; see [docs/carrier-sizing.md](docs/carrier-sizing.md)), one active recovery dock, and one to two micro-UAVs.
 
 ### P0 scope
 
@@ -90,7 +90,9 @@ Analysis and models:
   `python -m aiur.sim.fleet | python tools/report_fleet.py`
 - [Prior-art survey](docs/prior-art.md) — DARPA Gremlins/OFFSET, ONR LOCUST,
   Perdix, Sentien Hive, LTA motherships, and academic aerial docking
-- [Mass and capture-envelope model](aiur/p0.py)
+- [Mass and capture-envelope model](aiur/p0.py) — `python -m aiur.p0`
+- [Carrier sizing study](docs/carrier-sizing.md) and the
+  [envelope model](aiur/envelope.py) — `python -m aiur.envelope`
 - [Capture-chain tolerance stack](aiur/tolerance.py) — `python -m aiur.tolerance`
 - [Dock FMECA and fault trees](docs/dock-fmeca.md)
 - [Common-mode analysis](docs/common-mode.md)

@@ -325,7 +325,7 @@ DECLARED_DOMAIN: tuple[str, ...] = (
     "indoor still air: zero mean flow, gust sigma <= 0.03 m/s (INDOOR_CALM)",
     "external optical relative positioning at sigma ~3 mm, 40 ms latency "
     "(LIGHTHOUSE_GRADE)",
-    "one 4.5 m tethered carrier or bench rig, one active 180 mm funnel dock",
+    "one 3.5 m tethered carrier or bench rig, one active 180 mm funnel dock",
     "one or two Crazyflie-class ~37 g aircraft, sequential dock use",
     "closing speeds within the P0 capture envelope (<= 0.20 m/s)",
     "at most one injected fault per episode",

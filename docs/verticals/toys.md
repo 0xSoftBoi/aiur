@@ -22,7 +22,7 @@ This vertical also carries a program-level role: it is the mass-manufacturing co
 - Operator: consumer, indoor, zero calibration tolerance, no external infrastructure.
 - Cadence: play sessions of 10–20 min flight, weeks of shelf time between sessions.
 - Payload: 1 micro-UAV, tens of grams, fully prop-guarded.
-- Carrier: living-room-scale blimp (≤2 m class, not 4.5 m) loiters; the core interaction is the drone autonomously returning to the belly dock. Recharge-on-dock is the eventual play-cycle closer (P0 explicitly defers charging; same here).
+- Carrier: living-room-scale blimp (≤2 m class, not 3.5 m) loiters; the core interaction is the drone autonomously returning to the belly dock. Recharge-on-dock is the eventual play-cycle closer (P0 explicitly defers charging; same here).
 - Sorties: pre-canned behaviors (launch, orbit, photo pass, return) triggered from a phone.
 
 ### Profile 3 — museum / science-center demonstrator
@@ -62,8 +62,8 @@ All rows Status: engineering target. Cost figures are assumptions, not quotes.
 | TOY-001 | Terminal relative navigation without external infrastructure | Capture-grade relative pose from carrier-mounted beacon/camera + drone sensor, added BOM ≤$10 | Lighthouse base stations cost more than the whole toy; shared derived requirement with all non-lab verticals (GNSS-independent terminal relative nav; vision/UWB/IR trade open) |
 | TOY-002 | Terminal-nav relative position error (RMS, capture volume) | ≤3 cm at ≤1.5 m range | Funnel resizing input; toy-grade sensor class, per degraded-sensor-sweep axis |
 | TOY-003 | Funnel entrance diameter at toy-grade noise | Sized by twin for ≥90% capture at TOY-002 noise; expect >180 mm | 180 mm funnel is sized for mm-grade positioning; cm-grade noise likely forces a larger funnel — twin quantifies before any tooling |
-| TOY-004 | Toy-scale dock assembly mass | ≤50 g complete (funnel, collet, keeper, servo, switches) | A ≤2 m envelope lifts ~200–600 g gross; the 180 g P0 dock does not scale down for free |
-| TOY-005 | Carrier envelope length / lift budget | ≤2.0 m envelope; positive margin with dock + drone + avionics at ~1.0 g/L helium net lift (physics estimate; balloon-grade gas mixtures lift less — assumption to verify) | Living-room ceilings, doorways, and retail box size |
+| TOY-004 | Toy-scale dock assembly mass | ≤50 g complete (funnel, collet, keeper, servo, switches) | `python -m aiur.envelope` (toy sweep): a 2.0 m hull at fineness 2.5 on 50 µm film with 150 g of systems nets ~115 g; the 180 g P0 dock does not fit, a 50 g dock leaves ~30 g for the aircraft and avionics |
+| TOY-005 | Carrier envelope length / lift budget | ≤2.0 m envelope; positive margin with dock + drone + avionics at ~1.0 kg/m³ helium net lift (physics: 1.04 kg/m³ pure at 20 °C, ~1.0 at 97% fill purity; balloon-grade gas mixtures lift less — assumption to verify) | Living-room ceilings, doorways, and retail box size; the same model shows a 100 µm hull with the vendor's ~600 g of systems is negative below ~2.9 m at fineness 2.5, and the 50 µm toy hull with 150 g of systems only turns positive near 1.8 m |
 | TOY-006 | Envelope helium retention | ≤10% lift loss over 14 days shelf-inflated | Consumer helium logistics; a toy that needs weekly refills is returned |
 | TOY-007 | Consumer refill path | Refill from retail balloon-grade cylinder, ≤$15/fill, no regulator skill required | Helium cost/availability is a purchase-decision input, not an ops detail |
 | TOY-008 | Micro-UAV all-up mass | ≤60 g with mandatory full prop guards (P0 reference: 37 g guarded) | Injury energy, small-UAS registration threshold headroom (tens of grams vs 250 g — consideration to verify) |
@@ -80,7 +80,7 @@ The twin (aiur/sim, deterministic dependency-free Python) is the gate between th
 
 - TOY-001/002/003 — run `degraded-sensor-sweep` across the full noise axis, Lighthouse-grade mm up to toy-grade and GNSS/RTK-grade cm noise, and report capture probability vs funnel entrance diameter. Output is the funnel-size curve: the single number this vertical needs before injection-mold tooling. Known starting point: 180 mm assumes mm-grade positioning.
 - TOY-004/005 — extend the p0.py mass/lift model to a ≤2 m envelope parameter sweep; kill the vertical on paper if no (envelope, dock mass, drone mass) triple closes with margin.
-- Indoor disturbance — reuse `outdoor-gust-sweep` at its low wind levels as an HVAC-draft proxy; a living room with forced air is not still air, and a 2 m blimp has less control authority than the 4.5 m article.
+- Indoor disturbance — reuse `outdoor-gust-sweep` at its low wind levels as an HVAC-draft proxy; a living room with forced air is not still air, and a 2 m blimp has less control authority than the 3.5 m article.
 - Capture logic — `sil-p0b` and `sil-p0c` rerun unchanged except for the toy-scale funnel geometry and TOY-002 noise model; the S1 AND S2 state machine and abort semantics are identical, so the same SIL-B/SIL-C gates apply.
 - TOY-012 — Monte Carlo off-axis insertion campaign (angle/velocity distributions from a child-handling assumption set, labeled as such) to drive keeper and collet fatigue load cases.
 - Sequencing — `sil-p0d` is out of scope for a one-drone toy; applies only if a two-drone SKU is ever considered.
@@ -103,7 +103,7 @@ Ranked; killers first.
 1. Positioning cost kills the toy tier. Lighthouse is instrumentation, not a product architecture — two base stations exceed a defensible toy retail price on their own. The toy lives or dies on TOY-001 terminal nav at ≤$10 BOM, and `degraded-sensor-sweep` already implies the price of cheap sensing is a larger funnel. If the required funnel exceeds what a ≤2 m envelope can carry and box constraints allow, there is no product.
 2. Helium logistics kill the consumer tier. Refill cost, balloon-grade gas lift shortfall, and envelope leakage over shelf weeks (TOY-006/007) are unforgiving; a deflated toy in week two is a return. The STEM tier tolerates this; the mass market may not.
 3. Safety compliance is a schedule and BOM tax. ASTM F963-class review of a powered keeper, spinning props, and a lithium cell in a child-adjacent product is real engineering, not paperwork. Assume it reshapes the drone-side hardware.
-4. Lift budget at toy scale may not close. Envelope volume falls with length cubed; dock mass does not. 5.5 m³ → ~0.2 m³ at 1/3 scale is a ~200 g gross-lift class vehicle, which the current 180 g dock alone nearly consumes. TOY-004/005 must close in the model before anything is built.
+4. Lift budget at toy scale may not close. Envelope volume falls with length cubed; envelope skin only with length squared, and dock mass not at all. The sweep in [aiur/envelope.py](../../aiur/envelope.py) puts the crossover where a 100 µm hull can lift its own skin and systems near 3 m; at 2 m the toy only closes on 50 µm film with ~150 g of systems, netting ~115 g gross for dock, aircraft and avionics. The current 180 g dock alone exceeds it. TOY-004/005 must close in the model before anything is built.
 5. Durability under child handling. The P0-A gate is 50 careful cycles; TOY-012 asks for 1,000 careless ones. The collet/keeper may need a materials change that then propagates back into the core program.
 6. Price/value vs the $40 quadcopter. Even with everything solved, the system premium must survive a retail shelf next to cheaper, tougher, logistics-free alternatives.
 

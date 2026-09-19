@@ -76,8 +76,8 @@ The rig adds relative motion and a live aircraft. It does not add a vehicle.
 
 | ID | Not reproduced | Critical | Impact | Retirement gate |
 | --- | --- | --- | --- | --- |
-| TLYF-B-01 | Hull downwash recirculation. Downwash exits freely instead of reflecting off a 4.5 m envelope above the dock | yes | The terminal-approach disturbance measured on the rig is a lower bound on the vehicle's | P0-C |
-| TLYF-B-02 | Carrier trim transient. Rig dock motion is programmed and does not react to the ~0.36 N dead-weight step at capture, which exceeds the modeled 0.3 N vertical thrust budget | yes | The rig cannot show whether the carrier holds station through capture and release, which is the actual recovery question | P0-C |
+| TLYF-B-01 | Hull downwash recirculation. Downwash exits freely instead of reflecting off a 3.5 m envelope above the dock | yes | The terminal-approach disturbance measured on the rig is a lower bound on the vehicle's | P0-C |
+| TLYF-B-02 | Carrier trim transient. Rig dock motion is programmed and does not react to the ~0.47 N dead-weight step at capture (airframe, deck and probe), which exceeds the modeled 0.3 N vertical thrust budget | yes | The rig cannot show whether the carrier holds station through capture and release, which is the actual recovery question | P0-C |
 | TLYF-B-03 | Gas envelope. There is nothing to strike | yes | The `envelope_strikes == 0` criterion is untestable here, and prop-guard adequacy near a thin film is unknown | P0-C |
 | TLYF-B-04 | Carrier dynamics. Dock motion follows a script; real dock motion is produced by air, tether, and station-keeping, and is disturbed by the aircraft being caught | yes | Closing-speed statistics come from a motion profile chosen by the test, not by the vehicle | P0-C |
 | TLYF-B-05 | Buoyancy and ballast state: helium loss, ballast shift, attitude change with load | no | Single-capture results are unaffected; the sortie-set behaviour is not | P0-C day-in-the-life below |

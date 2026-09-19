@@ -15,23 +15,25 @@ P0 succeeds before the program spends engineering time on hydrogen, a large enve
 
 ## Reference flight article
 
-The baseline carrier is a 4.5 m indoor helium airship.
+The baseline carrier is a 3.5 m indoor helium airship: the smallest catalog article whose rated payload closes the two-aircraft mass budget below with the reserve rule stated there. The sizing study behind that choice, including why the previous 4.5 m baseline was oversized for a Crazyflie-class aircraft, is [carrier-sizing.md](carrier-sizing.md).
 
-A current commercial reference platform is RC-Zeppelin B100-I-450-VT:
+The commercial reference platform is the RC-Zeppelin 3.5 m indoor blimp:
 
 | Property | Reference value |
 | --- | ---: |
-| Envelope length | 4.5 m |
-| Helium volume | ~5.5 m³ |
-| Rated payload | up to 1.0 kg |
+| Envelope length | 3.5 m |
+| Helium volume | ~4 m³ (vendor figure, shared with the 3 m article) |
+| Rated payload | up to 500 g (vendor catalog also quotes 400–500 g) |
 | Envelope | 100 μm polyurethane |
-| Advertised endurance | 45–60 min |
-| 2026 RTF price | $2,820 |
+| Advertised endurance | 40–60 min |
+| 2026 RTF price | $2,644 |
 
-Source: https://www.rc-zeppelin.com/4.5m-indoor-RC-Blimp.html  
+Source: https://www.rc-zeppelin.com/indoor-rc-blimps.html  
 Pricing: https://www.rc-zeppelin.com/price-list.html
 
-Vendor figures are design inputs, not Aiur test results. They must be verified on the delivered vehicle.
+Vendor figures are design inputs, not Aiur test results. They must be verified on the delivered vehicle. Two things must happen before the order is placed: the vendor's payload rating for the specific article is obtained in writing, and `python -m aiur.p0` is re-run against the dock and probe masses measured at P0-A. If either drops the rating below the reserve rule, the fallback is the next article up, the 4.5 m B100-I-450-VT (~5.5 m³, vendor-rated 750 g to 1.0 kg, $2,820), which the executable selection returns automatically against the vendor's lower figures.
+
+The vendor does not publish envelope diameter. A volume-matched prolate spheroid gives 1.48 m; the drawn hull profile in [aiur/envelope.py](../aiur/envelope.py) gives the same diameter at a prismatic coefficient of 0.66, a fineness ratio of 2.4. That is a fat hull by airship standards (drag minima sit near 3–4), which is acceptable for an indoor vehicle that station-keeps at walking pace and helps the room fit.
 
 ## Aircraft
 
@@ -103,7 +105,7 @@ See [hardware/dock/README.md](../hardware/dock/README.md) and the [P0-A Rev-A be
 
 ## Mass budget
 
-Use the vendor's 1.0 kg rated payload as the P0 payload ceiling. Do not substitute theoretical helium lift for rated usable payload.
+Use the vendor's 500 g rated payload as the P0 payload ceiling. Do not substitute theoretical helium lift for rated usable payload: the physics net lift of a ~4 m³ hull after its own envelope is roughly 1.2 kg, and the vendor rates it at 0.5 kg. The gap is the vendor's business (ballast, trim, their own margin) until free lift is measured on the delivered vehicle (P0-MASS-004).
 
 Baseline carried mass target:
 
@@ -116,11 +118,13 @@ Baseline carried mass target:
 | Carrier localization + telemetry allocation | ≤50 g |
 | Wiring/mounting reserve | ≤100 g |
 | Total baseline allocation | ≤425.4 g |
-| Rated-payload reserve | ≥574.6 g |
+| Rated-payload reserve | ≥74.6 g |
 
-That reserve is deliberate. The prototype should not be engineered against its last gram.
+The reserve is governed by a rule, not a feeling: it must be at least 10% of the rating (50 g) and at least one aircraft's dead-weight step as flown, airframe plus deck plus probe (47.7 g), so the vehicle can be ballast-trimmed through a full release/recovery cycle. Both bounds sit under the 74.6 g that remains. If a measured allocation grows past that, the answer is the next catalog article, not spending the reserve.
 
-The executable budget lives in [aiur/p0.py](../aiur/p0.py).
+Note what the budget is made of. The two aircraft with their decks and probes are 95.4 g, under a quarter of the total; the dock, localization, and wiring allocations are the other three quarters. A carrier sized for this drone is sized for the dock.
+
+The executable budget and the article selection live in [aiur/p0.py](../aiur/p0.py) and [aiur/envelope.py](../aiur/envelope.py).
 
 ## Test gates
 

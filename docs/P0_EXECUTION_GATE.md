@@ -50,7 +50,7 @@ Only after P0-A passes, mount the dock to the buoyant carrier.
 
 ### Configuration
 
-- indoor ~4.5 m helium platform;
+- indoor 3.5 m helium platform (see [carrier-sizing.md](carrier-sizing.md));
 - one dock only;
 - one micro-UAV initially;
 - externally referenced positioning;

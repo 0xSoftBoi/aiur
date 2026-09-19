@@ -210,7 +210,7 @@ def outdoor_gust_case(seed: int, mean_wind_m_s: float) -> EpisodeConfig:
 
     A tethered-carrier recovery under outdoor wind.  The study exists to
     locate the wind level where capture collapses for the P0-scale article;
-    the expectation, to be confirmed by the sweep, is that a 4.5 m envelope
+    the expectation, to be confirmed by the sweep, is that a 3.5 m envelope
     is not an outdoor vehicle.
     """
 

@@ -9,7 +9,7 @@ lift, one belly dock, tethered and prop-guarded indoor operations, and
 thing you can see in a room.
 
 So this module builds the room: a hall floored and walled at a size that suits
-a 4.5 m airship, an overhead truss grid carrying the fixtures that actually
+a few-metre indoor airship, an overhead truss grid carrying the fixtures that actually
 light the scene, the external motion-capture cameras that provide the
 positioning reference, painted floor markings for the operating box, and the
 tether.  The haze is not decoration either - it is what makes a 20 m room read
@@ -24,7 +24,8 @@ import math
 import bpy
 
 from carrier_model import (
-    DOCK_BAY_X, HULL_RADIUS_M, active, hull_radius, pbr, put, shade_smooth,
+    DOCK_BAY_X, DOCK_MOUTH_Z, ENVELOPE_LENGTH_M, HULL_RADIUS_M, active,
+    hull_radius, pbr, put, shade_smooth,
 )
 
 # --- hall envelope -----------------------------------------------------------
@@ -184,7 +185,7 @@ def build_truss_rig(m):
     return made, fixtures
 
 
-def build_mocap(m, target=(2.25, 0.0, -0.4)):
+def build_mocap(m, target=(ENVELOPE_LENGTH_M / 2.0, 0.0, -0.4)):
     """External motion-capture cameras on the truss corners.
 
     P0's positioning is externally referenced, and this is what that looks
@@ -324,7 +325,7 @@ def build_atmosphere(strength=0.30, start=13.0, depth=26.0,
     return blend
 
 
-def stage_lighting(fixtures, dock=(DOCK_BAY_X, 0.0, -1.05), scale=1.0):
+def stage_lighting(fixtures, dock=(DOCK_BAY_X, 0.0, DOCK_MOUTH_Z), scale=1.0):
     """Hang the practical lights on the fixtures, plus one belly bounce.
 
     The overhead rig is motivated: every lamp sits inside a fixture you can
