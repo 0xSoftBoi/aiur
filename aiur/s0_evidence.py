@@ -279,6 +279,92 @@ def reduce_flights(
 
 
 # ----------------------------------------------------------------------
+# S0-B: tethered ascents
+# ----------------------------------------------------------------------
+
+TETHERED_MANIFEST_FIELDS = (
+    "run_id",
+    "article_rev",
+    "git_commit",
+    "evidence_kind",
+    "images_downlinked",
+    "parachute_deployments",
+    "parachute_failures",
+    "crew_contacts",
+)
+
+
+def reduce_tethered_ascent(
+    rows: list[dict[str, str]], manifest: dict[str, object], context: str = "ascent"
+) -> dict[str, float | int]:
+    """Metrics for one tethered ascent from its log and ground-side manifest."""
+
+    _require_columns(rows, FLIGHT_LOG_REQUIRED, context)
+    _require_manifest(manifest, TETHERED_MANIFEST_FIELDS, context)
+    last_rx: float | None = None
+    max_gap = 0.0
+    previous_t: float | None = None
+    for index, row in enumerate(rows):
+        where = f"{context} row {index + 1}"
+        t = _float(row["t_s"], "t_s", where)
+        if previous_t is not None and t < previous_t:
+            raise EvidenceError(f"{where}: t_s is not monotonic")
+        previous_t = t
+        if _bool(row["telemetry_received"], "telemetry_received", where):
+            if last_rx is not None:
+                max_gap = max(max_gap, t - last_rx)
+            last_rx = t
+    if last_rx is None:
+        raise EvidenceError(f"{context}: no telemetry received in the whole log")
+    deployments = int(_float(manifest["parachute_deployments"], "parachute_deployments", context))
+    failures = int(_float(manifest["parachute_failures"], "parachute_failures", context))
+    if failures > deployments:
+        raise EvidenceError(f"{context}: more parachute failures than deployments")
+    return {
+        "end_to_end_images_downlinked": int(
+            _float(manifest["images_downlinked"], "images_downlinked", context)
+        ),
+        "position_report_gap_max_s": max_gap,
+        "parachute_deployments": deployments,
+        "parachute_failures": failures,
+        "crew_contacts": int(_float(manifest["crew_contacts"], "crew_contacts", context)),
+    }
+
+
+def reduce_tethered(
+    ascents: list[tuple[list[dict[str, str]], dict[str, object]]],
+    trials: list[dict[str, str]],
+) -> dict[str, object]:
+    """S0-B metrics across every tethered ascent."""
+
+    if not ascents:
+        raise EvidenceError("no tethered ascents")
+    per = []
+    kinds = set()
+    run_ids = set()
+    for rows, manifest in ascents:
+        context = f"ascent {manifest.get('run_id', '?')}"
+        per.append(reduce_tethered_ascent(rows, manifest, context))
+        kinds.add(str(manifest["evidence_kind"]))
+        run_ids.add(str(manifest["run_id"]))
+    if len(run_ids) != len(ascents):
+        raise EvidenceError("ascents must carry distinct run_ids")
+    metrics: dict[str, object] = {
+        "tethered_flights": len(ascents),
+        "end_to_end_images_downlinked": sum(int(a["end_to_end_images_downlinked"]) for a in per),
+        "position_report_gap_max_s": max(a["position_report_gap_max_s"] for a in per),
+        "parachute_deployments": sum(int(a["parachute_deployments"]) for a in per),
+        "parachute_failures": sum(int(a["parachute_failures"]) for a in per),
+        "crew_contacts": sum(int(a["crew_contacts"]) for a in per),
+    }
+    metrics.update(
+        {k: v for k, v in reduce_trials(trials).items() if k.startswith("termination")}
+    )
+    metrics["evidence_kind"] = "flown" if kinds == {"flown"} else ",".join(sorted(kinds))
+    return metrics
+
+
+# ----------------------------------------------------------------------
 # S0-A: bench and cold chamber
 # ----------------------------------------------------------------------
 
@@ -354,6 +440,11 @@ def main(argv: list[str] | None = None) -> int:
     flight.add_argument("--manifest", type=Path, action="append", required=True)
     flight.add_argument("--trials", type=Path, required=True)
 
+    tethered = sub.add_parser("tethered", help="S0-B: tethered ascents")
+    tethered.add_argument("--log", type=Path, action="append", required=True)
+    tethered.add_argument("--manifest", type=Path, action="append", required=True)
+    tethered.add_argument("--trials", type=Path, required=True)
+
     chamber = sub.add_parser("chamber", help="S0-A: bench and cold chamber")
     chamber.add_argument("--soak", type=Path, required=True)
     chamber.add_argument("--trials", type=Path, required=True)
@@ -370,6 +461,14 @@ def main(argv: list[str] | None = None) -> int:
                 for log, manifest in zip(args.log, args.manifest)
             ]
             report = verdict("S0-C", reduce_flights(flights, read_csv(args.trials)))
+        elif args.command == "tethered":
+            if len(args.log) != len(args.manifest):
+                raise EvidenceError("each --log needs one --manifest, in order")
+            ascents = [
+                (read_csv(log), read_manifest(manifest))
+                for log, manifest in zip(args.log, args.manifest)
+            ]
+            report = verdict("S0-B", reduce_tethered(ascents, read_csv(args.trials)))
         else:
             report = verdict(
                 "S0-A",

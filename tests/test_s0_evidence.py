@@ -5,6 +5,7 @@ from aiur.s0_evidence import (
     reduce_chamber,
     reduce_flight,
     reduce_flights,
+    reduce_tethered,
     reduce_trials,
     verdict,
 )
@@ -134,6 +135,48 @@ class FlightReductionTests(unittest.TestCase):
         report = verdict("S0-C", reduce_flights(flights, _trials()))
         self.assertTrue(report["passed"])
         self.assertFalse(report["closes_requirements"])
+
+
+class TetheredReductionTests(unittest.TestCase):
+    @staticmethod
+    def _ascent(seed: int, **overrides: object) -> tuple[list[dict[str, str]], dict[str, object]]:
+        rows = _rows(seed)[:900]  # a tethered ascent is short; the log shape is the same
+        manifest: dict[str, object] = {
+            "run_id": f"T{seed}",
+            "article_rev": "Rev-A",
+            "git_commit": "abc",
+            "evidence_kind": "flown",
+            "images_downlinked": 12,
+            "parachute_deployments": 1 if seed == 3 else 0,
+            "parachute_failures": 0,
+            "crew_contacts": 0,
+        }
+        manifest.update(overrides)
+        return rows, manifest
+
+    def test_three_ascents_with_one_deployment_close_s0_b(self) -> None:
+        ascents = [self._ascent(1), self._ascent(2), self._ascent(3)]
+        report = verdict("S0-B", reduce_tethered(ascents, _trials()))
+        self.assertTrue(report["passed"], report)
+        self.assertTrue(report["closes_requirements"])
+        self.assertEqual(report["metrics"]["tethered_flights"], 3)
+        self.assertEqual(report["metrics"]["end_to_end_images_downlinked"], 36)
+
+    def test_two_ascents_or_no_deployment_fail(self) -> None:
+        report = verdict("S0-B", reduce_tethered([self._ascent(1), self._ascent(2)], _trials()))
+        self.assertFalse(report["passed"])
+        self.assertIn("at least three tethered ascents", report["failed_criteria"])
+        self.assertIn("termination fired aloft and the parachute deployed", report["failed_criteria"])
+
+    def test_crew_contact_fails_the_gate(self) -> None:
+        ascents = [self._ascent(1), self._ascent(2), self._ascent(3, crew_contacts=1)]
+        report = verdict("S0-B", reduce_tethered(ascents, _trials()))
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["metrics"]["crew_contacts"], 1)
+
+    def test_more_failures_than_deployments_is_inconsistent(self) -> None:
+        with self.assertRaises(EvidenceError):
+            reduce_tethered([self._ascent(3, parachute_failures=2)], _trials())
 
 
 class TrialReductionTests(unittest.TestCase):

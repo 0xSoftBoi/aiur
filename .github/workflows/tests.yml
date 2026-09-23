@@ -47,6 +47,8 @@ jobs:
           done
       - name: Rev-A package drawings regenerate cleanly
         run: python hardware/strato/cad/generate_package_rev_a.py --out /tmp/strato-cad
+      - name: STRATO-P0 readiness graph
+        run: python -m aiur.s0_readiness
       - name: Print P0 budget (parked carrier lineage)
         run: python -m aiur.p0
       - name: Requirement closure matrix
