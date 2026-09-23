@@ -169,6 +169,13 @@ export const PROGRAM = [
 export const NEWS = [
   {
     date: "September 2026",
+    tag: "Engineering",
+    title: "Rev-A flight package defined",
+    copy: "BOM, generated enclosure drawings, a fail-safe flight supervisor flown through the twin, and an evidence reducer that closes the S0 gates.",
+    href: `${REPO_URL}/blob/main/hardware/strato/README.md`,
+  },
+  {
+    date: "September 2026",
     tag: "Program",
     title: "Programme re-pointed at the stratosphere",
     copy: "STRATO-P0: no aircraft, no dock, pure observation. Executable ascent, geometry, and budget model with S0 gates.",

@@ -502,15 +502,17 @@ def visible_cap_area_km2(altitude_m: float) -> float:
 class Optic:
     """A camera as the geometry sees it.
 
-    Defaults describe a 1-inch-class sensor behind a 25 mm lens.  They are a
-    stand-in for whichever module the program buys; the point of the class
-    is that the buy is checked against a GSD target before it is made.
+    Defaults are the Rev-A BOM candidate (hardware/strato/bom.csv): a Sony
+    IMX477 1/2.3-inch sensor (1.55 um pixels, 6.287 x 4.712 mm active area,
+    published) behind a 16 mm M12 lens.  A stock Camera Module 3 (1.4 um
+    pixels, 4.74 mm focal length) would give ~5.9 m at 20 km and fail
+    S0-OBS-002, which is why the optic is checked here before it is bought.
     """
 
-    focal_length_m: float = 0.025
-    pixel_pitch_m: float = 2.4e-6
-    sensor_width_m: float = 0.0132
-    sensor_height_m: float = 0.0088
+    focal_length_m: float = 0.016
+    pixel_pitch_m: float = 1.55e-6
+    sensor_width_m: float = 0.006287
+    sensor_height_m: float = 0.004712
 
     def _validate(self) -> None:
         if min(self.focal_length_m, self.pixel_pitch_m, self.sensor_width_m, self.sensor_height_m) <= 0:

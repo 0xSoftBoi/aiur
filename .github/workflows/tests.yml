@@ -30,6 +30,23 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Print STRATO-P0 model (atmosphere, ascent, observation, budgets)
         run: python -m aiur.strato
+      - name: Simulated S0-C chain (real supervisor, simulated flights, gate verdict)
+        # Software evidence only: the reducer labels it "simulated" and it
+        # closes no requirement.  It is here so the gate logic, the reducer,
+        # and the supervisor are exercised together on every push.
+        run: |
+          python -m aiur.strato_sim --scenario nominal --flights 2 --out sim-s0 --git-commit "$GITHUB_SHA"
+          python -m aiur.s0_evidence flight \
+            --log sim-s0/nominal-1-flight-log.csv --manifest sim-s0/nominal-1-flight-manifest.json \
+            --log sim-s0/nominal-2-flight-log.csv --manifest sim-s0/nominal-2-flight-manifest.json \
+            --trials sim-s0/sim-termination-trials.csv
+      - name: Fault scenarios end the way the hazard log expects
+        run: |
+          for scenario in gnss-lost float-off computer-freeze ground-terminate; do
+            python -m aiur.strato_sim --scenario "$scenario"
+          done
+      - name: Rev-A package drawings regenerate cleanly
+        run: python hardware/strato/cad/generate_package_rev_a.py --out /tmp/strato-cad
       - name: Print P0 budget (parked carrier lineage)
         run: python -m aiur.p0
       - name: Requirement closure matrix

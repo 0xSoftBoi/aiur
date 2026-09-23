@@ -17,9 +17,13 @@ export const STRATO_SPEC = {
   /** Straight-line geometric horizon from the threshold altitude. */
   horizonDistanceKm: 505.2,
   visibleCapAreaKm2: 798_098,
-  /** Reference optic: 1-inch-class sensor, 2.4 µm pitch, 25 mm lens. */
-  nadirGsdM: 1.92,
-  frameSwathKm: [10.56, 7.04],
+  /** Reference optic: the BOM candidate, an IMX477 (1.55 µm pixels) behind a 16 mm lens. */
+  nadirGsdM: 1.94,
+  frameSwathKm: [7.86, 5.89],
+  /** Rev-A enclosure, from the generated manifest. */
+  packageExteriorMm: [170, 140, 120],
+  packageWeightSizeRatioOzPerIn2: 1.36,
+  bomNominalMassG: 430,
   ambientTemperatureC: -56.5,
   /** Program allocation and the 4 lb regulatory ceiling it stays under. */
   payloadAllocationKg: 1.0,

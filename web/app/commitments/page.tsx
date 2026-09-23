@@ -84,41 +84,44 @@ export default function CommitmentsPage() {
       <section className="plate-section" aria-labelledby="plate-title">
         <div className="shell">
           <div className="section-meta light-meta">
-            <span>02 / THE CLIMB</span>
-            <span>STANDARD ATMOSPHERE / MODEL</span>
+            <span>02 / CONTROLLED GEOMETRY</span>
+            <span>REV-A / FLIGHT PACKAGE</span>
           </div>
           <div className="section-head">
-            <h2 id="plate-title">The ladder is computed, not drawn</h2>
+            <h2 id="plate-title">The drawing is generated, not drawn</h2>
             <p className="section-lede">
-              Every altitude on this sheet is emitted by the same script that
-              sizes the balloon, the canopy, and the battery. A number here
-              cannot disagree with the model the article is built against.
+              Every dimension below is emitted by the same script that writes
+              the foam cut sheet and reports the package&apos;s smallest face
+              against the regulation. A number on this sheet cannot disagree
+              with the box that gets cut.
             </p>
           </div>
 
           <figure className="plate" data-reveal>
             <div className="plate-sheet">
               <img
-                src="/strato-altitude-ladder.svg"
-                alt={`STRATO-P0 altitude ladder: airliner cruise and the standard-atmosphere tropopause near 11 km, the ${STRATO_SPEC.thresholdAltitudeM / 1000} km stratospheric threshold with a ${Math.round(STRATO_SPEC.horizonDistanceKm)} km horizon and ${STRATO_SPEC.nadirGsdM} m nadir GSD, the predicted burst at ${(STRATO_SPEC.predictedBurstAltitudeM / 1000).toFixed(1)} km about ${Math.round(STRATO_SPEC.timeToBurstMin)} minutes after release, and a parachute descent to a landing within 15 km of prediction.`}
+                src="/strato_package_rev_a_section_dark.svg"
+                alt={`Dimensioned cross-section of the STRATO-P0 Rev-A flight package: ${STRATO_SPEC.packageExteriorMm.join(" by ")} mm exterior in 20 mm XPS foam, a 30 mm camera port in the end wall, a GNSS patch under a foam-only lid, and two load-line loops that run around the box rather than into it. Weight to size ratio ${STRATO_SPEC.packageWeightSizeRatioOzPerIn2} ounces per square inch at the 1 kg allocation, against a limit of 3.`}
               />
             </div>
             <figcaption className="plate-block">
-              <div><span>DIAGRAM</span><strong>STRATO-LADDER</strong></div>
-              <div><span>ATMOSPHERE</span><strong>US 1976</strong></div>
-              <div><span>UNITS</span><strong>KILOMETRES</strong></div>
-              <div><span>SOURCE</span><strong>aiur/strato.py</strong></div>
-              <div><span>BURST</span><strong>{(STRATO_SPEC.predictedBurstAltitudeM / 1000).toFixed(1)} KM</strong></div>
-              <div><span>STATUS</span><strong>MODEL / NOT MEASURED</strong></div>
+              <div><span>DRAWING</span><strong>STRATO-PKG-REV-A</strong></div>
+              <div><span>REVISION</span><strong>A</strong></div>
+              <div><span>UNITS</span><strong>MILLIMETRES</strong></div>
+              <div><span>SOURCE</span><strong>generate_package_rev_a.py</strong></div>
+              <div><span>EXTERIOR</span><strong>{STRATO_SPEC.packageExteriorMm.join(" × ")}</strong></div>
+              <div><span>STATUS</span><strong>FIRST-ARTICLE FIT</strong></div>
             </figcaption>
           </figure>
 
           <div className="note-band">
             <span>WHAT THIS SHEET IS NOT</span>
             <p>
-              A reference-condition prediction, not a forecast and not a flight
-              record. The launch-day sounding owns the real profile; this sheet
-              owns what the article is sized to survive.
+              First-article fit geometry, not a flight-qualified enclosure. The
+              physical fit owns the final dimensions; this sheet owns what gets
+              cut to test it. Nominal BOM masses sum to roughly{" "}
+              {STRATO_SPEC.bomNominalMassG} g against the{" "}
+              {Math.round(STRATO_SPEC.baselinePackageKg * 1000)} g baseline allocation.
             </p>
           </div>
         </div>

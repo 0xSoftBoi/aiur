@@ -1,0 +1,12 @@
+{
+  "run_id": "",
+  "article_rev": "Rev-A",
+  "git_commit": "",
+  "evidence_kind": "bench",
+  "payload_package_mass_kg": null,
+  "flight_computer_image_hash": "",
+  "timer_setting_s": null,
+  "cells": {"main_lot": "", "termination_lot": ""},
+  "chamber": "",
+  "test_director": ""
+}

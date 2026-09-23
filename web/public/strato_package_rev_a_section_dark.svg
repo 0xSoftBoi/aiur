@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" width="760" height="560" role="img" aria-label="STRATO-P0 Rev-A package cross-section">
+<rect width="760" height="560" fill="#0b0c0d"/>
+<g font-family="ui-monospace, Menlo, monospace" font-size="12" fill="#d9d4c7" transform="translate(130,130)">
+<rect x="0" y="0" width="340.0" height="240.0" fill="#1d2126" stroke="#d9d4c7" stroke-width="1.5"/>
+<rect x="40.0" y="40.0" width="260.0" height="160.0" fill="none" stroke="#d9d4c7" stroke-width="1.5"/>
+<line x1="0" y1="40.0" x2="340.0" y2="40.0" stroke="#6b7078" stroke-dasharray="4 4"/>
+<rect x="300.0" y="90.0" width="40.0" height="60.0" fill="#0b0c0d" stroke="#ff6428" stroke-width="1.5"/>
+<text x="348.0" y="124.0" fill="#ff6428">Ø30 CAMERA PORT</text>
+<rect x="145.0" y="40.0" width="50.0" height="6" fill="#ff6428"/>
+<text x="145.0" y="62.0" fill="#ff6428">GNSS PATCH / FOAM ONLY ABOVE</text>
+<line x1="60.0" y1="-14" x2="60.0" y2="254.0" stroke="#ff6428" stroke-width="2" stroke-dasharray="2 4"/>
+<line x1="280.0" y1="-14" x2="280.0" y2="254.0" stroke="#ff6428" stroke-width="2" stroke-dasharray="2 4"/>
+<text x="66.0" y="-20" fill="#ff6428">LOAD LINE x2 / AROUND THE BOX, NEVER INTO IT</text>
+<line x1="0" y1="274.0" x2="340.0" y2="274.0" stroke="#d9d4c7"/>
+<text x="140.0" y="268.0">170</text>
+<line x1="40.0" y1="296.0" x2="300.0" y2="296.0" stroke="#6b7078"/>
+<text x="140.0" y="290.0" fill="#6b7078">130 INT</text>
+<line x1="-34" y1="0" x2="-34" y2="240.0" stroke="#d9d4c7"/>
+<text x="-64" y="116.0">120</text>
+<line x1="-78" y1="40.0" x2="-78" y2="200.0" stroke="#6b7078"/>
+<text x="-122" y="134.0" fill="#6b7078">80 INT</text>
+<text x="348.0" y="24.0" fill="#6b7078">WALL 20</text>
+<text x="0" y="310.0">STRATO-P0 PACKAGE / Rev-A / SECTION THROUGH CAMERA PORT / MM</text>
+<text x="0" y="326.0" fill="#6b7078">EXTERIOR 170 x 140 x 120 / SMALLEST FACE 26.0 IN² / 1.35 OZ/IN² AT 1.0 KG (LIMIT 3.0)</text>
+<text x="0" y="342.0" fill="#6b7078">SOURCE generate_package_rev_a.py / FIRST-ARTICLE FIT GEOMETRY, NOT FLIGHT-QUALIFIED</text>
+</g></svg>

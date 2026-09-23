@@ -61,19 +61,41 @@ From the 20 km threshold:
 | --- | ---: |
 | Straight-line horizon | 505 km |
 | Visible cap area | ~800,000 km² |
-| Reference optic | 1-inch-class sensor, 2.4 µm pitch, 25 mm lens |
-| Nadir ground sample distance | 1.92 m |
-| GSD at 45° off-nadir | 3.84 m |
-| Single-frame swath | 10.6 km × 7.0 km |
+| Reference optic | Sony IMX477 1/2.3-inch sensor (1.55 µm pixels, published) behind a 16 mm M12 lens |
+| Nadir ground sample distance | 1.94 m |
+| GSD at 45° off-nadir | 3.88 m |
+| Single-frame swath | 7.9 km × 5.9 km |
 
-The reference optic is a stand-in with representative numbers; the point
-is that the buy is checked against the ≤ 3.0 m GSD target (S0-OBS-002)
-before it is made, and that resolution is then *measured* on a ground
-target after the first flight rather than quoted from the lens sheet.
+The reference optic is the Rev-A BOM candidate
+([hardware/strato/bom.csv](../hardware/strato/bom.csv)). The point of
+checking it in the model is that the obvious cheap choice fails: a stock
+Camera Module 3 (1.4 µm pixels, 4.74 mm lens) gives ~5.9 m at 20 km and
+misses the ≤ 3.0 m target (S0-OBS-002). Resolution is then *measured* on a
+ground target after the first flight rather than quoted from the lens sheet.
 
 Observation frames only count toward a gate when they carry a valid
 position tag and were captured above the threshold (S0-OBS-001). A pretty
 picture with no altitude is concept art.
+
+## The prototype
+
+The Rev-A flight package is defined in
+[hardware/strato/](../hardware/strato/README.md): a six-panel XPS foam
+box from a [generated cut sheet](../hardware/strato/cad/generated/strato_package_rev_a_cut_sheet.svg)
+with the load line running around it, an IMX477 imager behind a Ø30 mm
+port, a GNSS patch under a foam-only lid, a LoRa telemetry radio, four
+lithium AA cells on the main bus, and — on their own cells — an
+independent tracker, a hardware termination timer, and a nichrome cutdown.
+The [BOM](../hardware/strato/bom.csv) marks every figure as published or
+allocated; nominal masses sum to roughly 430 g against the 850 g baseline.
+
+The package's logic is [aiur/flight_supervisor.py](../aiur/flight_supervisor.py),
+flown in [aiur/strato_sim.py](../aiur/strato_sim.py) through the ascent
+model with the hazard log's fault menu, and reduced to the S0 gate
+metrics by [aiur/s0_evidence.py](../aiur/s0_evidence.py). The
+[S0-A test card](../hardware/strato/s0a-test-card.md) and the
+[launch checklist](../hardware/strato/launch-checklist.md) are the
+procedures that turn the same reducer's inputs from simulated into flown.
 
 ## Payload package mass budget
 

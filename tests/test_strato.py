@@ -197,14 +197,21 @@ class ObservationGeometryTests(unittest.TestCase):
         optic = Optic()
         gsd = optic.nadir_gsd_m(STRATOSPHERE_THRESHOLD_M)
         self.assertLessEqual(gsd, StratoP0Targets().max_nadir_gsd_m_at_threshold)
-        self.assertAlmostEqual(gsd, 1.92, places=3)
+        self.assertAlmostEqual(gsd, 1.9375, places=3)
+        # The stock Camera Module 3 optic fails the target: that is the point
+        # of checking the optic before buying it.
+        stock = Optic(focal_length_m=0.00474, pixel_pitch_m=1.4e-6)
+        self.assertGreater(
+            stock.nadir_gsd_m(STRATOSPHERE_THRESHOLD_M),
+            StratoP0Targets().max_nadir_gsd_m_at_threshold,
+        )
         self.assertAlmostEqual(optic.off_nadir_gsd_m(STRATOSPHERE_THRESHOLD_M, 0.0), gsd)
         self.assertGreater(optic.off_nadir_gsd_m(STRATOSPHERE_THRESHOLD_M, 45.0), gsd)
 
     def test_swath_and_slant_range(self) -> None:
         optic = Optic()
         across, along = optic.swath_m(STRATOSPHERE_THRESHOLD_M)
-        self.assertAlmostEqual(across, 10_560.0, places=6)
+        self.assertAlmostEqual(across, 7_858.75, places=6)
         self.assertGreater(across, along)
         self.assertAlmostEqual(
             optic.slant_range_m(STRATOSPHERE_THRESHOLD_M, 60.0), 40_000.0, places=6

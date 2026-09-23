@@ -1,0 +1,21 @@
+{
+  "run_id": "",
+  "article_rev": "Rev-A",
+  "git_commit": "",
+  "evidence_kind": "flown",
+  "jurisdiction_rule": "",
+  "airspace_coordination_ref": "",
+  "launch_time_utc": "",
+  "launch_lat": null,
+  "launch_lon": null,
+  "neck_lift_kg_measured": null,
+  "predicted_landing_x_km": null,
+  "predicted_landing_y_km": null,
+  "geofence_km": null,
+  "recovered": false,
+  "recovery_x_km": null,
+  "recovery_y_km": null,
+  "storage_checksum_verified": false,
+  "third_party_contacts": 0,
+  "test_director": ""
+}
