@@ -202,12 +202,14 @@ def reduce_flight(
                 raise EvidenceError(f"{where}: a geotagged frame needs a valid fix")
             if altitude >= STRATOSPHERE_THRESHOLD_M:
                 frames_above += 1
-        if _bool(row["telemetry_received"], "telemetry_received", where):
+        if row["state"].strip().lower() == "landed":
+            landed = True
+        # Gaps are judged in flight only: once landed the package is in
+        # beacon cadence by design, and that is not a telemetry gap.
+        if not landed and _bool(row["telemetry_received"], "telemetry_received", where):
             if last_rx is not None:
                 max_gap = max(max_gap, t - last_rx)
             last_rx = t
-        if row["state"].strip().lower() == "landed":
-            landed = True
     if max_altitude == -math.inf:
         raise EvidenceError(f"{context}: no valid fix in the whole log")
     if last_rx is None:

@@ -154,10 +154,9 @@ ITEMS: tuple[ReadinessItem, ...] = (
         "SW-FLIGHT-MAIN",
         "runnable flight program: sensor abstraction, 1 Hz loop, real flight-log writer, simulated backend",
         ClosedBy.SOFTWARE,
-        ItemStatus.OPEN,
+        ItemStatus.CLOSED,
         ("aiur/flight_main.py", "tests/test_flight_main.py"),
         ("SW-SUPERVISOR",),
-        "wrap the supervisor in a program the Pi runs, with a Sensors interface the bench and the sim both implement",
     ),
     ReadinessItem(
         "SW-GROUND-MERGE",

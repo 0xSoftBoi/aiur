@@ -72,6 +72,16 @@ Three design rules, each traceable to a hazard:
 
 ## Flight logic
 
+[`aiur/flight_main.py`](../../aiur/flight_main.py) is the program the
+payload computer runs: a 1 Hz loop that reads a `Sensors` backend, steps
+the supervisor, drives the cutdown line from its latched output every
+tick, captures and transmits at the commanded cadence, and flushes one
+flight-log row per second in the shape the reducer reads. The simulated
+backend flies it to landing in the twin (`--backend sim`), the replay
+backend feeds a recorded log back through it on the bench
+(`--backend replay`), and `--backend pi` prints the contract the S0-A
+build has to meet instead of pretending hardware exists.
+
 [`aiur/flight_supervisor.py`](../../aiur/flight_supervisor.py) is the
 package's state machine: SAFE → ARMED (only on a valid fix) → ASCENT →
 STRATOSPHERE → DESCENT → LANDED, with TERMINATING entered from any
