@@ -317,6 +317,22 @@ def write_flight(result: FlightResult, out_dir: Path, *, run_id: str, git_commit
         writer = csv.DictWriter(handle, fieldnames=FLIGHT_LOG_FIELDS)
         writer.writeheader()
         writer.writerows(result.rows)
+    # Ground-station receive log: what the simulated ground station decoded.
+    ground_path = out_dir / f"{run_id}-ground-log.csv"
+    with ground_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["rx_t_s", "packet_t_s", "rssi_dbm", "decoded_ok", "notes"])
+        for row in result.rows:
+            if row["telemetry_sent"]:
+                writer.writerow(
+                    [
+                        round(float(row["t_s"]) + 0.4, 1),
+                        row["t_s"],
+                        -95,
+                        int(bool(row["telemetry_received"])),
+                        "simulated",
+                    ]
+                )
     manifest = {
         "run_id": run_id,
         "article_rev": "Rev-A/sim",

@@ -48,6 +48,10 @@ FLIGHT_LOG_REQUIRED = (
     "geotagged",
     "telemetry_received",
 )
+GROUND_LOG_FIELDS = ("rx_t_s", "packet_t_s", "decoded_ok")
+#: A ground-received packet must match a transmit within this many seconds
+#: of the package's own clock; wider than a tick, narrower than a period.
+GROUND_MATCH_TOLERANCE_S = 5.0
 TRIAL_FIELDS = ("trial_id", "kind", "computer_powered", "fired")
 SOAK_FIELDS = (
     "t_s",
@@ -171,10 +175,56 @@ def reduce_trials(rows: list[dict[str, str]], context: str = "trials") -> dict[s
 # ----------------------------------------------------------------------
 
 
+def ground_receive_times(
+    ground: list[dict[str, str]], sent_times: list[float], context: str = "ground"
+) -> list[float]:
+    """Packet times the ground station decoded, checked against the transmit log.
+
+    The ground log is the telemetry evidence: a packet the package believes
+    it sent but nobody heard is a gap.  A decoded packet whose time matches
+    no transmit is an inconsistency, not evidence.
+    """
+
+    _require_columns(ground, GROUND_LOG_FIELDS, context)
+    received: list[float] = []
+    sent_sorted = sorted(sent_times)
+    for index, row in enumerate(ground):
+        where = f"{context} row {index + 1}"
+        if not _bool(row["decoded_ok"], "decoded_ok", where):
+            continue
+        packet_t = _float(row["packet_t_s"], "packet_t_s", where)
+        _float(row["rx_t_s"], "rx_t_s", where)
+        # Binary search for the nearest transmit.
+        lo, hi = 0, len(sent_sorted)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if sent_sorted[mid] < packet_t:
+                lo = mid + 1
+            else:
+                hi = mid
+        candidates = [sent_sorted[i] for i in (lo - 1, lo) if 0 <= i < len(sent_sorted)]
+        if not candidates or min(abs(c - packet_t) for c in candidates) > GROUND_MATCH_TOLERANCE_S:
+            raise EvidenceError(
+                f"{where}: decoded packet at t={packet_t} matches no transmit in the flight log"
+            )
+        received.append(packet_t)
+    if not received:
+        raise EvidenceError(f"{context}: no decoded packets in the ground log")
+    return sorted(received)
+
+
 def reduce_flight(
-    rows: list[dict[str, str]], manifest: dict[str, object], context: str = "flight"
+    rows: list[dict[str, str]],
+    manifest: dict[str, object],
+    context: str = "flight",
+    ground: list[dict[str, str]] | None = None,
 ) -> dict[str, float | int]:
-    """Metrics for one free flight; the gate is judged across all of them."""
+    """Metrics for one free flight; the gate is judged across all of them.
+
+    With a ground log, telemetry gaps come from what the ground station
+    decoded; without one, from the package's own ``telemetry_received``
+    column, which is only what the radio *accepted*.
+    """
 
     _require_columns(rows, FLIGHT_LOG_REQUIRED, context)
     _require_manifest(manifest, FLIGHT_MANIFEST_FIELDS, context)
@@ -184,7 +234,9 @@ def reduce_flight(
     last_rx: float | None = None
     max_gap = 0.0
     landed = False
+    landed_at: float | None = None
     previous_t: float | None = None
+    sent_times: list[float] = []
     for index, row in enumerate(rows):
         where = f"{context} row {index + 1}"
         t = _float(row["t_s"], "t_s", where)
@@ -202,8 +254,11 @@ def reduce_flight(
                 raise EvidenceError(f"{where}: a geotagged frame needs a valid fix")
             if altitude >= STRATOSPHERE_THRESHOLD_M:
                 frames_above += 1
-        if row["state"].strip().lower() == "landed":
+        if row["state"].strip().lower() == "landed" and not landed:
             landed = True
+            landed_at = t
+        if "telemetry_sent" in row and _bool(row["telemetry_sent"], "telemetry_sent", where):
+            sent_times.append(t)
         # Gaps are judged in flight only: once landed the package is in
         # beacon cadence by design, and that is not a telemetry gap.
         if not landed and _bool(row["telemetry_received"], "telemetry_received", where):
@@ -212,6 +267,17 @@ def reduce_flight(
             last_rx = t
     if max_altitude == -math.inf:
         raise EvidenceError(f"{context}: no valid fix in the whole log")
+    if ground is not None:
+        if not sent_times:
+            raise EvidenceError(f"{context}: a ground log needs telemetry_sent in the flight log")
+        received = [
+            t for t in ground_receive_times(ground, sent_times, f"{context} ground")
+            if landed_at is None or t <= landed_at
+        ]
+        if not received:
+            raise EvidenceError(f"{context}: ground station decoded nothing in flight")
+        max_gap = max([b - a for a, b in zip(received, received[1:])] or [0.0])
+        last_rx = received[-1]
     if last_rx is None:
         raise EvidenceError(f"{context}: no telemetry received in the whole log")
     recovered = _bool(manifest["recovered"], "recovered", context)
@@ -238,19 +304,24 @@ def reduce_flight(
 
 
 def reduce_flights(
-    flights: list[tuple[list[dict[str, str]], dict[str, object]]],
+    flights: list[tuple],
     trials: list[dict[str, str]],
 ) -> dict[str, object]:
-    """S0-C metrics across every flight, judged at the worst flight."""
+    """S0-C metrics across every flight, judged at the worst flight.
+
+    Each flight is ``(rows, manifest)`` or ``(rows, manifest, ground_rows)``.
+    """
 
     if not flights:
         raise EvidenceError("no flights")
     per_flight = []
     kinds = set()
     run_ids = set()
-    for rows, manifest in flights:
+    for flight in flights:
+        rows, manifest = flight[0], flight[1]
+        ground = flight[2] if len(flight) > 2 else None
         context = f"flight {manifest.get('run_id', '?')}"
-        per_flight.append(reduce_flight(rows, manifest, context))
+        per_flight.append(reduce_flight(rows, manifest, context, ground))
         kinds.add(str(manifest["evidence_kind"]))
         run_ids.add(str(manifest["run_id"]))
     if len(run_ids) != len(flights):
@@ -440,6 +511,13 @@ def main(argv: list[str] | None = None) -> int:
     flight = sub.add_parser("flight", help="S0-C: one or more free flights")
     flight.add_argument("--log", type=Path, action="append", required=True)
     flight.add_argument("--manifest", type=Path, action="append", required=True)
+    flight.add_argument(
+        "--ground",
+        type=Path,
+        action="append",
+        default=None,
+        help="ground-station receive log per flight, in --log order (the telemetry evidence)",
+    )
     flight.add_argument("--trials", type=Path, required=True)
 
     tethered = sub.add_parser("tethered", help="S0-B: tethered ascents")
@@ -458,9 +536,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "flight":
             if len(args.log) != len(args.manifest):
                 raise EvidenceError("each --log needs one --manifest, in order")
+            if args.ground is not None and len(args.ground) != len(args.log):
+                raise EvidenceError("each --log needs one --ground when ground logs are given")
+            grounds = args.ground or [None] * len(args.log)
             flights = [
-                (read_csv(log), read_manifest(manifest))
-                for log, manifest in zip(args.log, args.manifest)
+                (read_csv(log), read_manifest(manifest), read_csv(ground) if ground else None)
+                for log, manifest, ground in zip(args.log, args.manifest, grounds)
             ]
             report = verdict("S0-C", reduce_flights(flights, read_csv(args.trials)))
         elif args.command == "tethered":

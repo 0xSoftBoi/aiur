@@ -39,7 +39,10 @@ jobs:
           python -m aiur.s0_evidence flight \
             --log sim-s0/nominal-1-flight-log.csv --manifest sim-s0/nominal-1-flight-manifest.json \
             --log sim-s0/nominal-2-flight-log.csv --manifest sim-s0/nominal-2-flight-manifest.json \
+            --ground sim-s0/nominal-1-ground-log.csv --ground sim-s0/nominal-2-ground-log.csv \
             --trials sim-s0/sim-termination-trials.csv
+      - name: Hazard-log document matches the registry
+        run: python tools/render_hazard_log.py --check
       - name: Fault scenarios end the way the hazard log expects
         run: |
           for scenario in gnss-lost float-off computer-freeze ground-terminate; do

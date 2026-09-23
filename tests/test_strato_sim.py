@@ -100,6 +100,7 @@ class WrittenEvidenceTests(unittest.TestCase):
                     (
                         read_csv(out / f"nominal-{seed}-flight-log.csv"),
                         read_manifest(out / f"nominal-{seed}-flight-manifest.json"),
+                        read_csv(out / f"nominal-{seed}-ground-log.csv"),
                     )
                 )
             trials = read_csv(write_simulated_termination_trials(out))

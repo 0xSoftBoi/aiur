@@ -1,7 +1,7 @@
-# CARRIER-P0 hazard log
+# Hazard log
 
 Status: machinery built, zero residuals signed
-Scope: CARRIER-P0 through P0-D, indoor tethered operation
+Scope: STRATO-P0 through S0-C (`HAZ-013`…`HAZ-017`); CARRIER-P0 through P0-D retained as the parked lineage (`HAZ-001`…`HAZ-012`)
 
 The log is `aiur/hazards.py`. This document explains the rules it enforces
 and prints the current state; the module is the authority, and every table
@@ -169,7 +169,10 @@ the field says so explicitly rather than implying coverage.
 
 ## Current hazards
 
-Generated from `HAZARDS` in `aiur/hazards.py`.
+Generated from `HAZARDS` in `aiur/hazards.py` by
+`tools/render_hazard_log.py --write`; CI fails when this block is stale.
+
+<!-- generated:hazards -->
 
 | ID | Hazard | Initial | Residual | Acceptance required from | State |
 | --- | --- | --- | --- | --- | --- |
@@ -185,6 +188,27 @@ Generated from `HAZARDS` in `aiur/hazards.py`.
 | `HAZ-010` | Keeper servo stalls and overheats | 3B serious | 3D medium | safety observer + test conductor | unsigned |
 | `HAZ-011` | Uncommanded release over a person | 2C serious | 2D medium | safety observer + test conductor | unsigned |
 | `HAZ-012` | Carrier overruns its own aircraft or drifts into the crew | 3B serious | 3D medium | safety observer + test conductor | unsigned |
+| `HAZ-013` | Payload package descends onto a person, vehicle, or structure | 2C serious | 2D medium | safety observer + test conductor | unsigned |
+| `HAZ-014` | Conflict with a manned aircraft during ascent or descent | 1D serious | 1E medium | safety observer + test conductor | unsigned |
+| `HAZ-015` | Package lost: no recovery, imagery and lithium cells left in the field | 3B serious | 3C medium | safety observer + test conductor | unsigned |
+| `HAZ-016` | Cold-induced power loss silences tracking and disables termination | 3B serious | 3D medium | safety observer + test conductor | unsigned |
+| `HAZ-017` | Launch handling: line entanglement, uncontrolled release, or cylinder mishandling | 3C medium | 3D medium | safety observer + test conductor | unsigned |
+
+17 hazards; 16 residuals above LOW; 16 open acceptance items; 0 signed.
+
+<!-- /generated:hazards -->
+
+`HAZ-001` through `HAZ-012` are the carrier lineage, written for the indoor
+tethered regime. `HAZ-013` through `HAZ-017` are STRATO-P0's, and they are
+a different kind of exposure: the public under a descending package
+(`HAZ-013`), manned aircraft sharing the climb (`HAZ-014`), a package that
+is never found (`HAZ-015`), a cold-silenced tracker and termination path
+(`HAZ-016`), and the launch crew on the line (`HAZ-017`). `HAZ-014` is the
+program's second Catastrophic severity after `HAZ-009`, and like it the
+probability is a judgement until flights exist; its mitigations are the
+airspace coordination the launch checklist refuses to release without,
+the exemption-class package, and a termination path that works with the
+computer off.
 
 `HAZ-001` is twin finding 5 and `HAZ-002` is twin finding 3. `HAZ-001` is
 the one the log was built for: a stuck-closed seat switch plus a masked
@@ -209,8 +233,8 @@ The tooling therefore runs in two modes:
 | Call | Question | Current answer |
 | --- | --- | --- |
 | `validate_hazards()` | is the log structurally sound? | yes, no errors; this is what CI runs |
-| `validate_hazards(require_acceptance=True)` | may a person be exposed to this article? | no: 11 residuals above LOW have no signed acceptance |
-| `open_items()` | who has to decide what? | the same 11, each with its required authority |
+| `validate_hazards(require_acceptance=True)` | may a person be exposed to this article? | no: 16 residuals above LOW have no signed acceptance |
+| `open_items()` | who has to decide what? | the same 16, each with its required authority |
 
 The structural mode checks unique sorted ids, populated fields, a
 verification note that names something real, a residual that is not worse
@@ -231,14 +255,18 @@ source.
 
 ## What closing the gap looks like
 
-For each of the 11 open items: the named authority reads the hazard, the
+For each of the 16 open items: the named authority reads the hazard, the
 mitigations, and the verification note; writes a rationale; and records name,
-role, ISO date, and scope. `scope` should be the standing P0 sentence
-(`indoor tethered P0 single-fault regime, propeller-guarded`) unless the
-decision genuinely covers something else — a wider scope is a different
-decision.
+role, ISO date, and scope. `scope` should be the standing sentence for the
+regime the decision covers — `P0_ACCEPTANCE_SCOPE` for the carrier lineage
+(`indoor tethered P0 single-fault regime, propeller-guarded`) or
+`S0_ACCEPTANCE_SCOPE` for the observation article (`STRATO-P0 sounding
+regime: one unmanned free balloon under the exemption thresholds, daylight,
+coordinated launch site, helium only`) — unless the decision genuinely
+covers something else. A wider scope is a different decision.
 
-Two of the eleven should probably not be signed at all in their current
+The five STRATO-P0 items are the ones that matter now; the carrier items
+stay open with their lineage. Two of the carrier eleven should probably not be signed at all in their current
 form. `HAZ-005` is Serious because zero propeller-contact evidence exists;
 the honest move is to run P0-B and let `prop_funnel_contacts` replace the
 probability judgement. `HAZ-001` is the residual that a Rev-B design change

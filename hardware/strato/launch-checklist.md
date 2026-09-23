@@ -96,11 +96,15 @@ a stop and a hazard-log entry, not a note.
 - [ ] Manifest completed: `recovered`, recovery coordinates, checksum,
       `third_party_contacts`, and the coordination reference.
 
-Reduce:
+Reduce, with the ground station's receive log per flight in the
+[`s0-ground-log-template.csv`](s0-ground-log-template.csv) shape — the
+ground log, not the package's transmit log, is what the telemetry-gap
+criterion is judged on:
 
 ```
 python -m aiur.s0_evidence flight --log <flight-1.csv> --manifest <flight-1.json> \
                                    --log <flight-2.csv> --manifest <flight-2.json> \
+                                   --ground <ground-1.csv> --ground <ground-2.csv> \
                                    --trials <pre-flight-trials.csv>
 ```
 

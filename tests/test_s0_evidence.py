@@ -137,6 +137,46 @@ class FlightReductionTests(unittest.TestCase):
         self.assertFalse(report["closes_requirements"])
 
 
+class GroundLogTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.rows = _rows(1)
+
+    def _ground(self, *, drop: tuple[float, float] | None = None, bogus: bool = False) -> list[dict[str, str]]:
+        rows = []
+        for row in self.rows:
+            if row["telemetry_sent"] != "1":
+                continue
+            t = float(row["t_s"])
+            ok = not (drop is not None and drop[0] <= t < drop[0] + drop[1])
+            rows.append({"rx_t_s": str(t + 0.3), "packet_t_s": row["t_s"], "rssi_dbm": "-90", "decoded_ok": "1" if ok else "0"})
+        if bogus:
+            # 15 s from the nearest 30 s transmit: outside the match tolerance.
+            rows.append({"rx_t_s": "1246.0", "packet_t_s": "1245.0", "rssi_dbm": "-90", "decoded_ok": "1"})
+        return rows
+
+    def test_ground_log_agreeing_with_the_package_gives_the_same_gap(self) -> None:
+        with_ground = reduce_flight(self.rows, _manifest(1), ground=self._ground())
+        without = reduce_flight(self.rows, _manifest(1))
+        self.assertEqual(with_ground["telemetry_gap_max_s"], without["telemetry_gap_max_s"])
+
+    def test_ground_side_blackout_is_the_gap_that_counts(self) -> None:
+        metrics = reduce_flight(self.rows, _manifest(1), ground=self._ground(drop=(2000.0, 400.0)))
+        self.assertGreaterEqual(metrics["telemetry_gap_max_s"], 400.0)
+        report = verdict("S0-C", reduce_flights([(self.rows, _manifest(1), self._ground(drop=(2000.0, 400.0))), (_rows(2), _manifest(2))], _trials()))
+        self.assertFalse(report["passed"])
+        self.assertIn("no telemetry gap longer than five minutes in flight", report["failed_criteria"])
+
+    def test_decoded_packet_matching_no_transmit_is_inconsistent(self) -> None:
+        with self.assertRaises(EvidenceError):
+            reduce_flight(self.rows, _manifest(1), ground=self._ground(bogus=True))
+
+    def test_ground_log_with_nothing_decoded_is_missing_evidence(self) -> None:
+        silent = [dict(r, decoded_ok="0") for r in self._ground()]
+        with self.assertRaises(EvidenceError):
+            reduce_flight(self.rows, _manifest(1), ground=silent)
+
+
 class TetheredReductionTests(unittest.TestCase):
     @staticmethod
     def _ascent(seed: int, **overrides: object) -> tuple[list[dict[str, str]], dict[str, object]]:

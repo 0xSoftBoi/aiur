@@ -162,19 +162,17 @@ ITEMS: tuple[ReadinessItem, ...] = (
         "SW-GROUND-MERGE",
         "ground receive log merged into the package log so telemetry gaps are judged from the ground side",
         ClosedBy.SOFTWARE,
-        ItemStatus.OPEN,
+        ItemStatus.CLOSED,
         ("aiur/s0_evidence.py", "hardware/strato/s0-ground-log-template.csv"),
         ("SW-REDUCE",),
-        "add a ground-station receive log input to the flight reducer; the ground log, not the package's transmit log, is the telemetry evidence",
     ),
     ReadinessItem(
         "DOC-HAZLOG",
-        "docs/hazard-log.md regenerated so it lists the S0 hazards",
+        "docs/hazard-log.md generated from the registry and checked in CI",
         ClosedBy.SOFTWARE,
-        ItemStatus.OPEN,
-        ("docs/hazard-log.md",),
+        ItemStatus.CLOSED,
+        ("docs/hazard-log.md", "tools/render_hazard_log.py", "tests/test_hazard_log_doc.py"),
         ("SW-HAZARDS",),
-        "regenerate the printed hazard tables from aiur.hazards",
     ),
     # ---- decisions ----------------------------------------------------
     ReadinessItem(
