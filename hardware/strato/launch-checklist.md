@@ -18,10 +18,19 @@ condition. Nothing here is optional because the day is nice.
 - [ ] **Airspace coordination on file** (`airspace_authorisation_on_file`,
       S0-SAFE-005): reference number, authority, time, launch window and
       predicted trajectory attached. No reference, no release.
-- [ ] **Prediction committed** (S0-FLT-003): run the day's sounding through
-      the ascent model, commit the predicted landing point and ellipse to the
-      flight manifest *before* the fill. The geofence is set at ≥ 1.5× the
-      predicted range and written into `FlightLimits.max_range_km`.
+- [ ] **Prediction committed** (S0-FLT-003): put the day's sounding in the
+      [`s0-sounding-template.csv`](s0-sounding-template.csv) shape
+      (altitude, wind speed, wind *from* bearing) and run
+
+      ```
+      python -m aiur.strato_predict --sounding <today.csv> --payload-kg <measured> --out <run_id>-prediction.json
+      ```
+
+      Commit the JSON *before* the fill. Copy `predicted_landing_x_km`,
+      `predicted_landing_y_km`, and `geofence_km` into the flight manifest
+      and write `geofence_km` into `FlightLimits.max_range_km` on the
+      package. The tool sets the fence at ≥ 1.5× the predicted range and
+      beyond every ensemble member, so a nominal flight never breaches it.
 - [ ] Predicted landing ellipse is over open, accessible ground; not water,
       not a town, not an airport approach. If it is not, the day is a no-go.
 - [ ] Recovery crew briefed with the ellipse, the beacon frequency, and

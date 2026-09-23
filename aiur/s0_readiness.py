@@ -142,10 +142,13 @@ ITEMS: tuple[ReadinessItem, ...] = (
         "SW-PREDICT",
         "launch-day landing prediction from a measured wind profile, with the geofence derived from it",
         ClosedBy.SOFTWARE,
-        ItemStatus.OPEN,
-        ("aiur/strato_predict.py", "tests/test_strato_predict.py"),
+        ItemStatus.CLOSED,
+        (
+            "aiur/strato_predict.py",
+            "tests/test_strato_predict.py",
+            "hardware/strato/s0-sounding-template.csv",
+        ),
         ("SW-SIM",),
-        "read a wind sounding (altitude, speed, direction) and emit the predicted landing, ellipse, and geofence the checklist commits before the fill",
     ),
     ReadinessItem(
         "SW-FLIGHT-MAIN",
