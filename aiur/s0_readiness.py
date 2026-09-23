@@ -55,6 +55,46 @@ class ReadinessItem:
     next_action: str = ""
 
 
+#: Where decisions are recorded.  A DECISION item may be closed by a commit
+#: only when this document carries a name and an ISO date under the item's
+#: heading; the validator reads it.
+DECISIONS_DOC = "docs/decisions/strato-decisions.md"
+
+
+def decision_is_recorded(item_id: str, root: Path = ROOT) -> bool:
+    """True when the decisions document has a signed, dated record for the item."""
+
+    path = root / DECISIONS_DOC
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8")
+    heading = f"## {item_id}"
+    start = text.find(heading)
+    if start < 0:
+        return False
+    end = text.find("\n## ", start + len(heading))
+    section = text[start : end if end > 0 else len(text)]
+    decided_by = _table_value(section, "Decided by")
+    date = _table_value(section, "Date")
+    if not decided_by or not date:
+        return False
+    try:
+        from datetime import date as _date
+
+        _date.fromisoformat(date)
+    except ValueError:
+        return False
+    return True
+
+
+def _table_value(section: str, field: str) -> str:
+    for line in section.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 2 and cells[0] == field:
+            return cells[1]
+    return ""
+
+
 ITEMS: tuple[ReadinessItem, ...] = (
     # ---- software ---------------------------------------------------
     ReadinessItem(
@@ -177,21 +217,21 @@ ITEMS: tuple[ReadinessItem, ...] = (
     # ---- decisions ----------------------------------------------------
     ReadinessItem(
         "DEC-JURISDICTION",
-        "launch jurisdiction and its notice rules written into the flight manifest template",
+        "launch jurisdiction and its notice rules decided and recorded",
         ClosedBy.DECISION,
         ItemStatus.OPEN,
-        ("hardware/strato/s0-flight-manifest-template.json",),
+        (DECISIONS_DOC, "hardware/strato/s0-flight-manifest-template.json"),
         ("SW-PACKET",),
-        "founder decision: where the first flight launches, and under which rule",
+        "founder decision: sign and date the DEC-JURISDICTION record in docs/decisions/strato-decisions.md",
     ),
     ReadinessItem(
         "DEC-TRACKER",
         "independent tracker chosen (APRS with a licence, or a satellite beacon with a plan)",
         ClosedBy.DECISION,
         ItemStatus.OPEN,
-        ("hardware/strato/bom.csv",),
+        (DECISIONS_DOC, "hardware/strato/bom.csv"),
         ("DEC-JURISDICTION",),
-        "depends on the jurisdiction; update the BOM row from candidate to part",
+        "depends on the jurisdiction; sign the DEC-TRACKER record, then unblock order lines S0-20..S0-23",
     ),
     # ---- hardware -----------------------------------------------------
     ReadinessItem(
@@ -269,7 +309,12 @@ def validate_readiness(items: tuple[ReadinessItem, ...] = ITEMS, root: Path = RO
         if not item.evidence:
             errors.append(f"{item.id} names no evidence")
         if item.status is ItemStatus.CLOSED:
-            if item.closed_by is not ClosedBy.SOFTWARE:
+            if item.closed_by is ClosedBy.DECISION:
+                if not decision_is_recorded(item.id, root):
+                    errors.append(
+                        f"{item.id} is closed but {DECISIONS_DOC} carries no signed, dated record for it"
+                    )
+            elif item.closed_by is not ClosedBy.SOFTWARE:
                 errors.append(
                     f"{item.id} is closed by {item.closed_by.value} evidence, which a commit cannot supply"
                 )
@@ -340,7 +385,46 @@ def snapshot() -> dict[str, object]:
     }
 
 
-if __name__ == "__main__":
+#: The site reads this file; ``--export`` writes it and a test keeps it fresh.
+SITE_EXPORT = "web/lib/readiness.json"
+
+
+def site_export() -> dict[str, object]:
+    """The subset of the snapshot the public site renders."""
+
+    data = snapshot()
+    return {
+        "software_done": data["software_done"],
+        "by_closer": data["by_closer"],
+        "items": [
+            {
+                "id": item["id"],
+                "title": item["title"],
+                "closed_by": item["closed_by"],
+                "status": item["status"],
+                "depends_on": item["depends_on"],
+            }
+            for item in data["items"]  # type: ignore[union-attr]
+        ],
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="STRATO-P0 readiness graph.")
+    parser.add_argument("--export", action="store_true", help=f"write {SITE_EXPORT}")
+    args = parser.parse_args(argv)
+    if args.export:
+        path = ROOT / SITE_EXPORT
+        path.write_text(json.dumps(site_export(), indent=2) + "\n", encoding="utf-8")
+        print(f"wrote {SITE_EXPORT}")
+        return 0
     print(ladder())
     print()
     print(json.dumps({k: v for k, v in snapshot().items() if k != "items"}, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

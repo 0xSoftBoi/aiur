@@ -154,6 +154,8 @@ Hardware:
 
 - [Rev-A flight package](hardware/strato/README.md), its [BOM](hardware/strato/bom.csv), and the [generated enclosure drawings](hardware/strato/cad/generated/)
 - [S0-A test card](hardware/strato/s0a-test-card.md) and [launch checklist](hardware/strato/launch-checklist.md)
+- [Build plan](hardware/strato/build-plan.md) and the [stage-0 order sheet](hardware/strato/s0-stage0-order.csv)
+- [Readiness graph](aiur/s0_readiness.py) — `python -m aiur.s0_readiness` — and the [open decisions](docs/decisions/strato-decisions.md)
 
 Safety (carrier-era documents; the S0 hazards live in the registry):
 

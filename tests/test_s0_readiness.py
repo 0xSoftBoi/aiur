@@ -37,6 +37,39 @@ class ReadinessGraphTests(unittest.TestCase):
         errors = validate_readiness(_with("HW-S0A", status=ItemStatus.CLOSED))
         self.assertTrue(any("cannot supply" in error for error in errors))
 
+    def test_decision_closed_without_a_signed_record_is_an_error(self) -> None:
+        errors = validate_readiness(_with("DEC-JURISDICTION", status=ItemStatus.CLOSED))
+        self.assertTrue(any("no signed, dated record" in error for error in errors), errors)
+
+    def test_decision_closes_with_a_signed_dated_record(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from aiur.s0_readiness import DECISIONS_DOC, ROOT, decision_is_recorded
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            doc = root / DECISIONS_DOC
+            doc.parent.mkdir(parents=True)
+            doc.write_text(
+                "## DEC-JURISDICTION\n\n| Field | Value |\n| --- | --- |\n"
+                "| Decided by | A. Founder |\n| Date | 2026-10-01 |\n\n## DEC-TRACKER\n\n"
+                "| Decided by | |\n| Date | |\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(decision_is_recorded("DEC-JURISDICTION", root))
+            self.assertFalse(decision_is_recorded("DEC-TRACKER", root))
+            self.assertFalse(decision_is_recorded("DEC-NOPE", root))
+        self.assertFalse(decision_is_recorded("DEC-JURISDICTION", ROOT), "the real record is unsigned")
+
+    def test_site_export_is_fresh(self) -> None:
+        import json
+
+        from aiur.s0_readiness import ROOT, SITE_EXPORT, site_export
+
+        committed = json.loads((ROOT / SITE_EXPORT).read_text(encoding="utf-8"))
+        self.assertEqual(committed, site_export(), "run python -m aiur.s0_readiness --export")
+
     def test_closed_items_need_existing_evidence(self) -> None:
         errors = validate_readiness(_with("SW-MODEL", evidence=("aiur/does_not_exist.py",)))
         self.assertTrue(any("does not exist" in error for error in errors))

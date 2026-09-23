@@ -4,6 +4,15 @@ import Link from "next/link";
 import { PageHead } from "@/components/page-head";
 import { Pager } from "@/components/pager";
 import { COMPANY, PROGRAM } from "@/lib/site-content";
+import readiness from "@/lib/readiness.json";
+
+const CLOSER_LABEL: Record<string, string> = {
+  software: "CLOSED BY A COMMIT",
+  decision: "FOUNDER DECISION",
+  bench: "BENCH EVIDENCE",
+  tethered: "TETHERED EVIDENCE",
+  flight: "FLIGHT EVIDENCE",
+};
 
 export const metadata: Metadata = {
   title: "Company",
@@ -86,6 +95,37 @@ export default function CompanyPage() {
             <Link className="button" href="/careers">
               Join the adventure <span aria-hidden="true">→</span>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="program paper-section" id="readiness" aria-labelledby="readiness-title">
+        <div className="shell">
+          <div className="section-meta">
+            <span>03 / READINESS</span>
+            <span>GENERATED FROM aiur/s0_readiness.py</span>
+          </div>
+          <h2 id="readiness-title">
+            WHAT IS CLOSED,
+            <br />
+            <em>AND WHAT CANNOT BE YET.</em>
+          </h2>
+          <p className="section-lede dark-lede">
+            Every item names what closes it. A commit can close software; it
+            cannot close a decision, a bench, a tether, or a flight, and the
+            validator refuses to let it. Software items:{" "}
+            {readiness.by_closer.software.closed} closed, {readiness.by_closer.software.open} open.
+          </p>
+
+          <div className="program-list" data-reveal>
+            {readiness.items.map((item) => (
+              <article className={item.status === "closed" ? "active" : undefined} key={item.id}>
+                <span className="program-id">{item.id}</span>
+                <h3>{CLOSER_LABEL[item.closed_by] ?? item.closed_by.toUpperCase()}</h3>
+                <p>{item.title}</p>
+                <span className="program-status">{item.status.toUpperCase()}</span>
+              </article>
+            ))}
           </div>
         </div>
       </section>

@@ -1,0 +1,195 @@
+{
+  "software_done": true,
+  "by_closer": {
+    "software": {
+      "open": 0,
+      "closed": 13
+    },
+    "decision": {
+      "open": 2,
+      "closed": 0
+    },
+    "bench": {
+      "open": 1,
+      "closed": 0
+    },
+    "tethered": {
+      "open": 1,
+      "closed": 0
+    },
+    "flight": {
+      "open": 1,
+      "closed": 0
+    }
+  },
+  "items": [
+    {
+      "id": "SW-MODEL",
+      "title": "atmosphere, ascent, float, descent, geometry, and power model anchored to the standard's tables",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": []
+    },
+    {
+      "id": "SW-GATES",
+      "title": "S0-A/S0-B/S0-C gate ladder with a free-flight stage entered only from a passed tethered gate",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-MODEL"
+      ]
+    },
+    {
+      "id": "SW-REQS",
+      "title": "S0-* requirement closure rows validated against the gates",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-GATES"
+      ]
+    },
+    {
+      "id": "SW-HAZARDS",
+      "title": "HAZ-013..017 in the hazard log with verification pointing at real gate criteria",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-REQS"
+      ]
+    },
+    {
+      "id": "SW-SUPERVISOR",
+      "title": "fail-safe flight supervisor with a latched cutdown and an independent timer model",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-GATES"
+      ]
+    },
+    {
+      "id": "SW-SIM",
+      "title": "simulated flights across the hazard log's fault menu, asserting the outcomes the log expects",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-SUPERVISOR",
+        "SW-MODEL"
+      ]
+    },
+    {
+      "id": "SW-REDUCE",
+      "title": "strict evidence reducers for every S0 gate (A, B, C) with simulated evidence labelled and non-closing",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-SIM",
+        "SW-GATES"
+      ]
+    },
+    {
+      "id": "SW-CAD",
+      "title": "generated enclosure cut sheet, section, and manifest with the weight/size ratio",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-MODEL"
+      ]
+    },
+    {
+      "id": "SW-PACKET",
+      "title": "BOM, S0-A test card, launch checklist, and log/manifest templates",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-CAD",
+        "SW-REDUCE"
+      ]
+    },
+    {
+      "id": "SW-PREDICT",
+      "title": "launch-day landing prediction from a measured wind profile, with the geofence derived from it",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-SIM"
+      ]
+    },
+    {
+      "id": "SW-FLIGHT-MAIN",
+      "title": "runnable flight program: sensor abstraction, 1 Hz loop, real flight-log writer, simulated backend",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-SUPERVISOR"
+      ]
+    },
+    {
+      "id": "SW-GROUND-MERGE",
+      "title": "ground receive log merged into the package log so telemetry gaps are judged from the ground side",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-REDUCE"
+      ]
+    },
+    {
+      "id": "DOC-HAZLOG",
+      "title": "docs/hazard-log.md generated from the registry and checked in CI",
+      "closed_by": "software",
+      "status": "closed",
+      "depends_on": [
+        "SW-HAZARDS"
+      ]
+    },
+    {
+      "id": "DEC-JURISDICTION",
+      "title": "launch jurisdiction and its notice rules decided and recorded",
+      "closed_by": "decision",
+      "status": "open",
+      "depends_on": [
+        "SW-PACKET"
+      ]
+    },
+    {
+      "id": "DEC-TRACKER",
+      "title": "independent tracker chosen (APRS with a licence, or a satellite beacon with a plan)",
+      "closed_by": "decision",
+      "status": "open",
+      "depends_on": [
+        "DEC-JURISDICTION"
+      ]
+    },
+    {
+      "id": "HW-S0A",
+      "title": "S0-A: measured mass, cold soak, termination and link trials, drop tests reduced to a PASS",
+      "closed_by": "bench",
+      "status": "open",
+      "depends_on": [
+        "SW-PACKET",
+        "SW-FLIGHT-MAIN",
+        "DEC-TRACKER"
+      ]
+    },
+    {
+      "id": "HW-S0B",
+      "title": "S0-B: three tethered ascents with one termination aloft, reduced to a PASS",
+      "closed_by": "tethered",
+      "status": "open",
+      "depends_on": [
+        "HW-S0A"
+      ]
+    },
+    {
+      "id": "HW-S0C",
+      "title": "S0-C: two free flights of one configuration past 20 km, recovered, reduced to a PASS",
+      "closed_by": "flight",
+      "status": "open",
+      "depends_on": [
+        "HW-S0B",
+        "SW-PREDICT",
+        "SW-GROUND-MERGE",
+        "DEC-JURISDICTION"
+      ]
+    }
+  ]
+}
