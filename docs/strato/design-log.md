@@ -377,6 +377,26 @@ propulsion is a small share of a vehicle that is mostly envelope.
 - **Netted hull drag.** +15 % on hull drag for the lobed surface, until a
   model is measured: S3 netted is 26.6 kg.
 
+## Rev Q — the termination board, checked against its schematic
+
+The firmware's pins had been written from memory. Checked against LilyGO's
+schematics and pin files ([ftu.md](ftu.md) has the citations), four things
+were wrong, three of them in the netlist rather than the firmware:
+
+| Was | Is | Consequence if built as drawn |
+| --- | --- | --- |
+| Cutter gates on GPIO15/16 | GPIO38 and GPIO21 | 15/16 are the board's 32 kHz crystal and reach no header: unwireable |
+| 3.3 V fed into the board's 3V3 pin | 5 V buck-boost into VBUS | That pin is a regulator *output*. The processor would run with the radio and GNSS rails dead: a termination unit with no position and no link |
+| Barometer at I2C 0x77 | 0x76 | Collides with the BME280 already on the board |
+| Sense divider 2 x 100 k | 100 k over 47 k | Firmware reads 1.56x high, rejects the reading and fires with no under-voltage stop |
+
+Also: "hold BOOT at power-on" to clear flight state could never have worked
+(GPIO0 held through reset enters the bootloader); the firmware now waits
+for the press after reset. The BOM names the exact board build, because the
+two other builds sold under the same name have a GNSS or radio the firmware
+does not support. Both firmware environments build against the corrected
+board definition. Nothing has been checked on a physical board.
+
 ## Where the model was checked
 
 - **Lamb added-mass factors** reproduce Munk's NACA Report 184 table to

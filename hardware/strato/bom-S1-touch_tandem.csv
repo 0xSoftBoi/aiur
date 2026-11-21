@@ -13,9 +13,9 @@ power,HTR_POD,Stern pod heater,Polyimide film heater 3 W,1,ea,5.0,5.0,0.003,esti
 core,T_AMB,Ambient temperature probe,PT1000 thin-film RTD,1,ea,6.0,6.0,0.002,estimate,
 core,T_GAS,Gas temperature probe,PT1000 thin-film RTD on 2 m lead,1,ea,6.0,6.0,0.004,estimate,
 core,T_BAY,Bay temperature probe,DS18B20,1,ea,2.0,2.0,0.002,cited,
-termination,FTU,Flight termination unit,LilyGO T-Beam Supreme (ESP32-S3 + SX1262 + u-blox M10),1,ea,48.0,48.0,0.038,estimate,RP2040 + SX1262 + MAX-M10S custom
+termination,FTU,Flight termination unit,"LilyGO T-Beam S3 Supreme, u-blox + SX1262 build",1,ea,48.0,48.0,0.038,estimate,RP2040 + SX1262 + MAX-M10S custom
 termination,FTU_BAT,FTU primary battery,6 x Energizer L91 lithium AA (3S2P),1,ea,18.0,18.0,0.09,cited,
-termination,FTU_REG,FTU 3.3 V buck,Pololu S7V8F3 class,1,ea,7.0,7.0,0.002,estimate,
+termination,FTU_REG,FTU 5 V buck-boost,Pololu S7V8F5 class (input range to be confirmed against its datasheet),1,ea,7.0,7.0,0.002,estimate,
 termination,FTU_BARO,FTU barometer,MS5611 breakout,1,ea,9.0,9.0,0.0013,cited,
 termination,CUT_A,Cut-down A (suspension),Nichrome hot-wire cutter + logic MOSFET,1,ea,5.0,5.0,0.006,estimate,pyro line cutter
 termination,CUT_B,Cut-down B (envelope),Nichrome hot-wire on rip panel + MOSFET,1,ea,5.0,5.0,0.006,estimate,
@@ -27,7 +27,7 @@ core,RTD_G,RTD amplifier (gas),MAX31865 breakout,1,ea,12.0,12.0,0.002,estimate,A
 propulsion,PM_P,Pod power module,generic 60 A hall sensor,1,ea,22.0,22.0,0.014,estimate,
 propulsion,BEC_POD,Pod 5 V 3 A regulator,Pololu D36V28F5 class,1,ea,13.0,13.0,0.004,estimate,
 propulsion,POD_NODE,Pod CAN node,Matek AP_PERIPH CAN-L431,1,ea,30.0,30.0,0.005,estimate,any AP_Periph node
-termination,FTU_VSENSE,FTU cell-voltage divider,2 x 100k 1 % resistors to an ADC pin,1,ea,0.2,0.2,0.0002,estimate,
+termination,FTU_VSENSE,FTU cell-voltage divider,100k over 47k 1 % divider to GPIO3 (ADC1),1,ea,0.2,0.2,0.0002,estimate,
 termination,FTU_PULLDN,Cutter gate pull-downs,2 x 10k resistors gate-to-source,1,ea,0.2,0.2,0.0002,estimate,
 termination,RBF,Remove-before-flight plug,2-pin shorting plug with streamer in series with both cutter feeds,1,ea,4.0,4.0,0.006,estimate,
 envelope,-,Latex sounding balloons,1600 g sounding balloon,2,ea,160.0,320.0,3.2,sized,

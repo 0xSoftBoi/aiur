@@ -29,13 +29,13 @@ RF_C2_A,RX,ANT1,RXANT,FEED,rf,0,0.30,U.FL,,
 FTU_RAW,FTU_BAT,OUT,FTU_REG,VIN,power,24,0.05,solder,,
 FTU_CUT,RBF,OUT,CUT_A,VIN,power,22,1.20,JST-SM,,cutters draw from the primary cells directly
 FTU_CUT,RBF,OUT,CUT_B,VIN,power,20,2.50,JST-SM,,
-FTU_3V3,FTU_REG,3V3,FTU,3V3_IN,power,26,0.05,solder,,
-FTU_3V3,FTU_REG,3V3,FTU_BARO,VCC,power,28,0.05,solder,,
-I2C_FTU,FTU,I2C,FTU_BARO,I2C,i2c,28,0.05,solder,0x77,
-CUT_A_GATE,FTU,GPIO_A,CUT_A,GATE,gpio,28,1.20,JST-SM,,
-CUT_B_GATE,FTU,GPIO_B,CUT_B,GATE,gpio,28,2.50,JST-SM,,
+FTU_5V,FTU_REG,5V,FTU,VBUS,power,26,0.05,solder,,"header PM1-2, ground PM1-3"
+FTU_ALDO1,FTU,A_LDO1,FTU_BARO,VCC,power,28,0.05,solder,,header PN1-4; same rail as the bus pull-ups
+I2C_FTU,FTU,I2C,FTU_BARO,I2C,i2c,28,0.05,solder,0x76,header PN1-1/PN1-2 (bus 0)
+CUT_A_GATE,FTU,GPIO_A,CUT_A,GATE,gpio,28,1.20,JST-SM,,"GPIO38, header PN1-8"
+CUT_B_GATE,FTU,GPIO_B,CUT_B,GATE,gpio,28,2.50,JST-SM,,"GPIO21, header PN1-12"
 RF_FTU,FTU,LORA_ANT,FTU_ANT,FEED,rf,0,0.10,SMA,,
-HEARTBEAT,FC,HB_OUT,FTU,HB_IN,opto,28,0.30,JST-GH 2,,optically isolated: the only crossing between the two systems and it carries no power
+HEARTBEAT,FC,HB_OUT,FTU,HB_IN,opto,28,0.30,JST-GH 2,,"optically isolated, GPIO39 (PN1-7): the only crossing between the two systems and it carries no power"
 SPINE_CAN,FC,CAN,POD_NODE,CAN,can,26,9.5,JST-GH 4 at bay / M8 4-pin at pod,,"the whole stern pod interface: one twisted pair + reference, 9.5 m"
 VPOD_RAW,BAT_P,MAIN,PM_P,BAT_IN,power,14,0.12,XT60,,
 VPOD,PM_P,BAT_OUT,ESC,VIN,power,16,0.12,XT30,,
@@ -59,4 +59,4 @@ RTD_AMB,RTD_A,RTD,T_AMB,RTD,analog,28,0.5,JST-GH 4,,4-wire RTD lead
 RTD_GAS,RTD_G,RTD,T_GAS,RTD,analog,28,2.0,JST-GH 4,,4-wire RTD lead
 FTU_RAW,FTU_BAT,OUT,RBF,IN,power,20,0.05,solder,,cutter supply passes through the remove-before-flight plug
 FTU_RAW,FTU_BAT,OUT,FTU_VSENSE,IN,power,28,0.03,solder,,
-FTU_VBAT_SENSE,FTU_VSENSE,OUT,FTU,ADC_VBAT,analog,28,0.03,solder,,under-voltage stop for the cutter sequencer
+FTU_VBAT_SENSE,FTU_VSENSE,OUT,FTU,ADC_VBAT,analog,28,0.03,solder,,GPIO3 (PN1-10); under-voltage stop for the cutter sequencer

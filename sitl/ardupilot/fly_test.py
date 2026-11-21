@@ -106,7 +106,7 @@ class Vehicle:
     def wait(self, cond, what: str, wall_timeout: float = 120.0) -> None:
         t0 = time.time()
         while not cond():
-            self.pump()
+            self.pump(0.2)
             if time.time() - t0 > wall_timeout:
                 raise TimeoutError(f"timed out waiting for {what} (sim t={self.sim_t:.1f} s, "
                                    f"ekf=0x{self.ekf_flags:x}, gps fix={self.gps_fix}, texts={self.texts[-5:]})")
@@ -143,6 +143,23 @@ class Vehicle:
             return self.armed
         self.wait(armed, "arming")
         print(f"[{self.sim_t:8.1f}] armed in GUIDED", flush=True)
+
+    def set_param(self, name: str, value: float) -> None:
+        got = [None]
+        t_send = 0.0
+
+        def done() -> bool:
+            nonlocal t_send
+            if time.time() - t_send > 1.0:
+                t_send = time.time()
+                self.m.mav.param_set_send(self.m.target_system, self.m.target_component,
+                                          name.encode(), value, M.MAV_PARAM_TYPE_REAL32)
+            msg = self.m.recv_match(type="PARAM_VALUE", blocking=True, timeout=0.2)
+            if msg is not None and msg.param_id == name:
+                got[0] = msg.param_value
+            return got[0] is not None
+        self.wait(done, f"PARAM_VALUE {name}", 20.0)
+        print(f"  param {name} = {got[0]:g}", flush=True)
 
     # --- setpoints ------------------------------------------------------
     def heading_speed(self, heading_deg: float, speed: float) -> None:
@@ -347,10 +364,15 @@ def main(argv=None) -> int:
     ap.add_argument("--start-after", type=float, default=0.0, help="sim time at which the plant wind is steady")
     ap.add_argument("--resend", action="store_true", help="re-send the position target every 300 s")
     ap.add_argument("--duration", type=float, default=300.0)
+    ap.add_argument("--set", action="append", default=[], metavar="NAME=VALUE",
+                    help="set an ArduPilot parameter after arming (repeatable)")
     a = ap.parse_args(argv)
 
     v = Vehicle(a.connect)
     v.start(a.rate)
+    for item in a.set:
+        name, _, val = item.partition("=")
+        v.set_param(name, float(val))
     res = {"turn": test_turn, "station": test_station, "hold": test_hold}[a.test](v, a)
     res["statustext"] = v.texts
     print(json.dumps(res, indent=2))

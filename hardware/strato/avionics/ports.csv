@@ -53,8 +53,8 @@ STROBE,VCC,power_in,5.0,0
 STROBE,GATE,gpio,3.3,0
 FTU_BAT,OUT,power_out,4.8,5.0
 FTU_REG,VIN,power_in,4.8,0
-FTU_REG,3V3,power_out,3.3,1.0
-FTU,3V3_IN,power_in,3.3,0
+FTU_REG,5V,power_out,5.0,1.0
+FTU,VBUS,power_in,5.0,0
 FTU,I2C,i2c,3.3,0
 FTU,GPIO_A,gpio,3.3,0
 FTU,GPIO_B,gpio,3.3,0
@@ -102,3 +102,4 @@ RBF,IN,power_in,4.8,0
 RBF,OUT,power_out,4.8,5.0
 FTU_PULLDN,A,gpio,3.3,0
 FTU_PULLDN,B,gpio,3.3,0
+FTU,A_LDO1,power_out,3.3,0.3

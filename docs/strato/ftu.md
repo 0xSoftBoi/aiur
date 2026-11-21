@@ -365,12 +365,14 @@ Not run on hardware — all of it:
 
 Gaps in the design that firmware cannot close:
 
-- **Cell-voltage divider mismatch.** `components.csv` `FTU_VSENSE` is
-  2 × 100 k (÷ 2.00); the firmware's `kVbatDivider` assumes 100 k over 47 k
-  (÷ 3.13). With the BOM parts the firmware reads 1.56 × too high, rejects
-  anything above 4.15 V true as implausible and fires without under-voltage
-  checks. One of the two must change; either ratio suits GPIO3 (2.7 V or
-  1.7 V at 5.4 V).
+- **Cell-voltage divider.** Resolved in the netlist: `FTU_VSENSE` is now
+  100 k over 47 k (divide by 3.13), which is what `kVbatDivider` assumes.
+  The first netlist had 2 x 100 k, with which the firmware would have read
+  1.56x high and fired without under-voltage checks.
+- **Power feed.** Resolved in the netlist: the board is fed 5 V at VBUS from
+  a buck-boost, not 3.3 V back-fed into its regulator output (which leaves
+  the radio and GNSS rails dead). The barometer is powered from the board's
+  ALDO1 rail. The regulator's input range is still to be confirmed.
 - **Barometer address.** The MS5611 must be strapped to 0x76 (see Pins).
 - **Gate pull-downs.** The gate pins are high-impedance during reset and
   boot. Each MOSFET needs a gate-to-source pull-down in the FTU box.

@@ -83,7 +83,8 @@ fi
 ARGS=()
 case "$SCEN" in
   station) ARGS=(--wind "$WIND_N" "$WIND_E" 0 --start-after 100 --duration 1800) ;;
-  turn)    ARGS=(--duration 300) ;;
+  # Rover caps every GUIDED speed target at WP_SPEED; the turn test flies the 6 m/s cruise.
+  turn)    ARGS=(--duration 300 --speed 6 --set WP_SPEED=6) ;;
   hold)    ARGS=(--duration 300) ;;
 esac
 "$PYTHON" "$HERE/fly_test.py" "$SCEN" --truth "$RUN/truth.csv" --out "$RUN/result.json" \
