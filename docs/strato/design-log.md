@@ -479,6 +479,42 @@ Not flown under ArduPilot: ascent, the trainer, crosswind transits,
 failsafes, DroneCAN, real sensors. The wind estimate in these runs was
 handed to the companion rather than estimated.
 
+## Rev T — fly real days, not stacked percentiles
+
+```
+python tools/strato_wind_days.py --station GMM00010393 --cache <dir>
+python -m aiur.strato.campaign --design S2-dayloiter/hull --season summer --real-days
+```
+
+The Monte Carlo drew from "p50" and "p90" profiles, each a stack of
+per-level percentiles. No such day exists: a strong jet does not imply a
+strong stratosphere, and stacking them overstated drift. The campaign can
+now draw from 800 real soundings (Lindenberg, 200 per season, wind at every
+kilometre to 24 km).
+
+| Summer, S1 hull | Stacked percentiles | Real days |
+| --- | ---: | ---: |
+| Reach float | 98 % | 100 % |
+| Landing range, median | 86 km | 69 km |
+| Landing range, 90th percentile | 178 km | 139 km |
+
+And by season, for S2, with a simple go rule (lands within 120 km *and*
+wind at 20 km no more than the 6 m/s the vehicle sustains):
+
+| Season | Reach float | Lands within 120 km | Float wind <= 6 m/s | **Go day** |
+| --- | ---: | ---: | ---: | ---: |
+| Summer (JJA) | 100 % | 86 % | 81 % | **71 %** |
+| Spring (MAM) | 99 % | 79 % | 41 % | **41 %** |
+| Autumn (SON) | 99 % | 57 % | 28 % | **26 %** |
+| Winter (DJF) | 94 % | 26 % | 4 % | **4 %** |
+
+Five summer days in seven are flyable. Winter is not a season for this
+vehicle, but for a new reason: it now usually *reaches* float (the measured
+jet is weaker than the estimate was) and then cannot stay.
+
+One station, complete soundings only, and yesterday's sounding is not a
+forecast: this is a planning rate, not a launch criterion.
+
 ## Where the model was checked
 
 - **Lamb added-mass factors** reproduce Munk's NACA Report 184 table to

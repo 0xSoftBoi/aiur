@@ -210,14 +210,34 @@ class WindProfile:
 
     def __init__(self, name: str = "midlat-summer-p50", scale: float = 1.0,
                  veer_deg: float = 0.0) -> None:
-        if name not in WIND_PROFILES:
-            raise KeyError(f"unknown wind profile {name!r}")
         self.name = name
         self.scale = scale
         self.veer_deg = veer_deg
+        self._day = None
+        if name.startswith("day:"):
+            # "day:<station>:<index>" - one real sounding, see real_days().
+            _, station, index = name.split(":")
+            data = _load_days(station)
+            self._day = data["days"][int(index)]
+            self._day_km = data["altitude_km"]
+            self._rows = ()
+            return
+        if name not in WIND_PROFILES:
+            raise KeyError(f"unknown wind profile {name!r}")
         self._rows = WIND_PROFILES[name]
 
+    def _at_day(self, altitude_m: float) -> Wind:
+        km, u, v = self._day_km, self._day["u"], self._day["v"]
+        zk = min(max(altitude_m / 1000.0, km[0]), km[-1])
+        i = min(int(zk - km[0]), len(km) - 2)
+        f = zk - km[i]
+        east = (u[i] + f * (u[i + 1] - u[i])) / 10.0
+        north = (v[i] + f * (v[i + 1] - v[i])) / 10.0
+        return _rot(Wind(north * self.scale, east * self.scale), self.veer_deg)
+
     def at(self, altitude_m: float) -> Wind:
+        if self._day is not None:
+            return self._at_day(altitude_m)
         zk = altitude_m / 1000.0
         rows = self._rows
         if zk <= rows[0][0]:
@@ -254,6 +274,40 @@ class WindProfile:
                 best = (z, s)
             z += step_m
         return best
+
+
+_DAYS_CACHE: dict = {}
+
+
+def _load_days(station: str) -> dict:
+    if station not in _DAYS_CACHE:
+        import json
+        import os
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data",
+                            f"wind_days_{station}.json")
+        with open(path) as fh:
+            _DAYS_CACHE[station] = json.load(fh)
+    return _DAYS_CACHE[station]
+
+
+def real_days(station: str = "GMM00010393", season: str | None = None,
+              months: tuple | None = None) -> list[str]:
+    """Profile names for the real soundings on file, optionally filtered.
+
+    Each is one day that actually happened (wind at every kilometre to
+    24 km).  Flying these instead of stacked percentile profiles gives the
+    Monte Carlo real vertical structure: a windy jet does not imply a windy
+    stratosphere, and the two are stacked in the percentile tables.
+    """
+
+    out = []
+    for i, d in enumerate(_load_days(station)["days"]):
+        if season and d["season"] != season:
+            continue
+        if months and int(d["date"][5:7]) not in months:
+            continue
+        out.append(f"day:{station}:{i}")
+    return out
 
 
 def _from_dir(speed: float, from_deg: float) -> tuple[float, float]:

@@ -308,6 +308,7 @@ def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
     series: list = []
     float_entry_t = None
     float_alts: list = []
+    station_end = 0.0
     max_alt = sim.z
     max_dp = 0.0
     min_st = max_st = 0.0
@@ -366,6 +367,7 @@ def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
             log(f"at float, {sim.range_m/1000:.1f} km downrange, fill {100*sim.fill:.0f} %")
         if phase == FlightPhase.STATION_KEEP:
             float_alts.append(sim.z)
+            station_end = sim.range_m
         if phase != FlightPhase.DESCENT:
             term, why = fence.must_terminate(sim.range_m, sim.z, sim.t)
             if phase == FlightPhase.STATION_KEEP and float_entry_t is not None and \
@@ -403,6 +405,7 @@ def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
         "landing_bearing_deg": round(math.degrees(math.atan2(sim.east, sim.north)) % 360.0, 0),
         "flight_time_h": round(sim.t / 3600.0, 2),
         "final_phase": phase.value,
+        "station_error_end_km": None if float_entry_t is None else round(station_end / 1000.0, 1),
         "station_keep_cube_hours": round(energy_cube_h, 3),
         "trim_full_thrust_hours": round(trim_h, 3),
     }

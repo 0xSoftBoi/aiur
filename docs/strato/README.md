@@ -94,7 +94,9 @@ in the [design log](design-log.md).
 - **Winter.** Measured at four European stations, the 20 km winter median is
   20 m/s and wind is below 6 m/s on 6 % of days. In June-August it is below
   6 m/s on 80 % of days (98 % if the vehicle can pick its level between 18
-  and 22 km). This is a May-September vehicle. See [winds.md](winds.md).
+  and 22 km). Flown over 800 real soundings, 71 % of summer days are go
+  days (lands within 120 km and holds station); 4 % of winter days are.
+  This is a May-September vehicle. See [winds.md](winds.md).
 - **Come home.** It lands 55-75 km downrange in median wind and ~135 km at
   the 90th percentile. Recovery is a chase, and cost per flight assumes 70 %
   of hardware comes back.

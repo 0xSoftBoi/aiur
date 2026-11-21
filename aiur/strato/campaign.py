@@ -36,21 +36,33 @@ def _pct(values: list, q: float):
 
 def run(design_key: str, flights: int = 200, seed: int = 1, season: str = "summer",
         valve_fault_rate: float = 0.02, float_hours: float = 1.0,
-        free_lift: float | None = None) -> dict:
+        free_lift: float | None = None, real_days_station: str | None = None,
+        max_range_m: float | None = None) -> dict:
     from .sizing import ladder
     dp = ladder()[design_key]
     if free_lift is not None:
         dp.mission["free_lift_fraction"] = free_lift
     rng = random.Random(seed)
     rows = []
+    day_names = None
+    if real_days_station:
+        from .atmosphere import real_days
+        code = {"summer": "JJA", "winter": "DJF", "spring": "MAM", "autumn": "SON"}.get(season)
+        day_names = real_days(real_days_station, code) if code else \
+            real_days(real_days_station, months=(5, 9))
     for i in range(flights):
-        names, weights = zip(*SEASONS[season])
-        wind = rng.choices(names, weights)[0]
         fault = rng.random() < valve_fault_rate
+        if day_names:
+            # A real day needs no scale or veer: its variability is its own.
+            wind, scale, veer = rng.choice(day_names), 1.0, 0.0
+        else:
+            names, weights = zip(*SEASONS[season])
+            wind = rng.choices(names, weights)[0]
+            scale, veer = math.exp(rng.gauss(0.0, 0.25)), rng.gauss(0.0, 30.0)
         cfg = config_from_design(
             dp, wind=wind,
-            wind_scale=math.exp(rng.gauss(0.0, 0.25)),
-            wind_veer_deg=rng.gauss(0.0, 30.0),
+            wind_scale=scale,
+            wind_veer_deg=veer,
             gas_fill_error=rng.gauss(0.0, 0.03),
             earth_ir_w_m2=rng.uniform(150.0, 280.0),
             launch_hour=rng.uniform(4.5, 8.0),
@@ -67,6 +79,10 @@ def run(design_key: str, flights: int = 200, seed: int = 1, season: str = "summe
             and not r["burst"]]
     summary = {
         "design": design_key, "flights": flights, "seed": seed, "season": season,
+        "winds": f"real soundings, {real_days_station}" if real_days_station
+        else "stacked percentile profiles",
+        "station_error_end_km_p50": _pct([r["station_error_end_km"] for r in reached
+                                          if r.get("station_error_end_km") is not None], 0.5),
         "reached_float": len(reached) / flights,
         "held_above_18km_for_dwell": len(held) / flights,
         "burst": sum(r["burst"] for r in rows) / flights,
@@ -89,12 +105,17 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--design", default="S1-touch/hull")
     ap.add_argument("--flights", type=int, default=200)
     ap.add_argument("--seed", type=int, default=1)
-    ap.add_argument("--season", default="summer", choices=sorted(SEASONS))
+    ap.add_argument("--season", default="summer",
+                    choices=sorted(set(SEASONS) | {"spring", "autumn"}))
+    ap.add_argument("--real-days", metavar="STATION", nargs="?", const="GMM00010393",
+                    default=None, help="fly real soundings (default station Lindenberg) "
+                    "instead of stacked percentile profiles")
     ap.add_argument("--free-lift", type=float, default=None,
                     help="override launch free lift fraction")
     ap.add_argument("--full", action="store_true", help="include every flight row")
     a = ap.parse_args(argv)
-    out = run(a.design, a.flights, a.seed, a.season, free_lift=a.free_lift)
+    out = run(a.design, a.flights, a.seed, a.season, free_lift=a.free_lift,
+              real_days_station=a.real_days)
     print(json.dumps(out if a.full else out["summary"], indent=2))
     return 0
 
