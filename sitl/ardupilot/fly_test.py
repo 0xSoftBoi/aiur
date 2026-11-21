@@ -173,17 +173,24 @@ class Vehicle:
             M.MAV_FRAME_LOCAL_NED, mask, 0, 0, 0,
             speed * math.cos(h), speed * math.sin(h), 0, 0, 0, 0, 0, 0)
 
-    def heading_groundspeed(self, heading_deg: float, ground_speed: float) -> None:
-        """Explicit yaw plus a velocity vector along it.  Rover takes the
-        speed as signed along the commanded yaw, so a negative ground speed
-        ("fall back with the wind, bow first") is expressible."""
+    def heading_groundspeed(self, heading_deg: float, ground_speed: float, speed_default: float) -> None:
+        """Explicit heading plus a *signed* ground speed, via SET_ATTITUDE_TARGET
+        (yaw from the quaternion, speed = thrust x WP_SPEED).  Signed matters:
+        "fall back with the wind, bow first" is a negative ground speed.
+
+        SET_POSITION_TARGET_LOCAL_NED with yaw + velocity cannot be used for
+        this: Rover 4.7.3 takes the sign of the speed from the sign of the
+        NORTH velocity component (GCS_MAVLink_Rover.cpp, "we are using the
+        x-axis velocity to determine direction"), so any easterly heading
+        with a rounding-negative vx is flown in reverse.  Found the hard way
+        (tuning log, c1)."""
 
         h = math.radians(heading_deg)
-        mask = 0b0000_1001_1100_0111  # velocity + yaw
-        self.m.mav.set_position_target_local_ned_send(
+        q = (math.cos(h / 2), 0.0, 0.0, math.sin(h / 2))
+        thrust = max(-1.0, min(1.0, ground_speed / speed_default))
+        self.m.mav.set_attitude_target_send(
             int(self.sim_t * 1e3), self.m.target_system, self.m.target_component,
-            M.MAV_FRAME_LOCAL_NED, mask, 0, 0, 0,
-            ground_speed * math.cos(h), ground_speed * math.sin(h), 0, 0, 0, 0, h, 0)
+            0b0000_0111, q, 0, 0, 0, thrust)
 
     def goto_local(self, north: float, east: float) -> None:
         mask = 0b0000_1101_1111_1000  # position only
@@ -303,6 +310,8 @@ def test_station(v: Vehicle, a) -> dict:
         sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
         from aiur.strato.guidance import StationKeeper
         keeper = StationKeeper(a.max_airspeed)
+        # SET_ATTITUDE_TARGET thrust is a fraction of WP_SPEED
+        v.set_param("WP_SPEED", a.max_airspeed)
 
     def tick():
         if keeper is not None:
@@ -311,7 +320,7 @@ def test_station(v: Vehicle, a) -> dict:
                 c = keeper.command(tn - v.pos.x, te - v.pos.y, wn, we)
                 h = c.heading_rad
                 gs = c.airspeed_m_s + wn * math.cos(h) + we * math.sin(h)
-                v.heading_groundspeed(math.degrees(h), gs)
+                v.heading_groundspeed(math.degrees(h), gs, a.max_airspeed)
         # stock guidance: the target is sent once (re-sent rarely if asked)
         elif last[0] == 0.0 or v.sim_t - last[0] >= 300.0 and v.mode == GUIDED and a.resend:
             last[0] = v.sim_t

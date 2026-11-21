@@ -63,10 +63,13 @@ mid-flight; during a GNSS outage the bridge dead-reckons on barometric
 altitude (one run: 1,197 s dead-reckoned, mission completed).
 
 What this does and does not show: the mapping and the bridge work on the
-real wire format. The thing on the other end is this repo's simulation, not
-ArduPilot. ArduPilot SITL has not been run, and ArduPilot has no stock frame
-that accepts these two messages for a propeller airship - that custom frame
-is unwritten.
+real wire format, but the thing on the other end of *this* launch is the
+repo's simulation. ArduPilot itself is flown separately, in
+[`sitl/ardupilot`](../../sitl/ardupilot/) ([ardupilot-sitl.md](ardupilot-sitl.md)):
+stock ArduRover (boat, vectored thrust) accepts heading plus signed speed
+as `SET_ATTITUDE_TARGET` and flies the same 6-DoF plant. The two are not
+yet joined - the bridge has not been pointed at ArduPilot SITL, and its
+thrust field carries airspeed fraction where Rover expects signed speed.
 
 ## Station-keeping with the full control chain
 
@@ -180,8 +183,8 @@ unaided" flips on how much of the Munk moment is real.
 
 ## Known gaps
 
-- ArduPilot itself has never been in the loop: no SITL, no custom airship
-  frame, no parameter file.
+- ArduPilot SITL flies the 6-DoF plant, but not through this ROS stack and
+  not the ascent; stock Rover has no thrust floor, pitch or altitude loop.
 - Sensor noise and radio loss are not injected at the message level (motor,
   gimbal and GNSS-outage faults are).
 - The Gazebo fin runs are open loop; the closed-loop turn study has not been

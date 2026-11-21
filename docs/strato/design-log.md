@@ -430,6 +430,55 @@ much of the Munk moment is real, with a thin margin (75 % by the rule, 80 %
 at the edge). An open-loop sideslip release on the SP1 trainer measures
 both at once.
 
+## Rev S — ArduPilot in the loop
+
+```
+sitl/ardupilot/run_sitl.sh turn
+sitl/ardupilot/run_sitl.sh companion
+```
+
+The real ArduRover 4.7.3 SITL firmware (stock prebuilt binary) now flies
+the in-repo 6-DoF plant over ArduPilot's JSON physics interface
+([ardupilot-sitl.md](ardupilot-sitl.md)). It arms, its EKF aligns and
+tracks the plant to 0.5 m and about 1 degree, and it runs in GUIDED.
+These numbers are from the job that built the harness; I was not able to
+re-run the binary myself in this session.
+
+| S2 hull, 6 m/s | ArduRover | In-repo controller |
+| --- | ---: | ---: |
+| 90 degree turn: rise time | 19.1 s | 13.0 s |
+| 90 degree turn: overshoot | 3.3 deg | 8.3 deg |
+| Heading hold, 0.5 m/s gusts: RMS error | 2.6 deg | 2.1 deg |
+| Station-keeping, 4 m/s wind, calm: RMS distance | 124 m | 124 m |
+| Same, 0.5 m/s gusts: RMS distance | 148 m | 125 m |
+
+What it settled:
+
+- **Frame.** ArduRover as a boat with vectored thrust is the stock fit: its
+  steering output is the yaw gimbal. No custom firmware is needed to fly.
+- **Who does what.** Rover is a good inner loop for heading and speed. Its
+  own waypoint and loiter navigation is not usable: left alone in gusts it
+  wandered 660 m, because it scales turns by ground speed (2 m/s) while the
+  hull flies at 6 m/s through the air. The companion's station-keeping law
+  on top of Rover matches the in-repo result to the metre in steady wind.
+- **The command that works.** Heading plus signed speed as
+  `SET_ATTITUDE_TARGET`. A position/velocity target produced zero thrust and
+  an 8 km blow-away.
+- **The real limit: no thrust floor.** Rover cuts throttle to slow, stop or
+  reverse, and with vectored thrust zero throttle is zero steering. The
+  hull is yaw-unstable, so it swings downwind. The in-repo controller has a
+  thrust floor for exactly this; stock Rover has no such parameter. Rover's
+  failsafe "stop" is the same problem and is wrong for this vehicle.
+- **Pitch and altitude.** Rover has neither. A Lua script on the autopilot
+  trims pitch (altitude excursion in gusts 59 m to 36 m); it is first-cut.
+
+*Decision.* Stock Rover plus companion, not a fork. Next step, reasoned and
+not run: move the inner loop with a thrust floor into a Lua script.
+
+Not flown under ArduPilot: ascent, the trainer, crosswind transits,
+failsafes, DroneCAN, real sensors. The wind estimate in these runs was
+handed to the companion rather than estimated.
+
 ## Where the model was checked
 
 - **Lamb added-mass factors** reproduce Munk's NACA Report 184 table to
@@ -439,6 +488,9 @@ both at once.
 - **JP Aerospace Tandem** flew two 1.8 m propellers and managed 6 kt at
   ~29 km. The tandem model needs 100 W to sustain 3 m/s at 20 km with
   0.77 m propellers. Same regime.
+- **ArduPilot.** ArduRover 4.7.3 SITL flying the in-repo plant: turns and
+  station-keeping within 20 % of the in-repo controller (reported by the
+  harness job; not re-run by me).
 - **Gazebo with fins**: open-loop yaw divergence times within 7-15 % of the
   in-repo model for three fin sizes, differences attributed term by term.
 - **Gazebo** (`ros2 launch aiur_description gz_check.launch.py`): the stock

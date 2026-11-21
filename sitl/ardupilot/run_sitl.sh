@@ -3,7 +3,10 @@
 # scenario against them, and tear both down.
 #
 #   sitl/ardupilot/run_sitl.sh turn      # calm air, 90 degree heading step
-#   sitl/ardupilot/run_sitl.sh station   # 4 m/s wind, hold a point 1.5 km upwind, 30 min
+#   sitl/ardupilot/run_sitl.sh station   # 4 m/s wind, hold a point 1.5 km upwind, 30 min:
+#                                        #   one GUIDED position target, then Rover's boat loiter
+#   sitl/ardupilot/run_sitl.sh companion # same scenario; fly_test.py plays the companion:
+#                                        #   aiur.strato.guidance.StationKeeper -> heading + speed at 1 Hz
 #   sitl/ardupilot/run_sitl.sh hold      # arm and sit in boat loiter
 #   sitl/ardupilot/run_sitl.sh idle      # just start both and wait (connect your own GCS to tcp:5760)
 #
@@ -39,6 +42,7 @@ JSON_PORT=$((9002 + 10 * INSTANCE))
 MAV_PORT=$((5760 + 10 * INSTANCE))
 URL="https://firmware.ardupilot.org/Rover/stable/SITL_x86_64_linux_gnu/ardurover"
 RUN="$SITL_HOME/run-$SCEN${TAG:+-$TAG}"
+TEST="$SCEN"; [ "$SCEN" = "companion" ] && TEST=station
 
 if [ -z "${ARDUROVER:-}" ]; then
   ARDUROVER="$SITL_HOME/bin/ardurover"
@@ -55,7 +59,7 @@ rm -rf "$RUN"; mkdir -p "$RUN/scripts"
 [ "$LUA" = "1" ] && cp "$HERE"/scripts/*.lua "$RUN/scripts/" 2>/dev/null || true
 
 case "$SCEN" in
-  station) WIND_N="${WIND_N:-0}"; WIND_E="${WIND_E:--4}"; WIND_START=60; WIND_RAMP=30 ;;
+  station|companion) WIND_N="${WIND_N:-0}"; WIND_E="${WIND_E:--4}"; WIND_START=60; WIND_RAMP=30 ;;
   *)       WIND_N="${WIND_N:-0}"; WIND_E="${WIND_E:-0}";  WIND_START=0;  WIND_RAMP=0 ;;
 esac
 # start pointing into the wind (as the in-repo station_keep scenario does), else north
@@ -88,10 +92,11 @@ fi
 
 ARGS=()
 case "$SCEN" in
-  station) ARGS=(--wind "$WIND_N" "$WIND_E" 0 --start-after 100 --duration 1800) ;;
+  station)   ARGS=(--wind "$WIND_N" "$WIND_E" 0 --start-after 100 --duration 1800) ;;
+  companion) ARGS=(--wind "$WIND_N" "$WIND_E" 0 --start-after 100 --duration 1800 --guidance companion) ;;
   # Rover caps every GUIDED speed target at WP_SPEED; the turn test flies the 6 m/s cruise.
   turn)    ARGS=(--duration 300 --speed 6 --set WP_SPEED=6) ;;
   hold)    ARGS=(--duration 300) ;;
 esac
-"$PYTHON" "$HERE/fly_test.py" "$SCEN" --connect "tcp:127.0.0.1:$MAV_PORT" --truth "$RUN/truth.csv" --out "$RUN/result.json" \
+"$PYTHON" "$HERE/fly_test.py" "$TEST" --connect "tcp:127.0.0.1:$MAV_PORT" --truth "$RUN/truth.csv" --out "$RUN/result.json" \
     --series "$RUN/ekf_series.csv" "${ARGS[@]}" "$@" | tee "$RUN/fly_test.log"

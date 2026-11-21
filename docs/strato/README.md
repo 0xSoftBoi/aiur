@@ -104,8 +104,9 @@ in the [design log](design-log.md).
   unanswered. See [prototype-ladder.md](prototype-ladder.md).
 - **Recover aircraft at altitude.** A quadcopter cannot hover at 0.089 kg/m3.
   The stratospheric carrier is release-only.
-- **Claim any of this is tested.** No film has been sealed, no motor run in
-  a chamber, no firmware flashed, and no real autopilot has been in the loop.
+- **Claim any of this is tested on hardware.** No film has been sealed, no
+  motor run in a chamber, no firmware flashed. The real ArduPilot firmware
+  has flown the simulated hull, but only at float and only in software.
 
 ## Run it
 
@@ -134,6 +135,8 @@ ROS 2 (Jazzy): see [ros.md](ros.md).
 - [Design log](design-log.md) — the iterations and what each one changed
 - [Hardware](hardware.md) — structure, components, every connection
 - [Building the envelope](build-envelope.md) — from cut patterns to a leak-tested hull
+- [ArduPilot in the loop](ardupilot-sitl.md) — stock ArduRover flying the simulated hull
+- [Gazebo fin cross-check](gazebo-fins.md)
 - [Flight-termination unit](ftu.md) — firmware, packet format, bench procedure
 - [Winds](winds.md) — measured statistics from 89,000 soundings
 - [Prototype ladder](prototype-ladder.md) — what to build first, gates, regulation
