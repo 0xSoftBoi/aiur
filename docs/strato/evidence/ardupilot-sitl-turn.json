@@ -1,0 +1,92 @@
+{
+ "test": "turn",
+ "speed_cmd_m_s": 6.0,
+ "heading0_deg": 0.0,
+ "step_deg": 90.0,
+ "t_step_s": 283.1,
+ "t_end_s": 583.1,
+ "pre_step": {
+  "rms_heading_error_deg": 0.16,
+  "mean_ground_speed_m_s": 6.0,
+  "mean_throttle_pct": 32.3
+ },
+ "ekf": {
+  "rise_time_s": 18.9,
+  "overshoot_deg": 4.5,
+  "settle_5deg_s": 19.7,
+  "final_error_deg": 0.19,
+  "steering_saturated_fraction": 0.013,
+  "max_abs_steer_pwm_offset": 500,
+  "max_turn_rate_deg_s": 6.2
+ },
+ "truth": {
+  "rise_time_s": 19.1,
+  "overshoot_deg": 3.3,
+  "settle_5deg_s": 20.1,
+  "final_error_deg": 0.68,
+  "gimbal_saturated_fraction": 0.013,
+  "max_sideslip_deg": 9.8,
+  "min_airspeed_m_s": 5.14,
+  "max_thrust_n": 4.47,
+  "altitude_change_m": 0.2,
+  "max_abs_pitch_deg": 0.18
+ },
+ "statustext": [
+  [
+   0.0,
+   "Barometer 1 calibration complete"
+  ],
+  [
+   0.0,
+   "Barometer 2 calibration complete"
+  ],
+  [
+   0.0,
+   "Beginning INS calibration. Do not move vehicle"
+  ],
+  [
+   0.0,
+   "ArduPilot Ready"
+  ],
+  [
+   0.0,
+   "aiur_pitch.lua loaded"
+  ],
+  [
+   0.0,
+   "RCInput: decoding UDP (Pulses)"
+  ],
+  [
+   0.0,
+   "AHRS: DCM active"
+  ],
+  [
+   3.8,
+   "EKF3 IMU0 initialised"
+  ],
+  [
+   3.8,
+   "EKF3 IMU1 initialised"
+  ],
+  [
+   5.4,
+   "EKF3 IMU0 tilt alignment complete"
+  ],
+  [
+   5.4,
+   "EKF3 IMU1 tilt alignment complete"
+  ],
+  [
+   5.6,
+   "EKF3 IMU0 MAG0 initial yaw alignment complete"
+  ],
+  [
+   5.6,
+   "EKF3 IMU1 MAG0 initial yaw alignment complete"
+  ],
+  [
+   5.6,
+   "AHRS: EKF3 active"
+  ]
+ ]
+}

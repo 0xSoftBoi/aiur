@@ -441,8 +441,8 @@ The real ArduRover 4.7.3 SITL firmware (stock prebuilt binary) now flies
 the in-repo 6-DoF plant over ArduPilot's JSON physics interface
 ([ardupilot-sitl.md](ardupilot-sitl.md)). It arms, its EKF aligns and
 tracks the plant to 0.5 m and about 1 degree, and it runs in GUIDED.
-These numbers are from the job that built the harness; I was not able to
-re-run the binary myself in this session.
+The turn and both companion station-keeping runs were re-run from an empty
+directory and reproduce to the decimal; results are in `evidence/`.
 
 | S2 hull, 6 m/s | ArduRover | In-repo controller |
 | --- | ---: | ---: |
@@ -489,8 +489,8 @@ handed to the companion rather than estimated.
   ~29 km. The tandem model needs 100 W to sustain 3 m/s at 20 km with
   0.77 m propellers. Same regime.
 - **ArduPilot.** ArduRover 4.7.3 SITL flying the in-repo plant: turns and
-  station-keeping within 20 % of the in-repo controller (reported by the
-  harness job; not re-run by me).
+  station-keeping within 20 % of the in-repo controller; re-run from a
+  clean directory, reproduced exactly.
 - **Gazebo with fins**: open-loop yaw divergence times within 7-15 % of the
   in-repo model for three fin sizes, differences attributed term by term.
 - **Gazebo** (`ros2 launch aiur_description gz_check.launch.py`): the stock
