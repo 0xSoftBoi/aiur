@@ -58,7 +58,7 @@ class Propeller:
         # Section L/D vs Reynolds number for thin cambered low-Re sections
         # [estimate fitted to published low-Re airfoil data: ~12 at 1e4,
         # ~28 at 5e4, ~45 at 2e5].
-        l_over_d = max(6.0, min(60.0, 12.0 * (reynolds / 1e4) ** 0.45))
+        l_over_d = max(4.0, min(60.0, LOW_RE_LD_SCALE * 12.0 * (reynolds / 1e4) ** 0.45))
         # Profile efficiency of an element at the 3/4 radius.
         phi = math.atan2(v + vi, 0.75 * vtip)
         eps = 1.0 / l_over_d
@@ -125,6 +125,8 @@ MOTORS = {
 }
 
 ESC_EFFICIENCY = 0.95
+#: Multiplier on the section lift-to-drag fit; 1.0 is the baseline estimate.
+LOW_RE_LD_SCALE = 1.0
 
 
 def paschen_margin(bus_v: float, air: Air) -> float:

@@ -110,6 +110,10 @@ class DesignPoint:
 #: Droppable trim ballast as a fraction of gross mass [estimate from the
 #: ascent model: forced-convection cooling at cruise costs ~1 % of lift].
 TRIM_BALLAST_FRACTION = 0.03
+#: Appendage drag as a fraction of hull drag (total = 1.8x hull) [cited].
+APPENDAGE_DRAG_FRACTION = 0.8
+#: Fin areal mass, kg per m2 of fin [patterns.py].
+FIN_AREAL_KG_M2 = 0.115
 
 
 # --- shared pieces -----------------------------------------------------------
@@ -294,8 +298,11 @@ def _hull_budget(volume: float, mission: Mission, film_key: str, fineness: float
     # Fins, spine pods, rigging and film wrinkles: published sizing studies
     # take total drag as 1.8x hull-alone [cited: ICAS 2016-0703]; a slack
     # film hull with inflated fins earns no better.
-    extra_cda = 0.8 * hull.drag_coefficient(1e6) * hull.reference_area_m2 + 0.03
-    drag = lambda v: hull.drag_n(air.density_kg_m3, v, air.viscosity_pa_s, extra_cda)
+    extra_cda = APPENDAGE_DRAG_FRACTION * hull.drag_coefficient(1e6) * hull.reference_area_m2 + 0.03
+    # A netted hull is lobed between tendons: more wetted area and a rough
+    # surface.  +15 % on hull drag until someone measures a lobed model.
+    net_drag = 1.15 if netted else 1.0
+    drag = lambda v: net_drag * hull.drag_n(air.density_kg_m3, v, air.viscosity_pa_s, extra_cda)
     prop_d = max(0.6, min(1.8, 0.05 * length))
     bus_v = series * 3.6
     prop = _propulsion(air, drag(mission.dash_airspeed_m_s), mission.dash_airspeed_m_s,
@@ -357,7 +364,7 @@ def _hull_budget(volume: float, mission: Mission, film_key: str, fineness: float
     # patterns with spars filled to 10 kPa on the ground; the first guess of
     # 0.085 was 40 % light, because spar diameter is set by wrinkling under
     # launch loads, not by fabric strength.  [patterns.py]
-    m_fins = 0.115 * fin_area + 0.20
+    m_fins = FIN_AREAL_KG_M2 * fin_area + 0.20
     m_spine = 0.018 * length + 0.10         # UHMWPE webbing spine + load lines
     m_term = (0.04 if mission.recoverable else 0.0)  # filled in below
     lift_per_m3 = gas.lift_per_m3(air, superpressure_pa=dp_min)
@@ -609,6 +616,11 @@ MISSIONS = {
     "S1-touch": Mission("S1-touch", 20_000.0, payload_kg=0.5, payload_w=3.0,
                         cruise_airspeed_m_s=3.0, dash_airspeed_m_s=5.0,
                         energy_mode="battery", powered_hours=1.0),
+    # S1-lite: the same flight inside the exempt free-balloon mass limits
+    # (12 lb suspended, no package over 6 lb), for the regulatory conversation.
+    "S1-lite": Mission("S1-lite", 20_000.0, payload_kg=0.15, payload_w=2.0,
+                       cruise_airspeed_m_s=2.5, dash_airspeed_m_s=4.0,
+                       energy_mode="battery", powered_hours=0.5),
     # S2: a real hull.  All daylight at float, holding the summer median wind.
     "S2-dayloiter": Mission("S2-dayloiter", 20_000.0, payload_kg=2.0, payload_w=10.0,
                             cruise_airspeed_m_s=6.0, dash_airspeed_m_s=10.0,
@@ -627,6 +639,7 @@ MISSIONS = {
 def ladder() -> dict:
     out = {}
     out["SP1-trainer/hull"] = size_hull(MISSIONS["SP1-trainer"], "nylon-tpu-70gsm")
+    out["S1-lite/tandem"] = size_tandem(MISSIONS["S1-lite"], "1200g")
     out["S1-touch/tandem"] = size_tandem(MISSIONS["S1-touch"], "1600g")
     out["S1-touch/hull"] = size_hull(MISSIONS["S1-touch"], "lldpe-20um")
     out["S2-dayloiter/hull"] = size_hull(MISSIONS["S2-dayloiter"], "lldpe-20um")

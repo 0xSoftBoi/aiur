@@ -52,7 +52,7 @@ one, it is what most weather services already fly, and nobody is underneath.
 
 ## What the models found
 
-Twelve findings changed the design. Each is reproducible; the commands are
+Fourteen findings changed or tested the design. Each is reproducible; the commands are
 in the [design log](design-log.md).
 
 1. **Scaling the indoor P0 blimp does not work.** A TPU envelope with a
@@ -79,6 +79,12 @@ in the [design log](design-log.md).
     worse (20 m/s), and the calm season runs May to September.
 11. **Cutting patterns corrected the budget:** 38 % film waste not 18 %, fins
     35 % heavier, 2.2 % of volume lost to flat gores.
+13. **A full day closes with margin.** Ten hours at float on the unified
+    plant: S2 flies 48 km back to its station and holds it, the battery
+    never drops below 64 %, and it lands 22 km from launch.
+14. **One estimate can break the hull, and it is not the one expected.**
+    Seam strength and creep in the cold, then film optics. Propeller
+    efficiency moves the design by half a percent.
 12. **Overnight is a net, not a laminate.** Tendons carry the day-night
     pressure swing and 20 um film only spans between them: $4,260 against
     $17,600.
@@ -92,9 +98,10 @@ in the [design log](design-log.md).
 - **Come home.** It lands 55-75 km downrange in median wind and ~135 km at
   the 90th percentile. Recovery is a chase, and cost per flight assumes 70 %
   of hardware comes back.
-- **Fly under Part 101 exemptions.** Suspended mass is 5.6-6.5 kg against
-  the 12 lb (5.4 kg) exempt ceiling, and a *powered* airship is not a free
-  balloon in any case. See [prototype-ladder.md](prototype-ladder.md).
+- **Fly as a free balloon, as far as anyone has ruled.** By mass S1 fits the
+  Part 101 exempt class (3.6 kg hangs from the hull; the limit is 12 lb),
+  but a *powered* airship is not a free balloon, and that question is
+  unanswered. See [prototype-ladder.md](prototype-ladder.md).
 - **Recover aircraft at altitude.** A quadcopter cannot hover at 0.089 kg/m3.
   The stratospheric carrier is release-only.
 - **Claim any of this is tested.** No film has been sealed, no motor run in
@@ -109,6 +116,7 @@ python -m aiur.strato.ascent        # launch-to-landing reference flights
 python -m aiur.strato.flight6dof    # handling and station-keeping
 python -m aiur.strato.mission6      # launch to landing on the unified plant (buoyancy + 6-DoF)
 python -m aiur.strato.faults        # nine fault cases, all must end safe
+python -m aiur.strato.robustness    # which unmeasured estimate could break it
 python -m aiur.strato.patterns      # gore and fin cut patterns (SVG, DXF, station tables)
 make -C firmware/ftu/host test      # termination firmware vs the Python reference
 python -m aiur.strato.campaign --design S1-touch/hull --flights 200 --seed 1

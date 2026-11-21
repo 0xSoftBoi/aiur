@@ -310,6 +310,73 @@ went quiet, the float manager never declared float, and the flight ran to
 its time limit. The test is now on climb rate filtered over a minute, with
 a ten-minute fallback.
 
+## Rev N — fly the whole day, on a power bus
+
+```
+python -m aiur.strato.mission6 S2-dayloiter/hull --float-hours=10
+```
+
+Until now S2's "all daylight" was a sizing claim: one hour at float had been
+flown, and energy was a budget line. The unified plant now carries a power
+bus (array in from sun elevation and altitude; hotel and propulsion out,
+propulsion from the propeller and motor models at the thrust actually
+commanded) and flies ten hours at float.
+
+| | Result |
+| --- | --- |
+| Station error | 48.2 km at float entry, 0.1 km at the end: it flies home and stays |
+| Altitude | 19,849 m mean, 124 m sd; no ballast used |
+| Battery | never below 64 %; full at the end |
+| Energy | propulsion 287 Wh, hotel 295 Wh, array 923 Wh, of which 340 Wh had nowhere to go |
+| Landing | 21.9 km from launch, against 60 km for the one-hour flight |
+
+Two things follow. The array is about 35 % larger than this day needed,
+which is the margin for a 90th-percentile wind day rather than an error.
+And a long flight is *easier* to recover than a short one, because the
+float-level wind in summer is weak enough to fly home in.
+
+Caveat: the wind is a fixed profile for the whole day and the sky is clear.
+
+## Rev O — which estimate could break it?
+
+```
+python -m aiur.strato.robustness
+```
+
+Each `[estimate]` pushed to a pessimistic bound, one at a time, on S2:
+
+| Estimate | Pessimistic bound | Effect |
+| --- | --- | --- |
+| **Film sustained allowable** (seams, cold, creep) | 10 % of ultimate instead of 20 % | **Hoop margin 0.96: the hull fails.** The only single estimate that breaks the design |
+| **Film solar absorptance** | 0.12 (dusty, sealant haze) instead of 0.03 | Gas runs 30 K warm instead of 8 K; all trim ballast is spent |
+| Fin areal mass | 0.17 kg/m2 | +12 % gross (16.4 kg, 199 m3) |
+| Film areal density | +20 % | +11 % gross |
+| Fin lift slope | 1.4/rad instead of 2.2 | Turn overshoot 22 deg, gimbal saturated 12 %: flies, less tidily |
+| Appendage drag | doubled | Cruise 64 W instead of 41 W; +2 % gross |
+| Propeller low-Re L/D | x0.6 | Cruise 48 W; +0.5 % gross |
+| Ascent drag of the slack hull | Cd 1.1 | 102 min to float instead of 79; lands 74 km out |
+| Avionics mass and power | x1.5 | +2 % gross |
+
+So the bench order is not the one guessed in Rev A-G. Seam strength and
+creep at -60 C is first by a distance, film optics second, and both are
+coupon tests costing almost nothing (SP0-A). Propeller efficiency, which
+looked like the scary unknown, moves the design by half a percent because
+propulsion is a small share of a vehicle that is mostly envelope.
+
+## Rev P — smaller corrections
+
+- **GNSS outage.** The bridge dead-reckons on barometric altitude and last
+  ground velocity; a mission with a 20 minute outage at float completes
+  (1,197 s dead-reckoned). Altitude hold never needed GNSS.
+- **Suspended mass was over-counted.** The regulatory comparison counted
+  fins and hull fittings as payload. The envelope is the balloon; what hangs
+  from it is 3.6 kg (7.9 lb) on the S1 hull and 5.4 kg (11.9 lb) on the S1
+  tandem. An `S1-lite` tandem at 4.25 kg (9.4 lb) is in the ladder for the
+  regulatory conversation. None of this changes the fact that a powered
+  airship is not a free balloon.
+- **Netted hull drag.** +15 % on hull drag for the lobed surface, until a
+  model is measured: S3 netted is 26.6 kg.
+
 ## Where the model was checked
 
 - **Lamb added-mass factors** reproduce Munk's NACA Report 184 table to

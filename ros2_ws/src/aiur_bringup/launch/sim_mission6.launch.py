@@ -32,7 +32,8 @@ def setup(context):
              parameters=[{"design": design, "wind_profile": L("wind_profile"),
                           "wind_scale": L("wind_scale"), "steps_per_tick": L("steps_per_tick"),
                           "gimbal_jam_at_s": L("gimbal_jam_at_s"),
-                          "motor_fail_at_s": L("motor_fail_at_s")}]),
+                          "motor_fail_at_s": L("motor_fail_at_s"),
+                          "gps_dropout_at_s": L("gps_dropout_at_s")}]),
         Node(package="aiur_flight", executable="float_manager", namespace=ns, output="screen",
              parameters=[sim, {"vent_enabled": False, "cruise_airspeed_m_s": cruise,
                                "float_duration_s": L("float_duration_s")}]),
@@ -56,6 +57,7 @@ def generate_launch_description():
         DeclareLaunchArgument("max_range_m", default_value="150000.0"),
         DeclareLaunchArgument("gimbal_jam_at_s", default_value="-1.0"),
         DeclareLaunchArgument("motor_fail_at_s", default_value="-1.0"),
+        DeclareLaunchArgument("gps_dropout_at_s", default_value="-1.0"),
         DeclareLaunchArgument("output_dir", default_value="/tmp/aiur_mission6"),
         OpaqueFunction(function=setup),
     ])

@@ -15,6 +15,13 @@ before the next one is cut. Same rule as P0: a gate is evidence, not a date.
 | **SP3 film hull to float (S1)** | 15.0 m LLDPE hull | ~$2,330 | Reach 20 km; hull takes shape; station-keep 30 min in ≤3 m/s; land within the Monte Carlo footprint |
 | **SP4 day loiter (S2)** | 17.6 m hull, solar, 2 kg payload | ~$2,840 | All daylight at float; hold station inside 2 km in ≤5 m/s wind |
 
+Bench order, from the robustness study (design log, Rev O): **SP0-A first,
+and add a film optics measurement to it** (solar transmittance/absorptance
+of the film as sealed and handled, with a pyranometer or a lux meter and a
+thermocouple on a sunlit sample). Seam creep is the one estimate that can
+fail the hull; film optics is the one that can spend all the ballast.
+Propeller efficiency (SP0-C) matters least and can run in parallel.
+
 Why the tandem flies before the hull: it removes the two least-known things
 — hull inflation and fin aerodynamics — from the first stratospheric flight,
 and exercises everything else (avionics in the cold, the float controller,
@@ -47,16 +54,21 @@ This is the item most likely to stop the programme, and it is not an
 engineering problem.
 
 - **United States.** 14 CFR Part 101 covers unmanned *free balloons*. Its
-  exempt class ends at any package over 6 lb or 12 lb total; S1 carries
-  5.6–6.5 kg (12–14 lb) below the cells, so it is in Subpart D at best: two
+  exempt class allows up to 12 lb of payload in total with no package over
+  6 lb. Counting what hangs from the envelope (not the envelope or its
+  fins), the S1 hull carries 3.6 kg (7.9 lb), the S1 tandem 5.4 kg
+  (11.9 lb, no margin) and the S1-lite tandem 4.25 kg (9.4 lb); each must
+  be split so that no pod exceeds 6 lb, which the bay/stern-pod split
+  already does. S2 with its 2 kg payload is over, and is Subpart D: two
   independent payload cut-downs, two envelope terminations, a radar
-  reflector, lights at night below 60,000 ft, ATC notification 6–24 h ahead,
-  position reports every 2 h. The design already carries all of these. But
-  a *powered, steerable* airship is not a free balloon; Sceye and JP
+  reflector, lights at night below 60,000 ft, ATC notification 6-24 h
+  ahead, position reports every 2 h - all of which the design carries.
+  **But a powered, steerable airship is not a free balloon.** Sceye and JP
   Aerospace fly under aircraft registration (N-numbers). Part 107 stops at
-  400 ft and 55 lb. Expect to need an experimental certificate or a
-  44807 exemption, and to be asked for ADS-B Out — the 2025 Part 101
-  modernisation committee recommended it for the heavier balloon class.
+  400 ft and 55 lb. Expect to need an experimental certificate or a 44807
+  exemption, and to be asked for ADS-B Out. Whether a balloon-class vehicle
+  with a small trim motor can be argued into Part 101 is exactly the
+  question to put to the FAA; the mass numbers at least do not rule it out.
 - **Europe.** SERA Appendix 2: under 4 kg payload is a *light* balloon;
   ≥6 kg or any 3 kg package is *heavy* (two terminations, radar
   reflector/tracking, transponder where SSR is used, 7 days' notice).

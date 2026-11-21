@@ -45,6 +45,14 @@ class Bridge(Node):
         self.airspeed_cmd = 0.0
         self.float_cmd = FloatCommand()
         self.rx = self.tx = 0
+        # Dead reckoning for GNSS outages: barometric altitude, last ground
+        # velocity for the horizontal.  Altitude control must not depend on
+        # GNSS - the barometer is the better altitude sensor at float anyway.
+        self.last_fix_ms = None
+        self.last = None            # (north, east, vn, ve, launch_alt)
+        self.baro_alt = None
+        self.baro_prev = None
+        self.dr_fixes = 0
         self.pub_odom = self.create_publisher(Odometry, "odom", 10)
         self.pub_fix = self.create_publisher(NavSatFix, "gps/fix", 10)
         self.pub_baro = self.create_publisher(FluidPressure, "baro/pressure", 10)
@@ -94,6 +102,9 @@ class Bridge(Node):
             t = msg.get_type()
             if t == "ATTITUDE":
                 self.att = msg
+                if self.last_fix_ms is not None and msg.time_boot_ms - self.last_fix_ms > 3000 \
+                        and self.baro_alt is not None and msg.time_boot_ms % 1000 == 0:
+                    self.dead_reckon(msg.time_boot_ms)
             elif t == "NAMED_VALUE_FLOAT":
                 name = msg.name if isinstance(msg.name, str) else msg.name.decode()
                 self.named[name.rstrip("\x00")] = msg.value
@@ -105,6 +116,10 @@ class Bridge(Node):
                 b.header.stamp, b.header.frame_id = stamp, "baro_link"
                 b.fluid_pressure = msg.press_abs * 100.0
                 self.pub_baro.publish(b)
+                from aiur.strato.atmosphere import pressure_altitude_m
+                self.baro_prev = (self.baro_alt, getattr(self, "_baro_ms", msg.time_boot_ms))
+                self.baro_alt = pressure_altitude_m(msg.press_abs * 100.0)
+                self._baro_ms = msg.time_boot_ms
             elif t == "SYS_STATUS":
                 bs = BatteryState()
                 bs.voltage = msg.voltage_battery / 1000.0
@@ -117,6 +132,28 @@ class Bridge(Node):
     def stamp(self, ms: int):
         from builtin_interfaces.msg import Time
         return Time(sec=ms // 1000, nanosec=(ms % 1000) * 1_000_000)
+
+    def dead_reckon(self, ms: int) -> None:
+        north, east, vn, ve, launch, t0 = self.last
+        dt = (ms - t0) / 1000.0
+        self.last = (north + vn * dt, east + ve * dt, vn, ve, launch, ms)
+        prev_alt, prev_ms = self.baro_prev
+        climb = 0.0
+        if prev_alt is not None and self._baro_ms > prev_ms:
+            climb = (self.baro_alt - prev_alt) / ((self._baro_ms - prev_ms) / 1000.0)
+        yaw = math.pi / 2.0 - self.att.yaw
+        od = Odometry()
+        od.header.stamp, od.header.frame_id, od.child_frame_id = self.stamp(ms), "map", "base_link"
+        od.pose.pose.position.x, od.pose.pose.position.y = self.last[1], self.last[0]
+        od.pose.pose.position.z = self.baro_alt - launch
+        od.pose.pose.orientation.z, od.pose.pose.orientation.w = math.sin(yaw / 2), math.cos(yaw / 2)
+        od.pose.covariance[0] = od.pose.covariance[7] = (50.0 + 5.0 * (ms - self.last_fix_ms) / 1000.0) ** 2
+        c, s = math.cos(yaw), math.sin(yaw)
+        od.twist.twist.linear.x, od.twist.twist.linear.y = c * ve + s * vn, -s * ve + c * vn
+        od.twist.twist.linear.z = climb
+        self.pub_odom.publish(od)
+        self.dr_fixes += 1
+        self.send_setpoints(ms)
 
     def on_position(self, msg) -> None:
         lat, lon, alt = msg.lat / 1e7, msg.lon / 1e7, msg.alt / 1000.0
@@ -146,6 +183,8 @@ class Bridge(Node):
         o.y = cr * sp * cy + sr * cp * sy
         o.z = cr * cp * sy - sr * sp * cy
         vn, ve, vu = msg.vx / 100.0, msg.vy / 100.0, -msg.vz / 100.0
+        self.last_fix_ms = msg.time_boot_ms
+        self.last = (north, east, vn, ve, self.home[2], msg.time_boot_ms)
         c, s = math.cos(yaw), math.sin(yaw)
         od.twist.twist.linear.x = c * ve + s * vn
         od.twist.twist.linear.y = -s * ve + c * vn
@@ -187,6 +226,7 @@ def main() -> None:
     except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
         pass
     finally:
-        node.get_logger().info(f"MAVLink frames: {node.rx} received, {node.tx} sent")
+        node.get_logger().info(f"MAVLink frames: {node.rx} received, {node.tx} sent; "
+                               f"{node.dr_fixes} s dead-reckoned")
         node.destroy_node()
         rclpy.try_shutdown()

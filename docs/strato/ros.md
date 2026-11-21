@@ -58,7 +58,9 @@ The flight nodes see standard topics and cannot tell the difference.
 
 One recorded run: 164,220 frames received, 23,460 sent; float held at
 19,870 m (sd 178 m); landing 59.3 km from launch. Fault arguments
-`gimbal_jam_at_s` and `motor_fail_at_s` inject failures mid-flight.
+`gimbal_jam_at_s`, `motor_fail_at_s` and `gps_dropout_at_s` inject failures
+mid-flight; during a GNSS outage the bridge dead-reckons on barometric
+altitude (one run: 1,197 s dead-reckoned, mission completed).
 
 What this does and does not show: the mapping and the bridge work on the
 real wire format. The thing on the other end is this repo's simulation, not
@@ -159,8 +161,8 @@ A fin model in Gazebo is open work.
 
 - ArduPilot itself has never been in the loop: no SITL, no custom airship
   frame, no parameter file.
-- Sensor noise, GNSS dropouts and radio loss are not injected at the
-  message level (motor and gimbal faults are).
+- Sensor noise and radio loss are not injected at the message level (motor,
+  gimbal and GNSS-outage faults are).
 - Gazebo has no fin model, so only the bare-hull terms are cross-checked.
 - The termination node never exercises link loss; the firmware does.
 - `robot_localization` is installed but not in the loop; on the vehicle the

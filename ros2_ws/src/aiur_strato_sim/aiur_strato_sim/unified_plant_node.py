@@ -44,6 +44,8 @@ class UnifiedPlant(Node):
         opts = MissionOptions(external=True, gust_sigma_m_s=float(p("gust_sigma_m_s", 0.5).value),
                               gimbal_jam_at_s=self._opt(p("gimbal_jam_at_s", -1.0).value),
                               motor_fail_at_s=self._opt(p("motor_fail_at_s", -1.0).value))
+        self.gps_out_at = self._opt(p("gps_dropout_at_s", -1.0).value)
+        self.gps_out_for = float(p("gps_dropout_duration_s", 1200.0).value)
         self.dp = ladder()[design]
         self.sim = UnifiedSim(self.dp, opts, wind=p("wind_profile", "midlat-summer-p50").value,
                               wind_scale=float(p("wind_scale", 1.0).value))
@@ -129,10 +131,13 @@ class UnifiedPlant(Node):
                           mav.MAV_MODE_FLAG_GUIDED_ENABLED | mav.MAV_MODE_FLAG_SAFETY_ARMED, 0,
                           mav.MAV_STATE_ACTIVE)
         clamp = lambda v, lim: int(max(-lim, min(lim, v)))
-        mv.global_position_int_send(ms, int(lat * 1e7), int(lon * 1e7), int(z * 1000),
-                                    int((z - launch) * 1000), clamp(vn * 100, 32767),
-                                    clamp(ve * 100, 32767), clamp(-climb * 100, 32767),
-                                    int(math.degrees(yaw) % 360 * 100))
+        gps_ok = self.gps_out_at is None or not (
+            self.gps_out_at <= t < self.gps_out_at + self.gps_out_for)
+        if gps_ok:
+            mv.global_position_int_send(ms, int(lat * 1e7), int(lon * 1e7), int(z * 1000),
+                                        int((z - launch) * 1000), clamp(vn * 100, 32767),
+                                        clamp(ve * 100, 32767), clamp(-climb * 100, 32767),
+                                        int(math.degrees(yaw) % 360 * 100))
         mv.attitude_send(ms, roll, pitch, yaw, p, q, r)
         mv.vfr_hud_send(airspeed, math.hypot(vn, ve), int(math.degrees(yaw) % 360),
                         0, z, climb)

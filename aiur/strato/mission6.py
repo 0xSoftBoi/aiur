@@ -28,7 +28,9 @@ import math
 import sys
 
 from .ascent import AscentSim, config_from_design
-from .atmosphere import G0, Gust, isa
+from .atmosphere import G0, Gust, isa, solar_elevation_deg
+from .energy import ARRAYS, array_power_w_per_m2
+from .propulsion import ESC_EFFICIENCY, MOTORS, Propeller
 from .flight6dof import (Airframe, FlightController, State, _mat_t_vec, euler_from_quat,
                          quat_from_euler, quat_to_matrix, step)
 from .guidance import EntryGuidance, FlightPhase, FloatController, Geofence, StationKeeper
@@ -90,6 +92,46 @@ class UnifiedSim:
         self.stats = {"float_alts": [], "station_err": [], "pitch": [], "sat_s": 0.0,
                       "thrust_j": 0.0, "hull_s": 0.0, "max_pitch": 0.0, "max_roll": 0.0}
         self.rebuilds = 0
+        # --- energy: one bus, array in, hotel and propulsion out
+        e = dp.energy
+        self.batt_wh = self.batt_full_wh = float(e["pack_usable_wh"])
+        self.hotel_w = float(e["hotel_w"])
+        self.array_m2 = float(e["array_m2"])
+        self.array = ARRAYS["mono-si-laminate"]
+        self.prop = Propeller(dp.propulsion["prop_diameter_m"])
+        self.motor = MOTORS[dp.propulsion["motor"]]
+        self.n_props = dp.propulsion["n_props"]
+        self.energy = {"min_soc": 1.0, "prop_wh": 0.0, "hotel_wh": 0.0, "solar_wh": 0.0,
+                       "spilled_wh": 0.0, "brownout_s": 0.0, "peak_prop_w": 0.0}
+        self.brownout = False
+
+    def _energy_second(self, thrust_n: float, airspeed: float) -> None:
+        """One second of the power bus.  Propulsion is cut on brown-out."""
+
+        air = isa(self.z)
+        prop_w = 0.0
+        if thrust_n > 0.02:
+            op = self.prop.operating_point(air, thrust_n / self.n_props, max(airspeed, 0.0))
+            el = self.motor.electrical(op["rpm"], op["torque_nm"], self.dp.energy["bus_v"])
+            prop_w = self.n_props * el["input_w"] / ESC_EFFICIENCY
+        hour = (self.cfg.launch_hour + self.t / 3600.0) % 24.0
+        el_sun = solar_elevation_deg(self.cfg.latitude_deg, self.cfg.day_of_year, hour)
+        solar_w = self.array_m2 * array_power_w_per_m2(self.array, self.z, el_sun) \
+            if self.array_m2 > 0 and self.mode == "hull" else 0.0
+        en = self.energy
+        net = (solar_w - self.hotel_w - prop_w) / 3600.0
+        new = self.batt_wh + net
+        if new > self.batt_full_wh:
+            en["spilled_wh"] += new - self.batt_full_wh
+            new = self.batt_full_wh
+        self.batt_wh = max(0.0, new)
+        self.brownout = self.batt_wh <= 0.02 * self.batt_full_wh
+        en["brownout_s"] += 1.0 if self.brownout else 0.0
+        en["prop_wh"] += prop_w / 3600.0
+        en["hotel_wh"] += self.hotel_w / 3600.0
+        en["solar_wh"] += solar_w / 3600.0
+        en["peak_prop_w"] = max(en["peak_prop_w"], prop_w)
+        en["min_soc"] = min(en["min_soc"], self.batt_wh / self.batt_full_wh)
 
     # --- plumbing -------------------------------------------------------------
     @property
@@ -155,6 +197,7 @@ class UnifiedSim:
                 cmd = self.float_ctl.command(a.z, a.w, 1.0)
                 a.step(1.0, cmd.vent_open, cmd.ballast_kg_s, 0.0)
             self.t = a.t
+            self._energy_second(0.0, 0.0)
             if a.burst or a.landed:
                 self.mode = "descent"
             elif a.fill >= o.handoff_fill and self.dp.architecture == "hull":
@@ -219,12 +262,13 @@ class UnifiedSim:
             rpy = euler_from_quat(self.st.quat)
             c = self.fc.command(heading, speed, pitch_cmd, rpy, self.st.rate, self.st.vel[0],
                                 self.st.thrust_n, o.dt_flight_s)
-            if o.motor_fail_at_s is not None and self.t >= o.motor_fail_at_s:
+            if (o.motor_fail_at_s is not None and self.t >= o.motor_fail_at_s) or self.brownout:
                 c.thrust_n = 0.0
             if o.gimbal_jam_at_s is not None and self.t >= o.gimbal_jam_at_s:
                 c.gimbal_yaw, c.gimbal_pitch = self.st.gimbal_yaw, self.st.gimbal_pitch
             self.st = step(af, self.st, c, wind, o.dt_flight_s)
             self.stats["thrust_j"] += self.st.thrust_n * max(self.st.vel[0], 0.0) * o.dt_flight_s
+        self._energy_second(self.st.thrust_n, self.st.vel[0])
         self.stats["sat_s"] = self.fc.saturated_s
         self.stats["hull_s"] += 1.0
         rpy = euler_from_quat(self.st.quat)
@@ -335,6 +379,14 @@ class UnifiedSim:
             "gimbal_saturated_fraction": round(s["sat_s"] / max(s["hull_s"], 1.0), 3),
             "mean_thrust_power_w": round(s["thrust_j"] / max(s["hull_s"], 1.0), 1),
             "ballast_used_kg": round(self.cfg.ballast_kg - self.asc.ballast, 3),
+            "battery_min_soc": round(self.energy["min_soc"], 3),
+            "battery_end_soc": round(self.batt_wh / self.batt_full_wh, 3),
+            "propulsion_wh": round(self.energy["prop_wh"], 1),
+            "hotel_wh": round(self.energy["hotel_wh"], 1),
+            "solar_wh": round(self.energy["solar_wh"], 1),
+            "solar_unused_wh": round(self.energy["spilled_wh"], 1),
+            "peak_propulsion_w": round(self.energy["peak_prop_w"], 1),
+            "brownout_min": round(self.energy["brownout_s"] / 60.0, 1),
             "gas_vented_kg": round(self.asc.vented, 3),
             "landing_range_km": round(self.asc.range_m / 1000, 1),
             "flight_time_h": round(self.t / 3600, 2),
@@ -347,8 +399,10 @@ def main(argv: list[str]) -> int:
     from .sizing import ladder
     pts = ladder()
     keys = [a for a in argv if not a.startswith("--")] or ["S1-touch/hull", "S2-dayloiter/hull"]
+    hours = next((float(a.split("=")[1]) for a in argv if a.startswith("--float-hours=")), 1.0)
     for key in keys:
-        res = UnifiedSim(pts[key]).run()
+        res = UnifiedSim(pts[key], MissionOptions(float_duration_s=hours * 3600.0,
+                                                  max_time_s=(hours + 6) * 3600.0)).run()
         if "--json" in argv:
             print(json.dumps(res, indent=2))
             continue
