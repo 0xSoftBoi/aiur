@@ -180,7 +180,8 @@ def review(data: dict, tier: str = "S2", propulsion_peak_a: float = 9.0) -> dict
     all_cost = 0.0
     for cid in in_tier:
         c = comps[cid]
-        all_cost += c["unit_usd"] * c["qty"]
+        if cid not in SIZED_ROWS:
+            all_cost += c["unit_usd"] * c["qty"]
         if c["group"] in SIZED_ELSEWHERE or cid in SIZED_ROWS:
             continue
         mass += c["mass_g"] * c["qty"]

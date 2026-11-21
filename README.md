@@ -28,6 +28,23 @@ The first flight article is an indoor helium platform built around a ~4.5 m airs
 
 P0 does **not** attempt hydrogen lift, outdoor/BVLOS operations, eight full-size drones, a 40 m envelope, or DGX-class airborne compute. Those are downstream scaling problems.
 
+## Next article: STRATO
+
+The stratospheric article is defined as executable models before any film is
+cut: a 15 m class, 9 kg, polyethylene-hull airship that reaches 20 km on $18
+of hydrogen, built around ArduPilot-class avionics, for about $2,250 the
+first time and under $1,000 at volume. Sizing, ascent, 6-DoF flight, Monte
+Carlo, harness review, link and cost models live in `aiur/strato`; the same
+guidance code flies a full mission through a ROS 2 workspace and is
+cross-checked against Gazebo.
+
+```
+python -m aiur.strato.sizing
+```
+
+Start at [docs/strato/README.md](docs/strato/README.md). Nothing in it has
+flown.
+
 ## Digital twin
 
 The engineering loop's SIL stage is executable. `aiur/sim` is a
@@ -102,6 +119,14 @@ Safety:
 - [Kill path](docs/kill-path.md)
 - [Battery SOP](docs/battery-sop.md)
 - [Test cards, crew roles, and readiness review](docs/test-cards.md)
+
+Stratospheric article:
+
+- [STRATO overview](docs/strato/README.md) and [design log](docs/strato/design-log.md)
+- [STRATO hardware and connections](docs/strato/hardware.md) — data in [hardware/strato/](hardware/strato/)
+- [Prototype ladder and regulation](docs/strato/prototype-ladder.md)
+- [ROS 2 workspace](docs/strato/ros.md) — `ros2_ws/`
+- [Models](aiur/strato/)
 
 Hardware:
 

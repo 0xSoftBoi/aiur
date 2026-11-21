@@ -1,0 +1,41 @@
+group,ref,item,part,qty,unit,unit_usd,ext_usd,mass_kg,provenance,alternate
+power,PM,Power module + battery monitor,Matek FCHUB-12S / generic 60 A hall sensor,1,ea,22.0,22.0,0.014,estimate,Holybro PM02
+power,BEC5,5 V 5 A switching regulator,Matek UBEC DUO 5V,1,ea,16.0,16.0,0.013,estimate,Pololu D36V50F5
+core,FC,Flight controller,Matek H743-WING V3 (or H7A3-WING),1,ea,135.0,135.0,0.03,cited,SpeedyBee F405 WING (no CAN: PWM-over-spine variant)
+core,BARO,External barometer 10-1200 mbar,TE MS5611 on GY-63 breakout,1,ea,9.0,9.0,0.0013,cited,MS5607
+core,GNSS,GNSS + compass,Matek M10Q-5883 (u-blox M10),1,ea,28.0,28.0,0.009,cited,Holybro M10
+core,CC,Companion computer (ROS 2),Radxa Zero 3W 4 GB,1,ea,40.0,40.0,0.013,estimate,Raspberry Pi Zero 2 W / Pi 5
+core,RX,C2 + telemetry radio (air),mLRS 868/915 MHz 1 W module (MatekSys mR900-30 class),1,ea,45.0,45.0,0.008,estimate,RadioMaster DBR4 dual-band ELRS (100 mW)
+core,RXANT,C2 antenna 868/915 MHz,T-dipoles on 300 mm coax,1,ea,4.0,4.0,0.004,estimate,
+core,SRV_BAL,Ballast dispenser servo,9 g metal-gear micro servo,1,ea,8.0,8.0,0.012,estimate,
+power,HTR_BAY,Bay heater,Polyimide film heater 10 W + MOSFET switch,1,ea,7.0,7.0,0.006,estimate,
+power,HTR_POD,Stern pod heater,Polyimide film heater 3 W,1,ea,5.0,5.0,0.003,estimate,
+core,T_AMB,Ambient temperature probe,PT1000 thin-film RTD,1,ea,6.0,6.0,0.002,estimate,
+core,T_GAS,Gas temperature probe,PT1000 thin-film RTD on 2 m lead,1,ea,6.0,6.0,0.004,estimate,
+core,T_BAY,Bay temperature probe,DS18B20,1,ea,2.0,2.0,0.002,cited,
+core,DP_HULL,Hull differential pressure,Sensirion SDP810-125Pa,1,ea,32.0,32.0,0.006,cited,
+core,DP_PITOT,Airspeed pitot,Sensirion SDP811-125Pa,1,ea,32.0,32.0,0.006,cited,
+termination,FTU,Flight termination unit,LilyGO T-Beam Supreme (ESP32-S3 + SX1262 + u-blox M10),1,ea,48.0,48.0,0.038,estimate,RP2040 + SX1262 + MAX-M10S custom
+termination,FTU_BAT,FTU primary battery,6 x Energizer L91 lithium AA (3S2P),1,ea,18.0,18.0,0.09,cited,
+termination,FTU_REG,FTU 3.3 V buck,Pololu S7V8F3 class,1,ea,7.0,7.0,0.002,estimate,
+termination,FTU_BARO,FTU barometer,MS5611 breakout,1,ea,9.0,9.0,0.0013,cited,
+termination,CUT_A,Cut-down A (suspension),Nichrome hot-wire cutter + logic MOSFET,1,ea,5.0,5.0,0.006,estimate,pyro line cutter
+termination,CUT_B,Cut-down B (envelope),Nichrome hot-wire on rip panel + MOSFET,1,ea,5.0,5.0,0.006,estimate,
+termination,FTU_ANT,FTU antenna 868/433 MHz,quarter-wave whip,1,ea,3.0,3.0,0.003,estimate,
+recovery,CHUTE,Recovery parachute 1.2 m,ripstop cross parachute,1,ea,35.0,35.0,0.095,estimate,
+recovery,REFL,Radar reflector,foil-laminate octahedral,1,ea,6.0,6.0,0.03,estimate,
+core,RTD_A,RTD amplifier (ambient),MAX31865 breakout,1,ea,12.0,12.0,0.002,estimate,ADS1220
+core,RTD_G,RTD amplifier (gas),MAX31865 breakout,1,ea,12.0,12.0,0.002,estimate,ADS1220
+propulsion,PM_P,Pod power module,generic 60 A hall sensor,1,ea,22.0,22.0,0.014,estimate,
+propulsion,BEC_POD,Pod 5 V 3 A regulator,Pololu D36V28F5 class,1,ea,13.0,13.0,0.004,estimate,
+propulsion,POD_NODE,Pod CAN node,Matek AP_PERIPH CAN-L431,1,ea,30.0,30.0,0.005,estimate,any AP_Periph node
+envelope,-,Hull film incl. 18 % gore waste,LLDPE balloon film 20 um,225.0,m2,0.45,101.0,3.508,sized,
+envelope,-,"Seam tape, load patches, relief valve, fill port, nose cap",PE seam tape; 3D-printed fittings,1,set,232.0,232.0,1.7,sized,
+envelope,-,Fins x4: film skin on sealed air-beam spars with relief valves,LLDPE skin; TPU-coated ripstop beams,18.5,m2,11.19,207.0,1.775,sized,
+structure,-,"Spine webbing, load lines, pod shells",UHMWPE webbing 12 mm; EPP foam pods,17.4,m,10.06,175.0,0.413,sized,
+propulsion,-,"Propulsor x1: motor 5008-170kv, 0.87 m folding prop, ESC, 2-axis gimbal",see components.csv MOTOR/PROP/ESC/SRV_*,1,ea,144.0,144.0,0.454,sized,
+power,-,"Battery packs (hotel + propulsion), in-house spot-welded",6S3P 21700 5.0 Ah high-energy (Samsung 50S class),18,cells,6.89,124.0,1.391,sized,
+power,-,"Solar array, film-laminated back-contact Si",in-house laminate,0.41,m2,260.98,107.0,0.399,sized,
+structure,-,"Harness wire, connectors, foam bay",see connections.csv,1,set,55.0,55.0,0.339,sized,
+consumable,-,"Trim ballast, steel shot",1 mm shot,0.38,kg,5.26,2.0,0.379,sized,
+consumable,-,"Hydrogen, per launch",industrial cylinder,18.1,Nm3,1.6,29.0,0.0,sized,

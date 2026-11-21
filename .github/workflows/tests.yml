@@ -38,6 +38,10 @@ jobs:
         run: python -m aiur.tolerance
       - name: Practice-adoption register
         run: python -m aiur.adoption_loop
+      - name: STRATO design ladder closes
+        run: python -m aiur.strato.sizing
+      - name: STRATO harness review and budget
+        run: python -m aiur.strato.harness --check-budget
 
   sil-screen:
     name: SIL safety screen (not a gate)

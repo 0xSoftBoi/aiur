@@ -207,6 +207,71 @@ def sdf(key: str, dp, af: Airframe, thrust_n: float, rail: bool = False) -> tupl
     return model, world
 
 
+def write_bom(path: str, key: str, dp) -> float:
+    """Purchasable bill of materials: netlist parts plus the sized items."""
+
+    import csv
+    from aiur.strato.cost import unit_cost
+    from aiur.strato.harness import load
+    tier = "S1" if key.startswith("S1") else "S2"
+    data = load()
+    rows = []
+    for cid, c in data["components"].items():
+        if tier not in c["tiers"].split() or cid in ("BAT", "BAT_P", "MOTOR", "PROP", "ESC",
+                                                     "SRV_GY", "SRV_GP"):
+            continue
+        rows.append([c["group"], cid, c["name"], c["part"], int(c["qty"]), "ea",
+                     c["unit_usd"], c["unit_usd"] * c["qty"], c["mass_g"] * c["qty"] / 1000.0,
+                     c["provenance"], c["alternate"]])
+    g, m, e, p = dp.geometry, dp.mass_kg, dp.energy, dp.propulsion
+    uc = unit_cost(dp, 1)["parts"]
+    def sized(group, name, part, qty, unit, usd, mass):
+        rows.append([group, "-", name, part, qty, unit, round(usd / max(qty, 1e-9), 2),
+                     round(usd, 0), round(mass, 3), "sized", ""])
+    if dp.architecture == "hull":
+        sized("envelope", "Hull film incl. 18 % gore waste", g["film"],
+              round(g["surface_area_m2"] * 1.18, 0), "m2", uc["envelope film"], m["envelope_film"])
+        sized("envelope", "Seam tape, load patches, relief valve, fill port, nose cap",
+              "PE seam tape; 3D-printed fittings", 1, "set",
+              uc["seam tape, load patches, fittings"], m["seams_patches"] + m["fittings_valves"])
+        sized("envelope", "Fins x4: film skin on sealed air-beam spars with relief valves",
+              "LLDPE skin; TPU-coated ripstop beams", round(g["fin_area_total_m2"], 1), "m2",
+              uc["fins (film + air-beam fabric + valves)"], m["fins"])
+        sized("structure", "Spine webbing, load lines, pod shells",
+              "UHMWPE webbing 12 mm; EPP foam pods", round(g["length_m"], 1), "m",
+              uc["spine webbing, rigging, pods"], m["spine_rigging"])
+    else:
+        sized("envelope", "Latex sounding balloons", g["balloon"], 2, "ea",
+              uc["latex cells x2"], m["latex_cells"])
+        sized("envelope", "Neck vent valves (servo butterfly, 30 mm)", "in-house", 2, "ea",
+              uc["neck valves x2"], m["neck_valves"])
+        sized("structure", "Boom", f"pultruded carbon tube {g['boom_length_m']:.1f} m", 1, "ea",
+              uc["boom"], m["boom"])
+        sized("structure", "Rigging and pods", "UHMWPE line; EPP foam", 1, "set",
+              uc["rigging, pods"], m["rigging"])
+    sized("propulsion", f"Propulsor x{p['n_props']}: motor {p['motor']}, "
+          f"{p['prop_diameter_m']:.2f} m folding prop, ESC, 2-axis gimbal",
+          "see components.csv MOTOR/PROP/ESC/SRV_*", p["n_props"], "ea",
+          uc["propulsion (motor, prop, ESC, gimbal)"], m["propulsion"])
+    sized("power", "Battery packs (hotel + propulsion), in-house spot-welded", e["pack"],
+          e["pack_cells"], "cells", uc["battery packs"], m["battery"])
+    if e["array_m2"]:
+        sized("power", "Solar array, film-laminated back-contact Si", "in-house laminate",
+              round(e["array_m2"], 2), "m2", uc["solar array"], m["solar_array"])
+    sized("structure", "Harness wire, connectors, foam bay", "see connections.csv", 1, "set",
+          uc["harness, connectors, foam bay"], m["harness"] + m["avionics_bay"])
+    sized("consumable", "Trim ballast, steel shot", "1 mm shot", round(m.get("ballast", 0), 2),
+          "kg", 2.0, m.get("ballast", 0))
+    sized("consumable", "Hydrogen, per launch", "industrial cylinder",
+          round(dp.lift["launch_gas_nm3"], 1), "Nm3", dp.lift["launch_gas_usd"], 0.0)
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["group", "ref", "item", "part", "qty", "unit", "unit_usd", "ext_usd",
+                    "mass_kg", "provenance", "alternate"])
+        w.writerows(rows)
+    return sum(r[7] for r in rows)
+
+
 def main() -> int:
     pts = ladder()
     os.makedirs(os.path.join(REPO, "hardware", "strato", "design-points"), exist_ok=True)
@@ -217,6 +282,9 @@ def main() -> int:
         name = slug(key)
         with open(os.path.join(REPO, "hardware", "strato", "design-points", name + ".json"), "w") as fh:
             fh.write(dp.to_json() + "\n")
+        if key.startswith(("S1", "S2")):
+            total = write_bom(os.path.join(REPO, "hardware", "strato", f"bom-{name}.csv"), key, dp)
+            print(f"BOM {key}: ${total:.0f} of parts")
         if dp.architecture != "hull" or not key.startswith(("S1", "S2")):
             continue
         af = Airframe.from_design(dp)
