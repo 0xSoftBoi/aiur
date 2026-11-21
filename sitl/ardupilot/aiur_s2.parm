@@ -1,0 +1,144 @@
+# ArduRover 4.7.3 defaults for the aiur S2 day-loiter airship flown in SITL
+# against sitl/ardupilot/json_plant.py (aiur.strato.flight6dof physics).
+#
+# Loaded with `ardurover --defaults aiur_s2.parm`.  Every line here differs
+# from the Rover default; the comment above it says why.  Numbers that come
+# from the plant are from ladder()["S2-dayloiter/hull"]: mass 15.8 kg (+1.3 kg
+# axial / +13.6 kg lateral added mass), yaw inertia 266 + 154 (added) kg m2,
+# thruster 10.0 m aft of the centre of volume, max thrust 7.55 N, gimbal
+# +/-25 deg, trim thrust 2.42 N at 6 m/s airspeed (1.0 N at 4 m/s).
+#
+# Comments are on their own lines: the defaults-file parser is not
+# guaranteed to ignore trailing text.
+
+# --- frame -------------------------------------------------------------
+# Boat.  The only effect that matters: GUIDED/AUTO loiter at the destination
+# instead of cutting the throttle, and LOITER mode exists as a position hold.
+FRAME_CLASS 2
+
+# --- outputs -----------------------------------------------------------
+# SERVO1 = GroundSteering -> gimbal yaw servo.
+SERVO1_FUNCTION 26
+SERVO1_MIN 1000
+SERVO1_TRIM 1500
+SERVO1_MAX 2000
+# SERVO3 = Throttle -> propeller ESC.  TRIM = MIN makes the output
+# unidirectional: Rover's throttle is a +/-100 "angle" about TRIM, and with
+# TRIM at 1000 every reverse demand clips to zero thrust.  A stratospheric
+# propeller is not reversible.
+SERVO3_FUNCTION 70
+SERVO3_MIN 1000
+SERVO3_TRIM 1000
+SERVO3_MAX 2000
+# SERVO4 = gimbal pitch servo.  Rover has no output function for it.
+# 94 = Script1: written by scripts/aiur_pitch.lua.  Set 0 instead to drive
+# it from the companion with MAV_CMD_DO_SET_SERVO.
+SERVO4_FUNCTION 94
+SERVO4_MIN 1000
+SERVO4_TRIM 1500
+SERVO4_MAX 2000
+# Lua scripting on, for the pitch/altitude loop Rover does not have.
+SCR_ENABLE 1
+SCR_HEAP_SIZE 200000
+
+# --- motors ------------------------------------------------------------
+# Vectored thrust: the steering demand is treated as a lateral-thrust
+# fraction, the servo angle is atan(steering/throttle) limited to this
+# angle, and throttle is raised by 1/cos(angle).  25 deg is the gimbal limit.
+MOT_VEC_ANGLEMAX 25
+# No reverse (see SERVO3_TRIM), no deadband to jump: MOT_THR_MIN stays 0.
+# The plant's thrust is linear in command.  A real propeller is closer to
+# thrust ~ command^2: set MOT_THST_EXPO ~0.5 on hardware after a static
+# thrust test.  Not exercised here.
+MOT_THST_EXPO 0
+# The plant's thrust lag is 0.6 s; 50 %/s keeps Rover from asking for steps
+# the motor cannot follow.
+MOT_SLEWRATE 50
+
+# --- speed loop (acts on GROUND speed along the body x axis) ------------
+# Feed-forward point: 6 m/s needs 2.42 N = 32 % in still air.
+CRUISE_SPEED 6
+CRUISE_THROTTLE 32
+# Plant: 0.44 m/s2 per unit throttle, drag time constant ~20 s.  P 0.3
+# closes the loop at ~0.13 rad/s (the in-repo loop uses 2 N per m/s = 0.26).
+ATC_SPEED_P 0.3
+# The integrator carries the whole wind: holding zero ground speed in 4 m/s
+# of wind needs 13 % throttle that the feed-forward knows nothing about.
+ATC_SPEED_I 0.05
+ATC_SPEED_D 0
+ATC_SPEED_IMAX 1
+# 17 kg and at most 7.5 N: 0.44 m/s2 is the physical ceiling, 0.2 is usable.
+ATC_ACCEL_MAX 0.2
+ATC_DECEL_MAX 0.2
+# No brakes and no reverse thrust.
+ATC_BRAKE 0
+
+# --- steering loop -----------------------------------------------------
+# Steering output is a lateral-thrust fraction s; yaw acceleration is
+# 0.18 rad/s2 per unit s and the airframe is near-neutral in yaw (Munk
+# moment against fins), so steady turn rate per unit s is large and slow to
+# build (3 deg/s from s = 0.017 after ~30 s).  The rate loop is therefore
+# mostly P, with a small FF and I.
+ATC_STR_RAT_FF 0.2
+ATC_STR_RAT_P 2.5
+ATC_STR_RAT_I 0.3
+ATC_STR_RAT_D 0
+ATC_STR_RAT_IMAX 0.2
+# Heading error (rad) -> turn rate (rad/s).
+ATC_STR_ANG_P 0.25
+# The hull cannot usefully turn faster: 4 deg/s at 6 m/s is already ~8 deg
+# of sideslip.
+ATC_STR_RAT_MAX 4
+# At cruise thrust the gimbal delivers at most ~1.5 deg/s2; ask for less.
+ATC_STR_ACC_MAX 1
+ATC_STR_DEC_MAX 1
+# Lateral-acceleration limit used to cap turn rate; 0.6 g is for cars.
+ATC_TURN_MAX_G 0.1
+
+# --- navigation --------------------------------------------------------
+# Ground speed for guided position targets.  Rover knows nothing about
+# airspeed: 2 m/s over the ground into a 4 m/s wind is the 6 m/s airspeed
+# limit.  The companion must set this (or the target speed) from its wind
+# estimate.
+WP_SPEED 2
+WP_RADIUS 30
+# Minimum turn radius: 6 m/s at 3.5 deg/s.
+TURN_RADIUS 100
+# Position loop slowed to the vehicle: default 0.2 /s asks for corrections
+# the 10-20 s yaw and speed responses cannot follow.
+PSC_POS_P 0.05
+PSC_VEL_P 0.3
+PSC_VEL_I 0
+PSC_VEL_D 0
+# Loiter: always point the bow at the target (no reverse thrust).
+LOIT_TYPE 1
+LOIT_RADIUS 20
+# Distance outside LOIT_RADIUS -> ground speed.  1/gain must be slower than
+# the speed loop.
+LOIT_SPEED_GAIN 0.02
+
+# --- estimator ---------------------------------------------------------
+# No gyro calibration at boot: the platform is never stationary.
+INS_GYR_CAL 0
+# Height from GNSS, not baro.  At 20 km static pressure is 55 hPa and falls
+# 1 Pa per ~1.2 m, so sensor noise and thermal drift of a board at -56 C map
+# to tens of metres; the baro is also calibrated to "ground" at boot, which
+# is 20 km below.  (SITL's baro model is ideal; this is a hardware decision.)
+EK3_SRC1_POSZ 3
+# u-blox dynamic model "airborne <4g" (already the default; stated because
+# the "portable"/"pedestrian" models stop reporting above 12 km).
+GPS_NAVFILTER 8
+
+# --- arming and failsafes ---------------------------------------------
+# No RC receiver on the vehicle: the companion and the C2 link are the
+# pilots.  No RC throttle failsafe, no mode switch.
+FS_THR_ENABLE 0
+MODE_CH 0
+# GCS failsafe OFF for SITL ONLY: at 20x speedup a 1 Hz wall-clock heartbeat
+# is 20 s apart in simulated time.  On the vehicle this must be 1.
+FS_GCS_ENABLE 0
+# The crash check reads "throttle on, not moving" as a crash; a station-
+# keeping airship is exactly that.
+FS_CRASH_CHECK 0
+# Skip the RC arming check (bit 6): there is no RC.
+ARMING_SKIPCHK 64

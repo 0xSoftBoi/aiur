@@ -207,6 +207,321 @@ def sdf(key: str, dp, af: Airframe, thrust_n: float, rail: bool = False) -> tupl
     return model, world
 
 
+# --- finned free-flight variants (docs/strato/gazebo-fins.md) -----------------
+#
+# Everything below is separate from ``sdf()`` above and does not change what
+# that function writes.  It generates free-flying models with fins on Gazebo's
+# stock LiftDrag system, with the LighterThanAirDynamics coefficients derived
+# from the plugin source rather than guessed, plus the bare-hull variants used
+# to establish the plugin's conventions empirically.
+
+FIN_STUDY_DESIGN = "S2-dayloiter/hull"
+FIN_STUDY_RATIOS = (0.30, 0.50, 0.60)
+FIN_STALL_DEG = 15.0          # flight6dof.forces(): linear range of a fin pair
+FIN_PLATE_CD = 1.2            # flight6dof.forces(): separated crossflow term
+FIN_SPAN_ARM = 1.3            # flight6dof.forces(): roll arm, hull radii
+
+
+def hopkins_eps_v(hull: Hull, n: int = 2000) -> float:
+    """Station (m aft of the nose) where the hull flow stops being potential.
+
+    Hopkins' rule as used by Li & Nahon: 0.378 L + 0.527 x1, with x1 the
+    station of the steepest fall of cross-section area.
+    """
+
+    length = hull.length_m
+    best, x1 = 0.0, length
+    for i in range(1, n):
+        x = i * length / n
+        ds = hull.radius_at(x + length / n) ** 2 - hull.radius_at(x - length / n) ** 2
+        if ds < best:
+            best, x1 = ds, x
+    return 0.378 * length + 0.527 * x1
+
+
+def lta_coefficients(af: Airframe, hull_model: str) -> dict:
+    """LighterThanAirDynamics parameters with the signs the plugin source uses.
+
+    The plugin (LighterThanAirDynamics.cc, PreUpdate) applies, for crossflow
+    unit vector n at the station ``eps_v`` aft of the link origin,
+
+        F = q (-force_inviscid sin 2g + force_viscous sin^2 g) * (-n)
+        M = q (-moment_inviscid sin 2g + moment_viscous sin^2 g) * (x_hat cross n)
+
+    and takes the integrals of Li & Nahon eq. 11 and 14 over the *separated*
+    afterbody [eps_v, L] with lever arm (eps_m - eps), eps_m the centre of
+    volume.  The full Munk moment is not in the plugin: it comes from the
+    physics engine through <fluid_added_mass>.  So
+
+    * force_inviscid  = (k2-k1) int dS            < 0  (nose lift survives)
+    * force_viscous   = Cdc int 2R                > 0  (crossflow drag)
+    * moment_inviscid = (k2-k1) int dS (em - e)   > 0  (reduces the Munk moment)
+    * moment_viscous  = Cdc int 2R (em - e)       < 0  (afterbody drag stabilises)
+
+    ``hull_model``:
+
+    * ``"li-nahon"`` - the above with eps_v from Hopkins' rule;
+    * ``"equivalent"`` - what flight6dof models: full Munk moment, no nose
+      lift, crossflow drag over the whole length (seen from the centre of
+      volume, since the plugin has one velocity point and no strips);
+    * ``"none"`` - all four zero.
+    """
+
+    h = af.hull
+    k1, k2, _ = h.lamb_factors()
+    length, xm, n = h.length_m, af.x_cv, 2000
+    dx = length / n
+    if hull_model == "none":
+        return {"eps_station_m": xm, "eps_v": 0.0, "fi": 0.0, "fv": 0.0, "mi": 0.0, "mv": 0.0}
+    eps = hopkins_eps_v(h) if hull_model == "li-nahon" else 0.0
+    i1 = i3 = j1 = j2 = 0.0
+    for i in range(n):
+        x0, x1 = i * dx, (i + 1) * dx
+        if x0 < eps:
+            continue
+        x = 0.5 * (x0 + x1)
+        ds = math.pi * (h.radius_at(x1) ** 2 - h.radius_at(x0) ** 2)
+        i1 += ds
+        i3 += ds * (xm - x)
+        j1 += 2.0 * h.radius_at(x) * dx
+        j2 += 2.0 * h.radius_at(x) * dx * (xm - x)
+    if hull_model == "equivalent":
+        return {"eps_station_m": xm, "eps_v": 0.0, "fi": 0.0, "mi": 0.0,
+                "fv": af.crossflow_cd * j1, "mv": af.crossflow_cd * j2}
+    return {"eps_station_m": eps, "eps_v": eps - xm, "fi": (k2 - k1) * i1,
+            "mi": (k2 - k1) * i3, "fv": af.crossflow_cd * j1, "mv": af.crossflow_cd * j2}
+
+
+def fin_surfaces(af: Airframe) -> list[dict]:
+    """Four LiftDrag surfaces on base_link, + layout, matching flight6dof.
+
+    flight6dof lumps one fin *pair* per plane: area S_total/2, normal force
+    0.5 rho S_pair a V sin(alpha), at x_fin on the hull axis.  Two surfaces of
+    S_total/4 with the same slope and the same x give the same force and
+    moment in each plane; putting them at +/- 1.3 R also gives roll damping.
+    """
+
+    arm = FIN_SPAN_ARM * af.hull.radius_m
+    stall = math.radians(FIN_STALL_DEG)
+    # flight6dof normal-force coefficient broadside-on, reproduced as drag.
+    cn90 = af.fin_lift_slope * math.tan(stall) + FIN_PLATE_CD * (1.0 - math.tan(stall)) ** 2
+    out = []
+    for name, cp, up in (("fin_top", (af.x_fin, 0.0, arm), (0, 1, 0)),
+                         ("fin_bottom", (af.x_fin, 0.0, -arm), (0, 1, 0)),
+                         ("fin_port", (af.x_fin, arm, 0.0), (0, 0, 1)),
+                         ("fin_starboard", (af.x_fin, -arm, 0.0), (0, 0, 1))):
+        out.append({"name": name, "cp": cp, "upward": up, "forward": (1, 0, 0),
+                    "area": af.fin_area_total_m2 / 4.0, "cla": af.fin_lift_slope,
+                    "alpha_stall": stall, "cla_stall": 0.0, "cda": 0.0, "cma": 0.0,
+                    "cda_stall": cn90 / (math.pi / 2 - stall)})
+    return out
+
+
+def sdf_free_model(key: str, af: Airframe, name: str, hull_model: str = "li-nahon",
+                   lta_plugin: bool = True) -> str:
+    """A free-flying model: hull on the LTA plugin, fins (if any) on LiftDrag."""
+
+    h, air = af.hull, af.air
+    a = h.length_m / 2.0
+    b = math.sqrt(h.volume_m3 / (4.0 / 3.0 * math.pi * a))
+    xg, _, zg = af.rg                           # body FRD -> link FLU: z flips
+    # af.inertia is about the centre of volume; SDF wants it about the CoM.
+    ixx = af.inertia[0] - af.mass_kg * zg * zg
+    iyy = af.inertia[1] - af.mass_kg * (zg * zg + xg * xg)
+    izz = af.inertia[2] - af.mass_kg * xg * xg
+    re = air.density_kg_m3 * 6.0 * h.length_m / air.viscosity_pa_s
+    axial = h.drag_coefficient(re) * af.drag_multiplier * h.reference_area_m2
+    c = lta_coefficients(af, hull_model)
+    lta = f"""
+    <plugin filename="gz-sim-lighter_than_air_dynamics-system" name="gz::sim::systems::LighterThanAirDynamics">
+      <air_density>{air.density_kg_m3:.6f}</air_density>
+      <link_name>base_link</link_name>
+      <force_inviscid_coeff>{c['fi']:.5f}</force_inviscid_coeff>
+      <force_viscous_coeff>{c['fv']:.5f}</force_viscous_coeff>
+      <moment_inviscid_coeff>{c['mi']:.5f}</moment_inviscid_coeff>
+      <moment_viscous_coeff>{c['mv']:.5f}</moment_viscous_coeff>
+      <eps_v>{c['eps_v']:.5f}</eps_v>
+      <axial_drag_coeff>{axial:.6f}</axial_drag_coeff>
+    </plugin>""" if lta_plugin else ""
+    fins = visuals = ""
+    if af.fin_area_total_m2 > 0.0:
+        for s in fin_surfaces(af):
+            span = math.sqrt(s["area"] / 1.6)
+            chord = s["area"] / span
+            size = (f"{chord:.3f} 0.03 {span:.3f}" if s["upward"] == (0, 1, 0)
+                    else f"{chord:.3f} {span:.3f} 0.03")
+            visuals += (f'\n      <visual name="{s["name"]}"><pose>{s["cp"][0]:.3f} {s["cp"][1]:.3f} '
+                        f'{s["cp"][2]:.3f} 0 0 0</pose><geometry><box><size>{size}</size></box>'
+                        f'</geometry></visual>')
+            fins += f"""
+    <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
+      <link_name>base_link</link_name><!-- {s['name']} -->
+      <air_density>{air.density_kg_m3:.6f}</air_density>
+      <area>{s['area']:.5f}</area>
+      <a0>0</a0><cla>{s['cla']:.4f}</cla><cda>{s['cda']:.4f}</cda><cma>{s['cma']:.4f}</cma>
+      <alpha_stall>{s['alpha_stall']:.5f}</alpha_stall>
+      <cla_stall>{s['cla_stall']:.4f}</cla_stall><cda_stall>{s['cda_stall']:.4f}</cda_stall><cma_stall>0</cma_stall>
+      <cp>{s['cp'][0]:.4f} {s['cp'][1]:.4f} {s['cp'][2]:.4f}</cp>
+      <forward>{s['forward'][0]} {s['forward'][1]} {s['forward'][2]}</forward>
+      <upward>{s['upward'][0]} {s['upward'][1]} {s['upward'][2]}</upward>
+    </plugin>"""
+    return f"""  <model name="aiur_{name}">
+    <!-- GENERATED by tools/strato_export.py (finned free-flight section) from {key}. Do not edit. -->
+    <link name="base_link">
+      <inertial>
+        <pose>{xg:.4f} 0 {-zg:.4f} 0 0 0</pose>
+        <mass>{af.mass_kg:.5f}</mass>
+        <inertia><ixx>{ixx:.4f}</ixx><iyy>{iyy:.4f}</iyy><izz>{izz:.4f}</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        <fluid_added_mass>
+          <xx>{af.a11[0]:.5f}</xx><yy>{af.a11[1]:.5f}</yy><zz>{af.a11[2]:.5f}</zz>
+          <pp>0</pp><qq>{af.a22[1]:.4f}</qq><rr>{af.a22[2]:.4f}</rr>
+        </fluid_added_mass>
+      </inertial>
+      <collision name="hull"><geometry><ellipsoid><radii>{a:.4f} {b:.4f} {b:.4f}</radii></ellipsoid></geometry></collision>
+      <visual name="hull"><geometry><ellipsoid><radii>{a:.4f} {b:.4f} {b:.4f}</radii></ellipsoid></geometry></visual>{visuals}
+    </link>{lta}{fins}
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>map</odom_frame><robot_base_frame>base_link</robot_base_frame>
+      <odom_publish_frequency>50</odom_publish_frequency><dimensions>3</dimensions>
+      <odom_topic>/model/aiur/odometry</odom_topic>
+    </plugin>
+  </model>
+"""
+
+
+def sdf_free_world(air_density: float, body: str) -> str:
+    """World at float density with no thrust plugin: ApplyLinkWrench's
+    persistent force is world-fixed, which is wrong off the rail, so
+    scripts/gz_fins_run.py applies thrust along the body axis instead."""
+
+    return f"""<?xml version="1.0"?>
+<!-- GENERATED by tools/strato_export.py (finned free-flight section). Do not edit. -->
+<sdf version="1.9">
+  <world name="strato">
+    <physics name="10ms" type="ignored"><max_step_size>0.01</max_step_size><real_time_factor>0</real_time_factor></physics>
+    <gravity>0 0 -9.80665</gravity>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-buoyancy-system" name="gz::sim::systems::Buoyancy">
+      <uniform_fluid_density>{air_density:.6f}</uniform_fluid_density>
+    </plugin>
+{body}  </world>
+</sdf>
+"""
+
+
+def _python_case(af: Airframe, case: dict, dt: float = 0.01) -> dict:
+    """The in-repo 6-DoF flown open loop from the same state and thrust."""
+
+    from aiur.strato.flight6dof import State, run
+    u, v, w = case["vel_frd"]
+    st = State(vel=(u, v, w), thrust_n=case["thrust_n"])
+    res = run(af, case["duration_s"], lambda t, s: 0.0, u, controlled=False, initial=st,
+              dt=dt, record_s=dt)
+    key = "pitch_deg" if case["axis"] == "pitch" else "yaw_deg"
+    # Positive = the nose turning away from the velocity vector (divergence).
+    sign = 1.0 if case["axis"] == "pitch" else -1.0
+    rows = res["rows"]
+    t10 = next((r["t"] for r in rows if abs(r[key]) >= 10.0), None)
+    at = lambda t: min(rows, key=lambda r: abs(r["t"] - t))  # noqa: E731
+    last = rows[-1]
+    return {"t10_s": t10, "turn_at_t10_deg": None if t10 is None else round(sign * at(t10)[key], 2),
+            "turn_5s_deg": round(sign * at(5.0)[key], 3),
+            "turn_end_deg": round(sign * last[key], 2), "peak_turn_deg":
+            round(max((sign * r[key] for r in rows), key=abs), 2),
+            "airspeed_end_m_s": round(math.sqrt(last["u"] ** 2 + last["v"] ** 2 + last["w"] ** 2), 3),
+            "u_end_m_s": round(last["u"], 3), "yaw_end_deg": round(last["yaw_deg"], 2),
+            "pitch_end_deg": round(last["pitch_deg"], 2), "completed": res["completed"]}
+
+
+def export_fins(pts: dict) -> None:
+    """Write the finned models, the study worlds and the comparison cases."""
+
+    study = os.path.join(DESC, "worlds", "fins")
+    os.makedirs(study, exist_ok=True)
+    cases = []
+    for key, dp in pts.items():
+        if dp.architecture != "hull" or not key.startswith(("S1", "S2")):
+            continue
+        name = slug(key)
+        af = Airframe.from_design(dp)
+        rho = af.air.density_kg_m3
+        # The design-point model: <slug>_fins.
+        mdir = os.path.join(DESC, "models", name + "_fins")
+        os.makedirs(mdir, exist_ok=True)
+        with open(os.path.join(mdir, "model.sdf"), "w") as fh:
+            fh.write('<?xml version="1.0"?>\n<sdf version="1.9">\n'
+                     + sdf_free_model(key, af, name + "_fins") + "</sdf>\n")
+        with open(os.path.join(mdir, "model.config"), "w") as fh:
+            fh.write(f'<?xml version="1.0"?>\n<model><name>{name}_fins</name><version>1.0</version>'
+                     f'<sdf version="1.9">model.sdf</sdf><description>Generated from design '
+                     f'point {key}: hull on LighterThanAirDynamics, fins on LiftDrag</description></model>\n')
+        with open(os.path.join(DESC, "worlds", name + "_fins_float.sdf"), "w") as fh:
+            fh.write(sdf_free_world(rho, f"    <include><uri>model://{name}_fins</uri>"
+                                         f"<pose>0 0 100 0 0 0</pose></include>\n"))
+        if key != FIN_STUDY_DESIGN:
+            continue
+        ref = af.hull.reference_area_m2
+        cruise = dp.mission["cruise_airspeed_m_s"]
+        thrust = dp.propulsion["drag_cruise_n"]
+        d2 = math.radians(2.0)
+        # What gz_fins_run.py needs to start the body moving with an impulse.
+        body_args = {"mass_kg": af.mass_kg, "added_mass_kg": list(af.a11),
+                     "com_link_m": [af.rg[0], 0.0, -af.rg[2]]}
+
+        def world(tag: str, body: str) -> str:
+            rel = os.path.join("fins", f"{name}_{tag}.sdf")
+            with open(os.path.join(DESC, "worlds", rel), "w") as fh:
+                fh.write(sdf_free_world(rho, body))
+            return rel
+
+        def inline(model: str) -> str:
+            return model.replace(
+                '<link name="base_link">', '<pose>0 0 100 0 0 0</pose>\n    <link name="base_link">', 1)
+
+        slip = {"axis": "yaw", "vel_frd": [cruise * math.cos(d2), cruise * math.sin(d2), 0.0],
+                "thrust_n": 0.0, "duration_s": 60.0}
+        # Convention checks on the bare hull (task 1).
+        bare = Airframe.from_design(dp, fin_area_total_m2=0.0)
+        existing = sdf(key, dp, af, 0.0)[0]
+        existing = existing[existing.index("<model"):existing.index("</sdf>")]
+        for tag, body, note in (
+            ("bare_added-mass-only", inline(sdf_free_model(key, bare, "bare", lta_plugin=False)),
+             "no LTA plugin: is the Munk moment in the physics engine?"),
+            ("bare_lta-zero", inline(sdf_free_model(key, bare, "bare", "none")),
+             "LTA plugin, four coefficients zero: its added-mass Coriolis terms and axial drag"),
+            ("bare_as-generated", inline("  " + existing),
+             "the existing sdf() model unchanged"),
+            ("bare_li-nahon", inline(sdf_free_model(key, bare, "bare", "li-nahon")),
+             "coefficients from lta_coefficients('li-nahon')"),
+            ("bare_equivalent", inline(sdf_free_model(key, bare, "bare", "equivalent")),
+             "coefficients from lta_coefficients('equivalent')"),
+        ):
+            cases.append({"id": tag, "group": "convention", "world": world(tag, body), "note": note,
+                          **slip, **body_args, "python": _python_case(bare, slip)})
+        for ratio in FIN_STUDY_RATIOS:
+            afr = Airframe.from_design(dp, fin_area_total_m2=ratio * ref)
+            for hull_model in ("equivalent", "li-nahon"):
+                tag = f"fins{int(round(ratio * 100)):03d}_{hull_model}"
+                rel = world(tag, inline(sdf_free_model(key, afr, tag, hull_model)))
+                for cid, case in (
+                    ("yaw2", slip),
+                    ("pitch2", {"axis": "pitch", "vel_frd": [cruise * math.cos(d2), 0.0,
+                                                             cruise * math.sin(d2)],
+                                "thrust_n": 0.0, "duration_s": 60.0}),
+                    ("cruise", {"axis": "yaw", "vel_frd": slip["vel_frd"], "thrust_n": thrust,
+                                "duration_s": 240.0}),
+                ):
+                    cases.append({"id": f"{tag}_{cid}", "group": cid, "fin_ratio": ratio,
+                                  "hull_model": hull_model, "world": rel, **case, **body_args,
+                                  "python": _python_case(afr, case)})
+    with open(os.path.join(study, "cases.json"), "w") as fh:
+        json.dump(cases, fh, indent=1)
+    print(f"exported finned models and {len(cases)} comparison cases")
+
+
 def write_bom(path: str, key: str, dp) -> float:
     """Purchasable bill of materials: netlist parts plus the sized items."""
 
@@ -309,6 +624,7 @@ def main() -> int:
         print(f"exported {key}: {af.hull.length_m:.1f} m hull, {af.mass_kg:.2f} kg")
     with open(os.path.join(DESC, "worlds", "expectations.json"), "w") as fh:
         json.dump(index, fh, indent=2)
+    export_fins(pts)
     return 0
 
 

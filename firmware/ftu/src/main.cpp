@@ -1,5 +1,11 @@
-// FTU glue for a LilyGO T-Beam Supreme class board (ESP32-S3, SX1262, u-blox
-// M10) with an external MS5611, two cutter gates and an opto heartbeat input.
+// FTU glue for the LilyGO T-Beam S3 Supreme (ESP32-S3FN8, SX1262, u-blox
+// MAX-M10S, AXP2101) with an external MS5611, two cutter gates and an opto
+// heartbeat input.
+//
+// This builds for the SX1262 + u-blox variant ONLY.  The board is also sold
+// with a Quectel L76K (no UBX: gnss.begin() fails, no position, no airborne
+// model) and with an LR1121 radio (different driver, TCXO 3.0 V, RF switch
+// on DIO5/DIO6: radio.begin() fails).  Neither is supported here.
 //
 // Everything that decides anything is in geofence.cpp and protocol.cpp, which
 // are tested on the host.  This file only moves bytes: sensors -> Sample,
@@ -7,9 +13,28 @@
 // logic added here is logic that no test sees.
 //
 // STATUS: this file has been compiled (see docs/strato/ftu.md for the exact
-// build) but has NEVER run on hardware.  Pin numbers, PMU rail assignments,
-// the TCXO voltage and the GNSS baud rate are from memory of the board family
-// and must be checked against the schematic of the board revision in hand.
+// build) but has NEVER run on hardware.  Pin numbers, PMU rails, the TCXO
+// voltage and the GNSS baud rate have been checked against the vendor's
+// schematics and pin definitions (sources below) - against documents, not
+// against a board.  Anything still tagged UNVERIFIED was not found in a
+// primary source.
+//
+// Sources, cited by tag in the comments below:
+//  [SCH-CORE] LilyGO T-Beam-S3-Core.pdf (schematic V3.0; p1 Power, p2 ESP32S3,
+//             p3 Radio & GNSS)
+//  [SCH-SUP]  LilyGO T-Beam-S3-Supreme-V3.1.pdf (carrier board; one page)
+//             both in github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series @5f537f1,
+//             schematic/T-Beam-S3-Supreme/
+//  [LG-UTIL]  same repo, examples/ArduinoLoRa/LoRaReceiver/utilities.h
+//             L480-552 (T_BEAM_S3_SUPREME block)
+//  [LG-BRD]   same repo, .../LoRaReceiver/LoRaBoards.cpp L172-224 (PMU rails)
+//  [LG-FACT]  same repo, examples/Factory/Factory.ino L1421, L1476, L1617
+//  [LG-HW]    same repo, docs/en/t_beam_supreme/t_beam_supreme_hw.md
+//             (pin map L82-121, I2C addresses L134-151, PMU channels L171-187)
+//  [MESH]     github.com/meshtastic/firmware @fe89ac1,
+//             variants/esp32s3/tbeam-s3-core/variant.h
+//  [S3-DS]    Espressif ESP32-S3 Series Datasheet v2.2: Table 2-1 (pin
+//             defaults), Table 2-2 (power-up glitches), Table 3-1 (strapping)
 #include <Arduino.h>
 #include <Preferences.h>
 #include <SPI.h>
@@ -48,34 +73,62 @@
 #endif
 
 // ---------------------------------------------------------------------------
-// Pins.  *** VERIFY EVERY ONE AGAINST THE BOARD REVISION BEFORE POWERING A
-// CUTTER. ***  "board" = fixed by the T-Beam Supreme PCB (taken from the
-// vendor pin map as remembered, unverified here).  "harness" = our choice of
-// a free header pin; whether these GPIOs are actually broken out on the
-// Supreme's headers is NOT verified.
+// Pins.  "board" = fixed by the PCB.  "harness" = our choice among the GPIOs
+// that the Supreme carrier really breaks out.  Header PN1 carries GPIO48, 21,
+// 3, 38, 39, 45, 46, GPS_PPS, RADIO_RETAIN(GPIO2), SDA/SCL(17/18) and A_LDO1;
+// header PM1 carries U0TXD/U0RXD(43/44), CHIP_PU and the power rails
+// [SCH-SUP].  Nothing else is reachable: in particular GPIO15/16 (used for the
+// cutters before this file was checked) are the 32.768 kHz crystal [SCH-CORE
+// p2] and are not on any header.  Header pin POSITIONS are those of carrier
+// V3.1; V3.0 carries the same nets but its positions were not checked.
+// *** STILL BUZZ OUT EVERY HARNESS PIN ON THE BOARD IN HAND BEFORE POWERING
+// A CUTTER. ***
 // ---------------------------------------------------------------------------
 namespace pin {
-// board: SX1262
+// board: SX1262 (HPD16A module).  [SCH-CORE p2/p3] [LG-UTIL L513-520]
+// [MESH L19-21, L25, L61-64].  DIO2 and DIO3 are not brought out of the module.
 constexpr int kLoraSck = 12, kLoraMiso = 13, kLoraMosi = 11, kLoraCs = 10;
 constexpr int kLoraRst = 5, kLoraDio1 = 1, kLoraBusy = 4;
-// board: GNSS UART (names from the ESP32 side)
+// board: GNSS UART, named from the ESP32 side: GPIO9 receives the module's
+// TXD, GPIO8 drives its RXD, each through 100 R.  [SCH-CORE p2/p3]
+// [LG-UTIL L503-504] [MESH L66-67]
 constexpr int kGnssRx = 9, kGnssTx = 8;
-// board: sensor I2C bus (also carries the on-board OLED/magnetometer/BME280)
+// board: GNSS pin 5.  WAKE_UP on the L76K build; the vendor code drives it
+// high on every Supreme [LG-BRD L726-729] [LG-HW L110, L125].  There is no
+// GNSS reset GPIO: RESET_N is not routed to the ESP32 [SCH-CORE p3].  PPS is
+// GPIO6 through a diode and is not used here.
+constexpr int kGnssWake = 7;
+// board: I2C bus 0 = on-board OLED (0x3C/0x3D), magnetometer and BME280
+// (0x77), and the SDA/SCL pins of header PN1 (pins 1/2), with 4.7 k pull-ups
+// to ALDO1.  [SCH-SUP] [LG-UTIL L496-497] [LG-HW L134-151] [MESH L6-7]
 constexpr int kI2cSda = 17, kI2cScl = 18;
-// board: PMU I2C bus (AXP2101)
+// board: I2C bus 1 = AXP2101 (0x34) and PCF8563 RTC (0x51) only.
+// [SCH-CORE p1] [LG-UTIL L499-500] [MESH L3-4]
 constexpr int kPmuSda = 42, kPmuScl = 41;
-// board: BOOT button, active low
+// board: BOOT button, to ground, 10 k pull-up.  [SCH-CORE p2] [LG-UTIL L508]
+// [MESH L9].  Strapping pin: held low at reset it selects download mode, so
+// press it AFTER power-up/reset for the 3 s ground reset.
 constexpr int kButton = 0;
-// harness: CUT_A_GATE / CUT_B_GATE.  Not strapping pins (0, 3, 45, 46): a
-// strapping pin has a defined level at reset that is not ours to choose.
-// Each MOSFET needs its own gate pull-down (10 k) on the FTU side: during
-// reset and boot these pins are high-impedance.
-constexpr int kCutA = 15, kCutB = 16;
-// harness: HEARTBEAT, opto-transistor to ground, internal pull-up
-constexpr int kHeartbeat = 21;
-// harness: FTU_RAW through a divider to an ADC1 pin.  NOT IN THE NETLIST
-// (connections.csv has no such net): see docs/strato/ftu.md.
-constexpr int kVbatSense = 2;
+// harness: CUT_A_GATE = GPIO38 (PN1 pin 8), CUT_B_GATE = GPIO21 (PN1 pin 12)
+// [SCH-SUP].  Why these two: neither is a strapping pin (0, 3, 45, 46), a USB
+// pin (19, 20), a UART0 pin (43 prints ROM boot messages) or a pad-JTAG pin
+// with a reset pull-up (39 = MTCK); neither is in the power-up glitch table;
+// both come out of reset high-impedance with no pull [S3-DS Tables 2-1, 2-2,
+// 3-1].  They are not adjacent on the header.  Each MOSFET needs its own gate
+// pull-down (10 k) on the FTU side.
+constexpr int kCutA = 38, kCutB = 21;
+// harness: HEARTBEAT = GPIO39 (PN1 pin 7), opto-transistor to ground.  39 is
+// MTCK: with pad JTAG not disabled by eFuse it has a weak pull-up from reset
+// [S3-DS Table 2-1 note 7], which is the idle level wanted here anyway.
+constexpr int kHeartbeat = 39;
+// harness: FTU_VBAT_SENSE = GPIO3 (PN1 pin 10) = ADC1_CH2, the only ADC pin
+// on the headers that nothing else uses (GPIO2/ADC1_CH1 is also there but is
+// wired to radio module pin 6 as RADIO_RETAIN) [SCH-SUP] [SCH-CORE p2/p3].
+// ADC1, so no ADC2/Wi-Fi restriction.  GPIO3 is the JTAG-source strapping
+// pin; it is "floating" by default and is only read if eFuse
+// STRAP_JTAG_SEL has been burnt, which is not the factory state [S3-DS
+// Table 3-1], so a divider on it is harmless.
+constexpr int kVbatSense = 3;
 }  // namespace pin
 
 // FTU_RAW divider: 100 k over 47 k puts 5.4 V at 1.73 V on the pin.
@@ -85,10 +138,26 @@ constexpr float kVbatDivider = (100.0f + 47.0f) / 47.0f;
 #define FTU_FREQ_MHZ 869.525  // EU 869.40-869.65 MHz: 500 mW ERP, 10 % duty.  Site-specific.
 #endif
 #ifndef FTU_TCXO_V
-#define FTU_TCXO_V 1.8  // unverified for this module
+// DIO3 powers the module's TCXO and DIO2 drives its RF switch, both inside the
+// HPD16A can (DIO3 is "not connected on PCB, but internally" [MESH L22]).
+// 1.8 V is Meshtastic's fielded value for this board [MESH L30-31]; the
+// vendor's own example calls radio.begin() with RadioLib's default 1.6 V and
+// setDio2AsRfSwitch(true) [LG-FACT L1421, L1476].  The TCXO's rated supply is
+// UNVERIFIED (no HPD16A datasheet found); both values are in use on this board.
+#define FTU_TCXO_V 1.8
 #endif
 #ifndef FTU_GNSS_BAUD
-#define FTU_GNSS_BAUD 9600  // u-blox factory default; the board vendor may ship another
+// 9600 for both GNSS builds of this board [LG-UTIL L539].  A receiver that
+// earlier firmware reconfigured can keep another rate while its backup supply
+// lasts; the vendor code probes 9600..921600 for that reason [LG-BRD L841].
+#define FTU_GNSS_BAUD 9600
+#endif
+// The carrier has a BME280 on this same bus at 0x77 (SDO pulled high, R11)
+// [SCH-SUP] [LG-HW L139], which is the MS5611's default address.  The MS5611
+// must therefore be strapped to 0x76 (CSB high), or the BME280 moved to 0x76
+// (address resistor, carrier V3.1 only [LG-HW L156, L281]) and this set to 0x77.
+#ifndef FTU_MS5611_ADDR
+#define FTU_MS5611_ADDR 0x76
 #endif
 #ifndef FTU_DEBUG_SERIAL
 #define FTU_DEBUG_SERIAL 0
@@ -200,11 +269,11 @@ void load_state() {
 }
 
 // ---------------------------------------------------------------------------
-// MS5611 (I2C 0x77).  Non-blocking: one conversion is ~9 ms at OSR 4096 and
+// MS5611 (I2C FTU_MS5611_ADDR).  Non-blocking: one conversion is ~9 ms at OSR 4096 and
 // the loop must not wait for it.
 // ---------------------------------------------------------------------------
 
-constexpr uint8_t kMsAddr = 0x77;
+constexpr uint8_t kMsAddr = FTU_MS5611_ADDR;
 
 bool ms_cmd(uint8_t cmd) {
     Wire.beginTransmission(kMsAddr);
@@ -470,18 +539,27 @@ bool read_battery(uint16_t* mv) {
 
 void pmu_begin() {
 #if FTU_HAS_AXP2101
-    // On the Supreme the radio and the GNSS are fed from AXP2101 LDOs that
-    // are off until asked for.  Rail assignment is from memory of the vendor
-    // examples (ALDO1 sensors/OLED, ALDO3 LoRa, ALDO4 GNSS) - VERIFY.  If the
-    // PMU does not answer, carry on: a board fed through its 3V3 pin with the
-    // PMU bypassed needs none of this.
+    // Rail map [SCH-CORE p1/p3] [LG-HW L171-187] [LG-BRD L172-205]; Meshtastic
+    // sets the same rails to the same 3.3 V (src/Power.cpp L1259-1289):
+    //   DCDC1 -> VDD3V3 (ESP32-S3), on by default, never touched here
+    //   ALDO1 -> OLED, magnetometer, BME280, I2C bus 0 pull-ups, PN1 pin 4
+    //   ALDO2 -> "sensor" (IMU); the vendor keeps it on for bus access
+    //   ALDO3 -> SX1262 VCC          ALDO4 -> GNSS VCC
+    // ALDO1 must be up before bus 0 is touched or the bus hangs [LG-HW
+    // L143-147].  All LDO inputs are VSYS, which exists only when the PMU is
+    // fed at VBUS or BAT: a board fed at its VDD3V3 pin runs the ESP32 with
+    // the radio and GNSS dead, and the PMU will not answer here.
     if (!g_pmu.begin(Wire1, AXP2101_SLAVE_ADDRESS, pin::kPmuSda, pin::kPmuScl)) {
-        LOG("no AXP2101\n");
+        LOG("no AXP2101: radio and GNSS are unpowered\n");
         return;
     }
     g_pmu.setALDO1Voltage(3300); g_pmu.enableALDO1();
+    g_pmu.setALDO2Voltage(3300); g_pmu.enableALDO2();
     g_pmu.setALDO3Voltage(3300); g_pmu.enableALDO3();
     g_pmu.setALDO4Voltage(3300); g_pmu.enableALDO4();
+    // No thermistor on the TS pin of this board (Meshtastic Power.cpp
+    // L1325-1327).
+    g_pmu.disableTSPinMeasure();
     // The PMU's own protections must not switch the FTU off in flight.  The
     // power key is not reachable in the box, and a battery "low voltage
     // shutdown" is meaningless here (there is no Li-ion on the PMU input).
@@ -540,12 +618,25 @@ void setup() {
     g_boot_count = static_cast<uint8_t>(boots);
     LOG("boot %u, reset reason %d\n", static_cast<unsigned>(boots), static_cast<int>(esp_reset_reason()));
 
-    //    Ground reset: BOOT button held for 3 s at power-up forgets the last
+    //    Ground reset: BOOT button held for 3 s just after power-up forgets the last
     //    flight (state, references, flight clock).  Without this a unit
     //    recovered in ARMED or TERMINATED would come back up in that state
     //    on the bench.  The uplink counter is deliberately kept.
+    //    BOOT is GPIO0, a strapping pin: held low THROUGH a reset it puts the
+    //    chip in download mode and this code never runs [S3-DS Table 3-3].  So
+    //    the press has to begin after the reset; after a power-on or RST-pin
+    //    reset (never after a watchdog, brown-out or panic reset, which are
+    //    the in-flight ones) wait up to 1.5 s for it to begin.
     pinMode(pin::kButton, INPUT_PULLUP);
     bool held = digitalRead(pin::kButton) == LOW;
+    const esp_reset_reason_t why = esp_reset_reason();
+    if (why == ESP_RST_POWERON || why == ESP_RST_EXT) {
+        for (int i = 0; !held && i < 15; ++i) {
+            delay(100);
+            esp_task_wdt_reset();
+            held = digitalRead(pin::kButton) == LOW;
+        }
+    }
     for (int i = 0; held && i < 30; ++i) {
         delay(100);
         esp_task_wdt_reset();
@@ -569,6 +660,8 @@ void setup() {
     pinMode(pin::kHeartbeat, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(pin::kHeartbeat), on_heartbeat, CHANGE);
 
+    pinMode(pin::kGnssWake, OUTPUT);
+    digitalWrite(pin::kGnssWake, HIGH);
     Serial1.begin(FTU_GNSS_BAUD, SERIAL_8N1, pin::kGnssRx, pin::kGnssTx);
     esp_task_wdt_reset();
     gnss_configure();

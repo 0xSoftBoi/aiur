@@ -8,8 +8,8 @@ hot-wire cutters. This page says what it decides, how that was checked, and
 what has not been checked.
 
 Source: [`firmware/ftu/`](../../firmware/ftu/). Nothing here has run on
-hardware. Every statement below is either the output of a command run in this
-repository or is marked **unverified**.
+hardware. Every statement below is the output of a command run in this
+repository, is cited to a vendor document, or is marked **unverified**.
 
 ## What it decides
 
@@ -88,9 +88,10 @@ What the firmware adds around it, and why:
   the stored home position, ground references, flight clock and pulse count.
   A reset in flight therefore does not return the unit to DISARMED with a
   "ground" reference taken at 20 km.
-- Power-on with the BOOT button held for 3 s clears the stored flight state.
-  **This must be done before every flight and before bench work on a
-  recovered unit.**
+- BOOT pressed within 1.5 s *after* power-on (or RST) and held for 3 s clears
+  the stored flight state. Not before: BOOT is GPIO0, and held through a
+  reset it puts the ESP32-S3 in download mode. **This must be done before
+  every flight and before bench work on a recovered unit.**
 - DISARM is bounded (≤ 1 h hold) and self-healing: when the hold ends, a unit
   still above the arming height re-arms. It is refused once TERMINATED.
 
@@ -199,39 +200,156 @@ by expected reason: (none)=6102, altitude=6128, commanded=1210, flight time=3924
 - **Target build.** PlatformIO Core 6.2.0, platform espressif32 8.0.0,
   Arduino-ESP32 3.3.12, RadioLib 7.8.1, SparkFun u-blox GNSS v3 3.1.15,
   XPowersLib 0.2.9: `pio run -e ftu` (with a key file) and
-  `pio run -e ftu_bench` both link; 439 kB flash, 26 kB static RAM, no
+  `pio run -e ftu_bench` both link with the board definition
+  `boards/t-beams3-supreme.json`; 439 kB flash, 26 kB static RAM, no
   warnings from the FTU sources. `pio run -e ftu` without
   `src/ftu_secrets.h` fails on purpose.
 
-## Pins
+## Board, pins and power
 
-**None of these has been checked against a board.** "Board" pins are the
-T-Beam Supreme pin map as remembered; "harness" pins are a choice of
-supposedly free GPIOs, and whether they are broken out on the Supreme's
-headers is not known. Check all of them against the schematic of the board
-revision in hand before connecting a cutter.
+Checked against the vendor's schematics and pin definitions — documents, not
+a board. Buzz out every harness pin on the board in hand before connecting a
+cutter. Sources:
 
-| Signal | GPIO | Origin | Net |
-| --- | ---: | --- | --- |
-| SX1262 SCK / MISO / MOSI / CS | 12 / 13 / 11 / 10 | board | — |
-| SX1262 RST / DIO1 / BUSY | 5 / 1 / 4 | board | — |
-| GNSS UART RX / TX | 9 / 8 | board | — |
-| Sensor I²C SDA / SCL (MS5611 at 0x77) | 17 / 18 | board | `I2C_FTU` |
-| PMU I²C SDA / SCL (AXP2101) | 42 / 41 | board | — |
-| BOOT button (clear flight state) | 0 | board | — |
-| Cutter A gate | 15 | harness | `CUT_A_GATE` |
-| Cutter B gate | 16 | harness | `CUT_B_GATE` |
-| Heartbeat in (opto to ground, pull-up) | 21 | harness | `HEARTBEAT` |
-| Cell voltage (100 k / 47 k divider) | 2 | harness | not in the netlist |
+- **SC** — LilyGO `T-Beam-S3-Core.pdf` (p1 Power, p2 ESP32S3, p3 Radio & GNSS)
+- **SS** — LilyGO `T-Beam-S3-Supreme-V3.1.pdf` (carrier; headers PN1 / PM1)
+- **LU** — LilyGO `examples/ArduinoLoRa/LoRaReceiver/utilities.h` L480–552
+- **LB** — LilyGO `.../LoRaReceiver/LoRaBoards.cpp` L172–224
+- **LH** — LilyGO `docs/en/t_beam_supreme/t_beam_supreme_hw.md`
+- **LF** — LilyGO `examples/Factory/Factory.ino`
 
-Also from memory and unverified: TCXO 1.8 V, DIO2 as RF switch, GNSS at
-9600 baud, PMU rails ALDO1 (sensors), ALDO3 (radio), ALDO4 (GNSS).
+  (all in `github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series` at `5f537f1`;
+  schematics under `schematic/T-Beam-S3-Supreme/`)
+- **M** — `github.com/meshtastic/firmware` at `fe89ac1`,
+  `variants/esp32s3/tbeam-s3-core/variant.h`; **MP** — its `src/Power.cpp`
+- **DS** — Espressif *ESP32-S3 Series Datasheet* v2.2, Tables 2-1, 2-2, 3-1
+
+### Variant
+
+`components.csv` row `FTU` says "ESP32-S3 + SX1262 + u-blox M10": that is the
+**T-Beam S3 Supreme "Ublox"** build (MAX-M10S) with the SX1262 radio
+(LH L18–24). The firmware supports only that build.
+
+- **L76K GNSS instead:** no UBX protocol, so the receiver is never detected,
+  there is no position and no airborne dynamic model. The unit would fly with
+  barometer, flight time, link loss and command only. Reject the board.
+  (The L76K's own altitude ceiling is **unverified**.)
+- **LR1121 radio instead:** different chip and driver (TCXO 3.0 V, RF switch
+  on its DIO5/DIO6, M L36–46; LF L1479–1498). `radio.begin()` fails: no
+  telemetry, no command, and link loss terminates at 3 h. Reject the board.
+- **Carrier V3.0 vs V3.1:** same nets; V3.1 adds battery protection and the
+  BME280 address resistor (LH L275–283). Header pin positions below are V3.1;
+  V3.0 positions are **unverified**.
+
+### Pins
+
+| Signal | GPIO | Was | Where | Source |
+| --- | ---: | ---: | --- | --- |
+| SX1262 SCK / MISO / MOSI / NSS | 12 / 13 / 11 / 10 | same | on module | SC p2–3; LU L513–516; M L61–64 |
+| SX1262 RST / DIO1 / BUSY | 5 / 1 / 4 | same | on module | SC p2–3; LU L518–520; M L19–21 |
+| SX1262 DIO2 (RF switch), DIO3 (TCXO) | — | — | inside the radio can | M L22, L30–31; LF L1476 |
+| GNSS UART: ESP RX / ESP TX | 9 / 8 | same | on module, 100 Ω each | SC p2–3; LU L503–504; M L66–67 |
+| GNSS PPS (unused) / pin 5 wake (driven high) | 6 / 7 | not set | PPS also PN1-11 | SC p3; LU L505–506; LH L109–110, L125 |
+| GNSS reset | none | — | RESET_N not routed to the ESP32 | SC p3 |
+| I²C bus 0 SDA / SCL: OLED, magnetometer, BME280, **MS5611** | 17 / 18 | same | PN1-1 / PN1-2 | SS; LU L496–497; LH L134–139 |
+| I²C bus 1 SDA / SCL: AXP2101 0x34, RTC 0x51 | 42 / 41 | same | on module | SC p1; LU L499–500; M L3–4 |
+| BOOT button | 0 | same | button | SC p2; LU L508; M L9 |
+| Cutter A gate `CUT_A_GATE` | **38** | 15 | PN1-8 | SS; DS |
+| Cutter B gate `CUT_B_GATE` | **21** | 16 | PN1-12 | SS; DS |
+| Heartbeat in `HEARTBEAT` (opto to ground) | **39** | 21 | PN1-7 | SS; DS |
+| Cell voltage `FTU_VBAT_SENSE` | **3** (ADC1_CH2) | 2 | PN1-10 | SS; DS |
+
+Why the harness pins moved:
+
+- GPIO15 / 16 are the 32.768 kHz crystal (SC p2) and reach no header. The old
+  cutter pins could not have been wired.
+- The carrier breaks out only GPIO48, 21, 3, 38, 39, 45, 46, GPIO2
+  (`RADIO_RETAIN`, also wired to radio module pin 6), GPS_PPS, bus 0, and
+  UART0 (43 / 44) (SS). Of these, 45 and 46 are strapping pins, 43 prints the
+  ROM boot log, 39 has a pull-up from reset (pad JTAG), and 2 is shared with
+  the radio. 38 and 21 are the two that come out of reset high-impedance with
+  no pull and no power-up glitch (DS Tables 2-1, 2-2, 3-1); they are not
+  adjacent on PN1. 48 is spare.
+- GPIO3 is the only unshared ADC pin on the headers. It is ADC1 (no ADC2
+  restriction). It is the JTAG-select strapping pin, read only if eFuse
+  `STRAP_JTAG_SEL` is burnt, which is not the factory state (DS §3).
+
+Radio and GNSS settings:
+
+| Setting | Value | Was | Source |
+| --- | --- | --- | --- |
+| DIO2 as RF switch | yes | yes | M L30; LF L1476 |
+| TCXO on DIO3 | 1.8 V | 1.8 V | M L31. LilyGO's example uses RadioLib's default 1.6 V (LF L1421). Rated TCXO supply **unverified** (no module datasheet) |
+| PA current limit | 140 mA | 140 mA | LF L1617 |
+| GNSS baud | 9600 | 9600 | LU L539. A receiver reconfigured by earlier firmware may differ (LB L841 probes) |
+| MS5611 address | **0x76** | 0x77 | the on-board BME280 is at 0x77 on the same bus (SS: SDO pulled high; LH L139) |
+
+### Power rails (AXP2101)
+
+| Rail | Feeds | Firmware | Source |
+| --- | --- | --- | --- |
+| DCDC1 → `VDD3V3` | ESP32-S3; PM1-10 | default on, untouched | SC p1; LH L173 |
+| ALDO1 | OLED, magnetometer, BME280, bus 0 pull-ups; PN1-4 | 3.3 V, on (before bus 0 is used: LH L143–147) | SS; LH L179; LB L193; MP L1287–1289 |
+| ALDO2 | "sensor" (IMU) | 3.3 V, on (**new**) | LH L180; LB L196; MP L1278–1285 |
+| ALDO3 | SX1262 VCC | 3.3 V, on | SC p3; LH L181; LB L180; MP L1270–1272 |
+| ALDO4 | GNSS VCC | 3.3 V, on | SC p3; LH L182; LB L176; MP L1262–1268 |
+| BLDO1 | SD card | off | LH L183 |
+| BLDO2, DCDC3–5 | M.2 / PM1 header | off | LH L175–177, L184 |
+| VRTC | GNSS V_BCKP | — | SC p1, p3 |
+
+All LDO inputs (`ALDOIN`, `BLDOIN`) and all DCDC inputs are `VSYS` (SC p1).
+`VSYS` exists only when the PMU is fed at `VBUS` or `BAT`.
+
+### Power feed — the netlist is wrong
+
+`connections.csv` feeds 3.3 V from `FTU_REG` to an FTU port `3V3_IN`. The only
+3.3 V pin on the board is `VDD3V3` (PM1-10), which is the *output* of DCDC1.
+Back-feeding it runs the ESP32-S3 but leaves `VSYS` at zero, so the PMU is
+unpowered, ALDO3 and ALDO4 cannot turn on, and **the radio and GNSS are
+dead** (SC p1, p3). The firmware would log "no AXP2101" and fly without them.
+
+The supported inputs are (LH L163–167; SC p1; SS):
+
+- `VBUS` (USB-C, or PM1-2): 3.9–6 V. **Use this**, from a regulated 5 V.
+- `VBAT` (18650 holder, or PY1 / PM1-1): a single 3.7 V Li-ion, behind a
+  charger. Carrier V3.1 puts a 5.0 V TVS and a Li-ion protector on it (SS).
+  Primary cells must never be connected here: the PMU would charge them, and
+  3S L91 (up to 5.4 V) exceeds a one-cell input.
+
+`components.csv` gives the 3S L91 pack as 3.3–5.4 V, which falls below the
+3.9 V `VBUS` minimum, so the pack cannot feed `VBUS` directly either; it needs
+a buck-boost to 5 V. Required
+change (not made here; `hardware/` is not this page's to edit):
+
+| File, row | Field | Now | Should be |
+| --- | --- | --- | --- |
+| `components.csv` `FTU_REG` | name / part | FTU 3.3 V buck / Pololu S7V8F3 class | FTU 5 V buck-boost / Pololu S7V8F5 class (5 V out; its input range is from memory, **unverified**) |
+| `connections.csv` `FTU_3V3,FTU_REG,3V3,FTU,3V3_IN` | net, ports | `FTU_3V3`, `3V3` → `3V3_IN` | `FTU_5V`, `5V` → `VBUS` (PM1-2; ground PM1-3) |
+| `connections.csv` `FTU_3V3,FTU_REG,3V3,FTU_BARO,VCC` | net, from | `FTU_3V3`, `FTU_REG` `3V3` | `FTU_ALDO1`, `FTU` `A_LDO1` (PN1-4, 3.3 V; ground PN1-3) |
+| `connections.csv` `I2C_FTU` | `i2c_addr` | `0x77` | `0x76` (MS5611 CSB tied high) |
+| `components.csv` `FTU` | `v_min`, `v_max` | 3.0, 4.3 | 3.9, 6.0 (the `VBUS` range) |
+
+The barometer moves to ALDO1 because the bus pull-ups are on ALDO1 and a
+sensor powered from another rail can hang the bus (LH L143–147); a bare
+MS5611 cannot take 5 V.
 
 ## Not verified, and known gaps
 
+Checked against documents only, not on a board: every pin, rail and radio
+setting above. Not found in any primary source:
+
+- the TCXO's rated supply voltage (1.8 V and 1.6 V are both in use upstream);
+- the AXP2101's own limits and defaults — absolute maximum on `VBUS` and
+  `BAT`, default input current and voltage limits, behaviour with no cell on
+  `BAT` (no datasheet obtained; only LilyGO's "3.9–6 V" figure);
+- header pin positions on carrier V3.0;
+- the GNSS baud rate of a board that arrives with other firmware on it, and
+  whether the MAX-M10S ignores the level on its pin 5 (the vendor code drives
+  it high on both GNSS builds, and so does this firmware);
+- flash size and mode on the actual module (read the esptool banner).
+
 Not run on hardware — all of it:
 
-- every pin, rail and radio setting above;
 - that the u-blox accepts and reports the airborne < 1 g dynamic model (the
   firmware reads it back and reports it as a telemetry flag; without it the
   receiver stops reporting above 12 km);
@@ -247,17 +365,23 @@ Not run on hardware — all of it:
 
 Gaps in the design that firmware cannot close:
 
-- **Cell-voltage sensing is not in the netlist.** `connections.csv` has no
-  net from `FTU_RAW` to an ADC pin. Without the divider the firmware treats
-  the reading as absent and fires without under-voltage checks.
+- **Cell-voltage divider mismatch.** `components.csv` `FTU_VSENSE` is
+  2 × 100 k (÷ 2.00); the firmware's `kVbatDivider` assumes 100 k over 47 k
+  (÷ 3.13). With the BOM parts the firmware reads 1.56 × too high, rejects
+  anything above 4.15 V true as implausible and fires without under-voltage
+  checks. One of the two must change; either ratio suits GPIO3 (2.7 V or
+  1.7 V at 5.4 V).
+- **Barometer address.** The MS5611 must be strapped to 0x76 (see Pins).
 - **Gate pull-downs.** The gate pins are high-impedance during reset and
   boot. Each MOSFET needs a gate-to-source pull-down in the FTU box.
 - **No physical safe plug.** The software arming rule is the only thing
   between a powered FTU and a hot wire. A remove-before-flight link in
   `FTU_RAW` to the cutters would be the hardware barrier.
-- **Power path.** The netlist feeds the board at `3V3_IN`. On this board
-  family the radio and GNSS are supplied through PMU regulators; whether they
-  are powered when the board is fed at 3.3 V is unverified.
+- **Power path.** The netlist's 3.3 V feed leaves the radio and GNSS
+  unpowered; see "Power feed" above for the required change.
+- **PMU power key.** With no cell on `BAT`, the PMU starts when `VBUS`
+  appears; that it always does so unattended is **unverified**. The firmware
+  sets the longest power-key off time (10 s) and masks PMU interrupts.
 - **GNSS loss.** With no fix, range holds its last value and cannot trip.
   Flight time, link loss and ground command remain.
 - **Reset loops.** Link-loss and heartbeat timers restart at a reset (the
@@ -277,7 +401,8 @@ fitted with sacrificial line and nothing else flammable is near them.
 
 Before anything: check the pin table against the board; scope both gate pins
 through a power-on and a reset and confirm they stay below the MOSFET
-threshold; hold BOOT for 3 s at power-on to clear stored state.
+threshold; press BOOT just after power-on and hold it 3 s to clear stored
+state.
 
 1. **Idle.** Power the FTU alone, outdoors or at a window. Within a few
    minutes telemetry shows state DISARMED, flags GNSS valid, baro valid,
