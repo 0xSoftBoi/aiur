@@ -7,8 +7,10 @@
 #                                        #   one GUIDED position target, then Rover's boat loiter
 #   sitl/ardupilot/run_sitl.sh companion # same scenario; fly_test.py plays the companion:
 #                                        #   aiur.strato.guidance.StationKeeper -> heading + speed at 1 Hz
+#   sitl/ardupilot/run_sitl.sh failsafe  # 4 m/s wind; hold ground on setpoints, then Rover HOLD for 300 s
 #   sitl/ardupilot/run_sitl.sh hold      # arm and sit in boat loiter
-#   sitl/ardupilot/run_sitl.sh idle      # just start both and wait (connect your own GCS to tcp:5760)
+#   sitl/ardupilot/run_sitl.sh idle      # just start both and wait (connect your own GCS to tcp:5760);
+#                                        #   this is what ros2 launch aiur_bringup sitl_ardupilot.launch.py runs
 #
 # Environment (all optional):
 #   ARDUROVER   path to the ArduRover SITL binary.  If unset, the stable
@@ -21,7 +23,9 @@
 #   EXTRA_PARM  a second defaults file layered on top (for tuning experiments)
 #   WIND_N WIND_E  plant wind, NED m/s (station default 0 / -4: blowing west)
 #   GUST        plant gust sigma m/s (default 0)
-#   LUA         1 = install scripts/aiur_pitch.lua (default 1), 0 = no script
+#   LUA         1 = install scripts/aiur_pitch.lua (default 1), 0 = no pitch script
+#   INNER       1 = install scripts/aiur_inner.lua (thrust-floor inner loop) and layer
+#               aiur_inner.parm; default 0 = stock Rover steering/throttle control
 #   PYTHON      interpreter with pymavlink (default /usr/bin/python3.12)
 #   TAG         suffix for the result directory
 #   INSTANCE    SITL instance number (default 0); shifts every port by 10*N so
@@ -56,10 +60,14 @@ if [ -z "${ARDUROVER:-}" ]; then
 fi
 
 rm -rf "$RUN"; mkdir -p "$RUN/scripts"
-[ "$LUA" = "1" ] && cp "$HERE"/scripts/*.lua "$RUN/scripts/" 2>/dev/null || true
+[ "$LUA" = "1" ] && cp "$HERE/scripts/aiur_pitch.lua" "$RUN/scripts/"
+INNER="${INNER:-0}"
+[ "$INNER" = "1" ] && cp "$HERE/scripts/aiur_inner.lua" "$RUN/scripts/"
 
 case "$SCEN" in
-  station|companion) WIND_N="${WIND_N:-0}"; WIND_E="${WIND_E:--4}"; WIND_START=60; WIND_RAMP=30 ;;
+  station|companion|failsafe) WIND_N="${WIND_N:-0}"; WIND_E="${WIND_E:--4}"; WIND_START=60; WIND_RAMP=30 ;;
+  # idle: whoever connects decides; WIND_START / WIND_RAMP may be given (the ROS launch does)
+  idle)    WIND_N="${WIND_N:-0}"; WIND_E="${WIND_E:-0}";  WIND_START="${WIND_START:-0}"; WIND_RAMP="${WIND_RAMP:-0}" ;;
   *)       WIND_N="${WIND_N:-0}"; WIND_E="${WIND_E:-0}";  WIND_START=0;  WIND_RAMP=0 ;;
 esac
 # start pointing into the wind (as the in-repo station_keep scenario does), else north
@@ -69,6 +77,7 @@ PIDS=()
 # ArduPilot SITL ignores SIGTERM while blocked on the JSON socket, hence -9.
 cleanup() { for p in "${PIDS[@]:-}"; do kill -9 "$p" 2>/dev/null || true; done; wait 2>/dev/null || true; }
 trap cleanup EXIT
+trap 'exit 0' INT TERM
 
 "$PYTHON" "$HERE/json_plant.py" --wind "$WIND_N" "$WIND_E" 0 --wind-start-s "$WIND_START" \
     --wind-ramp-s "$WIND_RAMP" --gust "$GUST" --yaw-deg "$YAW" --log "$RUN/truth.csv" \
@@ -76,7 +85,9 @@ trap cleanup EXIT
     > "$RUN/plant.log" 2>&1 &
 PIDS+=($!)
 
-DEFAULTS="$PARM${EXTRA_PARM:+,$EXTRA_PARM}"
+DEFAULTS="$PARM"
+[ "$INNER" = "1" ] && DEFAULTS="$DEFAULTS,$HERE/aiur_inner.parm"
+DEFAULTS="$DEFAULTS${EXTRA_PARM:+,$EXTRA_PARM}"
 # -w wipes the eeprom so only the defaults file(s) define the vehicle.
 # Home altitude 20000 m: the design float altitude (baro, GPS and the EKF origin sit there).
 ( cd "$RUN" && exec "$ARDUROVER" -w -S --model JSON:127.0.0.1 --speedup "$SPEEDUP" \
@@ -95,7 +106,8 @@ case "$SCEN" in
   station)   ARGS=(--wind "$WIND_N" "$WIND_E" 0 --start-after 100 --duration 1800) ;;
   companion) ARGS=(--wind "$WIND_N" "$WIND_E" 0 --start-after 100 --duration 1800 --guidance companion) ;;
   # Rover caps every GUIDED speed target at WP_SPEED; the turn test flies the 6 m/s cruise.
-  turn)    ARGS=(--duration 300 --speed 6 --set WP_SPEED=6) ;;
+  turn)    ARGS=(--duration 300 --speed 6) ;;
+  failsafe) ARGS=(--wind "$WIND_N" "$WIND_E" 0 --start-after 100 --duration 300) ;;
   hold)    ARGS=(--duration 300) ;;
 esac
 "$PYTHON" "$HERE/fly_test.py" "$TEST" --connect "tcp:127.0.0.1:$MAV_PORT" --truth "$RUN/truth.csv" --out "$RUN/result.json" \

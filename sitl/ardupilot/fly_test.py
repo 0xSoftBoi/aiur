@@ -55,6 +55,7 @@ class Vehicle:
         self.mode = -1
         self.rows = []
         self.texts = []
+        self.named = {}
         self._last_hb = 0.0
         self.recording = False
 
@@ -94,6 +95,8 @@ class Vehicle:
             self.gps_fix = msg.fix_type
         elif t == "EKF_STATUS_REPORT":
             self.ekf_flags = msg.flags
+        elif t == "NAMED_VALUE_FLOAT":
+            self.named[msg.name] = round(msg.value, 3)
         elif t == "STATUSTEXT":
             self.texts.append((round(self.sim_t, 1), msg.text))
             print(f"  [{self.sim_t:8.1f}] AP: {msg.text}", flush=True)
@@ -243,8 +246,9 @@ def test_turn(v: Vehicle, a) -> dict:
         def f():
             if v.sim_t - last[0] >= 0.5:
                 last[0] = v.sim_t
-                v.heading_speed(h, a.speed)
+                v.heading_groundspeed(h, a.speed, a.speed)
         return f
+    v.set_param("WP_SPEED", a.speed)  # SET_ATTITUDE_TARGET thrust is a fraction of WP_SPEED
     print(f"[{v.sim_t:8.1f}] turn test: heading {h0:g} deg at {a.speed:g} m/s for {a.settle:g} s", flush=True)
     v.recording = True
     v.run_until(t0 + a.settle, tick(h0))
@@ -291,11 +295,15 @@ def test_station(v: Vehicle, a) -> dict:
     wn, we = a.wind[0], a.wind[1]
     wmag = math.hypot(wn, we)
     un, ue = ((-wn / wmag, -we / wmag) if wmag > 0 else (1.0, 0.0))
+    if a.bearing:
+        # rotate the start->station direction clockwise from "upwind"
+        cb, sb = math.cos(math.radians(a.bearing)), math.sin(math.radians(a.bearing))
+        un, ue = un * cb - ue * sb, un * sb + ue * cb
     n0, e0 = v.pos.x, v.pos.y
     tn, te = n0 + un * a.upwind_m, e0 + ue * a.upwind_m
     t0 = v.sim_t
     print(f"[{t0:8.1f}] station test: from N {n0:.0f} E {e0:.0f} to N {tn:.0f} E {te:.0f} "
-          f"({a.upwind_m:g} m upwind), {a.duration:g} s", flush=True)
+          f"({a.upwind_m:g} m at {a.bearing:g} deg from upwind), {a.duration:g} s", flush=True)
     v.recording = True
     last = [0.0, 0.0]
 
@@ -336,7 +344,7 @@ def test_station(v: Vehicle, a) -> dict:
     rows = [r for r in v.rows if r[0] >= t0]
     half = [r for r in rows if r[0] >= t0 + 0.5 * a.duration]
     dist = lambda r: math.hypot(r[5] - tn, r[6] - te)  # noqa: E731
-    res = {"test": "station", "guidance": a.guidance, "wind_ned": list(a.wind), "upwind_m": a.upwind_m, "duration_s": a.duration,
+    res = {"test": "station", "guidance": a.guidance, "bearing_from_upwind_deg": a.bearing, "wind_ned": list(a.wind), "upwind_m": a.upwind_m, "duration_s": a.duration,
            "t_start_s": round(t0, 1), "t_end_s": round(t1, 1), "target_ne": [round(tn, 1), round(te, 1)]}
     arrive = next((r[0] - t0 for r in rows if dist(r) <= 50.0), None)
     res["ekf"] = {
@@ -386,9 +394,45 @@ def test_hold(v: Vehicle, a) -> dict:
             "altitude_excursion_m": round(max(abs(r[7] - rows[0][7]) for r in rows), 1)}
 
 
+def test_failsafe(v: Vehicle, a) -> dict:
+    """Fly into the wind on companion setpoints, then put Rover in HOLD - the
+    mode its failsafes select - and watch what the motor and the bow do."""
+
+    if v.sim_t < a.start_after:
+        v.run_until(a.start_after)
+    wn, we = a.wind[0], a.wind[1]
+    upwind = math.degrees(math.atan2(-we, -wn)) if (wn or we) else 0.0
+    v.set_param("WP_SPEED", a.max_airspeed)
+    v.recording = True
+    last = [0.0]
+
+    def tick():
+        if v.sim_t - last[0] >= 1.0:
+            last[0] = v.sim_t
+            v.heading_groundspeed(upwind, 0.0, a.max_airspeed)  # hold ground along the wind axis
+    t0 = v.sim_t
+    print(f"[{t0:8.1f}] failsafe test: heading {upwind:g} deg, zero ground speed for {a.fs_after:g} s", flush=True)
+    v.run_until(t0 + a.fs_after, tick)
+    t_fs = v.sim_t
+    n0, e0 = v.pos.x, v.pos.y
+    print(f"[{t_fs:8.1f}] setting HOLD (mode 4), companion silent", flush=True)
+    v.m.mav.set_mode_send(v.m.target_system, M.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, 4)
+    v.run_until(t_fs + a.duration)
+    rows = [r for r in v.rows if r[0] >= t_fs + 5.0]
+    res = {"test": "failsafe", "wind_ned": list(a.wind), "t_hold_s": round(t_fs, 1), "duration_s": a.duration,
+           "mode_at_end": v.mode,
+           "mean_throttle_pct": round(sum((r[12] - 1000) / 10.0 for r in rows) / len(rows), 1),
+           "zero_throttle_fraction": round(sum(1 for r in rows if r[12] <= 1005) / len(rows), 3),
+           "rms_heading_off_upwind_deg": round(math.sqrt(sum(wrap180(r[1] - upwind) ** 2 for r in rows) / len(rows)), 1),
+           "max_heading_off_upwind_deg": round(max(abs(wrap180(r[1] - upwind)) for r in rows), 1),
+           "drift_m": round(math.hypot(rows[-1][5] - n0, rows[-1][6] - e0), 1),
+           "mean_drift_speed_m_s": round(math.hypot(rows[-1][5] - n0, rows[-1][6] - e0) / a.duration, 2)}
+    return res
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("test", choices=("turn", "station", "hold"))
+    ap.add_argument("test", choices=("turn", "station", "hold", "failsafe"))
     ap.add_argument("--connect", default="tcp:127.0.0.1:5760")
     ap.add_argument("--rate", type=float, default=5.0, help="telemetry rate, Hz of simulated time")
     ap.add_argument("--truth", default="", help="json_plant.py truth CSV")
@@ -404,7 +448,11 @@ def main(argv=None) -> int:
     # station
     ap.add_argument("--wind", type=float, nargs=3, default=(0.0, -4.0, 0.0), metavar=("N", "E", "D"),
                     help="the wind the plant was started with (to find 'upwind')")
-    ap.add_argument("--upwind-m", type=float, default=1500.0)
+    ap.add_argument("--upwind-m", type=float, default=1500.0, help="distance from start to station")
+    ap.add_argument("--bearing", type=float, default=0.0,
+                    help="direction of the station from the start, degrees clockwise from upwind "
+                         "(0 = upwind, +/-90 = crosswind transit)")
+    ap.add_argument("--fs-after", type=float, default=120.0, help="failsafe test: seconds of flight before HOLD")
     ap.add_argument("--start-after", type=float, default=0.0, help="sim time at which the plant wind is steady")
     ap.add_argument("--guidance", choices=("rover", "companion"), default="rover",
                     help="rover: one GUIDED position target, then Rover's boat loiter.  companion: "
@@ -421,8 +469,11 @@ def main(argv=None) -> int:
     for item in a.set:
         name, _, val = item.partition("=")
         v.set_param(name, float(val))
-    res = {"turn": test_turn, "station": test_station, "hold": test_hold}[a.test](v, a)
+    res = {"turn": test_turn, "station": test_station, "hold": test_hold,
+           "failsafe": test_failsafe}[a.test](v, a)
     res["statustext"] = v.texts
+    if v.named:
+        res["named_value_float_last"] = v.named
     print(json.dumps(res, indent=2))
     if a.out:
         with open(a.out, "w") as fh:

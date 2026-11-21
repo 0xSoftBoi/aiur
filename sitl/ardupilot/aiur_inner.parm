@@ -1,0 +1,24 @@
+# Overlay for aiur_s2.parm when scripts/aiur_inner.lua is installed
+# (run_sitl.sh INNER=1).  Kept separate so the stock-Rover results stay
+# reproducible from aiur_s2.parm alone.
+
+# An airspeed sensor, so the script can enforce the airspeed limit.
+# 100 = SITL: the plant sends equivalent airspeed in the JSON "airspeed"
+# field.  HARDWARE NOTE: at 20 km and 6 m/s the dynamic pressure is 1.6 Pa.
+# No pitot/differential-pressure sensor resolves that; the flight sensor has
+# to be an anemometer (ultrasonic or hot-film) presented to ArduPilot as an
+# airspeed backend.  SITL's sensor here is noise-free.
+ARSPD_TYPE 100
+ARSPD_USE 1
+# No pre-flight zero-airspeed calibration of a sensor that is never at rest.
+ARSPD_SKIP_CAL 1
+# The speed-ratio autocal and the "airspeed vs wind" health checks are for
+# aeroplanes.
+ARSPD_AUTOCAL 0
+ARSPD_OPTIONS 0
+ARSPD_WIND_MAX 0
+# The inner loop asks more of the scripting VM (50 Hz).
+SCR_VM_I_COUNT 100000
+# On a failsafe prefer LOITER, else HOLD; the script stays active in both
+# (AIN_FS_HOLD 1) so the motor is not cut.
+FS_ACTION 6

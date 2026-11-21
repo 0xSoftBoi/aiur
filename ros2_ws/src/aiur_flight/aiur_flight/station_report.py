@@ -1,4 +1,9 @@
-"""Runs for a fixed simulated time, then reports station-keeping and exits."""
+"""Runs for a fixed simulated time, then reports station-keeping and exits.
+
+`relative_time` (default False): count `duration_s` from the first odometry
+message instead of from stamp zero, for an autopilot that has been up for a
+while before the companion takes over (ArduPilot SITL).
+"""
 
 import json
 import math
@@ -16,6 +21,8 @@ class StationReport(Node):
         super().__init__("station_report")
         self.duration = float(self.declare_parameter("duration_s", 1800.0).value)
         self.out = self.declare_parameter("output", "/tmp/aiur_station.json").value
+        self.relative = bool(self.declare_parameter("relative_time", False).value)
+        self.t0 = None
         self.rows, self.thrust, self.sat, self.n = [], 0.0, 0, 0
         self.create_subscription(PropulsionCommand, "cmd/propulsion", self.on_cmd, 10)
         self.create_subscription(Odometry, "odom", self.on_odom, 10)
@@ -27,6 +34,10 @@ class StationReport(Node):
 
     def on_odom(self, m: Odometry) -> None:
         t = m.header.stamp.sec + m.header.stamp.nanosec * 1e-9
+        if self.relative:
+            if self.t0 is None:
+                self.t0 = t
+            t -= self.t0
         p = m.pose.pose.position
         self.rows.append((t, math.hypot(p.x, p.y), p.z))
         if t >= self.duration:

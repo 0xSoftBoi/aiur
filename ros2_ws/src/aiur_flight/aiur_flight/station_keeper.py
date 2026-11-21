@@ -4,6 +4,14 @@ The wind is not measured, it is inferred: ground velocity from odometry
 minus the air velocity the vehicle was last commanded to fly, low-passed.
 That is the estimator a GNSS-only vehicle with no usable pitot has, and at a
 dynamic pressure of 1-4 Pa that is this vehicle.
+
+That estimator assumes the autopilot flies the commanded AIR velocity.  An
+autopilot that tracks GROUND speed (ArduRover) breaks the assumption: it
+converts the air demand with this node's own wind estimate, achieves that
+ground speed whatever the real wind is, and "ground minus commanded air"
+then returns the estimate it was given - the wind is unobservable.  With
+`use_airspeed: true` the achieved air velocity is instead the measured true
+airspeed on `airspeed` along the present heading.
 """
 
 import math
@@ -12,6 +20,7 @@ import rclpy
 from geometry_msgs.msg import TwistStamped, Vector3Stamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
+from std_msgs.msg import Float32
 
 from aiur.strato.guidance import EntryGuidance, FlightPhase, StationKeeper
 from aiur_msgs.msg import FlightStatus
@@ -31,6 +40,9 @@ class StationKeeperNode(Node):
         self.always_active = bool(p("always_active", False).value)
         self.entry = EntryGuidance(self.keeper.max_airspeed_m_s)
         self.use_entry = bool(p("entry_guidance", False).value)
+        #: Use measured true airspeed for the wind estimate (see module docstring).
+        self.use_airspeed = bool(p("use_airspeed", False).value)
+        self.airspeed = None
         self.trim = self.climb = 0.0
         self.phase = FlightPhase.PRELAUNCH.value
         self.wind = [0.0, 0.0]          # east, north
@@ -41,6 +53,11 @@ class StationKeeperNode(Node):
         self.pub_wind = self.create_publisher(Vector3Stamped, "wind/estimate", 10)
         self.create_subscription(FlightStatus, "status", self.on_status, 10)
         self.create_subscription(Odometry, "odom", self.on_odom, 10)
+        if self.use_airspeed:
+            self.create_subscription(Float32, "airspeed", self.on_airspeed, 10)
+
+    def on_airspeed(self, msg: Float32) -> None:
+        self.airspeed = float(msg.data)
 
     def on_status(self, msg: FlightStatus) -> None:
         self.phase = msg.phase
@@ -55,9 +72,13 @@ class StationKeeperNode(Node):
         vx, vy = msg.twist.twist.linear.x, msg.twist.twist.linear.y
         ve = math.cos(yaw) * vx - math.sin(yaw) * vy
         vn = math.sin(yaw) * vx + math.cos(yaw) * vy
-        a = min(1.0, dt / self.airspeed_lag_s)
-        self.air_est[0] += a * (self.cmd[0] - self.air_est[0])
-        self.air_est[1] += a * (self.cmd[1] - self.air_est[1])
+        if self.use_airspeed and self.airspeed is not None:
+            # yaw is ENU (from east, counter-clockwise): the bow points (cos, sin)
+            self.air_est = [self.airspeed * math.cos(yaw), self.airspeed * math.sin(yaw)]
+        else:
+            a = min(1.0, dt / self.airspeed_lag_s)
+            self.air_est[0] += a * (self.cmd[0] - self.air_est[0])
+            self.air_est[1] += a * (self.cmd[1] - self.air_est[1])
         b = min(1.0, dt / self.tau)
         self.wind[0] += b * ((ve - self.air_est[0]) - self.wind[0])
         self.wind[1] += b * ((vn - self.air_est[1]) - self.wind[1])
