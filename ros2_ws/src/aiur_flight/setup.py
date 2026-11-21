@@ -12,5 +12,5 @@ setup(
     zip_safe=True,
     description="STRATO flight nodes: float manager, station keeper, termination, mission logger",
     license="Apache-2.0",
-    entry_points={"console_scripts": ['float_manager = aiur_flight.float_manager:main', 'station_keeper = aiur_flight.station_keeper:main', 'termination = aiur_flight.termination:main', 'mission_logger = aiur_flight.mission_logger:main']},
+    entry_points={"console_scripts": ['float_manager = aiur_flight.float_manager:main', 'station_keeper = aiur_flight.station_keeper:main', 'termination = aiur_flight.termination:main', 'mission_logger = aiur_flight.mission_logger:main', 'attitude_controller = aiur_flight.attitude_controller:main', 'station_report = aiur_flight.station_report:main']},
 )

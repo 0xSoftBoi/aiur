@@ -1,0 +1,9 @@
+{
+  "sim_time_s": 1801.0,
+  "start_distance_m": 1506.0,
+  "final_distance_m": 5431.0,
+  "rms_distance_second_half_m": 4535.0,
+  "altitude_excursion_m": 53.2,
+  "mean_thrust_n": 2.53,
+  "gimbal_saturated_fraction": 0.076
+}

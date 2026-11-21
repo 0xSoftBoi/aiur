@@ -7,6 +7,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/BuoyancyState.msg"
   "msg/FlightStatus.msg"
   "msg/FloatCommand.msg"
+  "msg/PropulsionCommand.msg"
   DEPENDENCIES std_msgs
 )
 ament_export_dependencies(rosidl_default_runtime)

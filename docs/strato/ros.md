@@ -14,8 +14,8 @@ ros2_ws/src/
   aiur_msgs         BuoyancyState, FlightStatus, FloatCommand - the only custom interfaces
   aiur_core         installs the repo's `aiur` Python package (symlink; one copy of the code)
   aiur_description  GENERATED: URDF, hull STL, Gazebo models and worlds
-  aiur_strato_sim   plant node: ascent.AscentSim behind standard topics; owns /clock
-  aiur_flight       float_manager, station_keeper, termination, mission_logger
+  aiur_strato_sim   plant (whole mission, ascent.AscentSim) and flight_plant (6-DoF at float); own /clock
+  aiur_flight       float_manager, station_keeper, attitude_controller, termination, loggers
   aiur_bringup      launch files and the MAVROS topic map
 ```
 
@@ -37,6 +37,30 @@ A recorded run is in [`evidence/`](evidence/): float entry at 5,168 s,
 float held at 19,876 ± 38 m for an hour, landing 64.5 km out — the batch
 model gives 5,172 s and 64.6 km.
 
+## Station-keeping with the full control chain
+
+```
+ros2 launch aiur_bringup sim_float.launch.py wind_east_m_s:=-5.0
+```
+
+`station_keeper` (outer loop) → `attitude_controller` (inner loop, wrapping
+`flight6dof.FlightController`) → `flight_plant` (rigid body, added mass,
+gust gradients). The command crossing the last arrow is
+`aiur_msgs/PropulsionCommand` — thrust and two gimbal angles, exactly what
+the stern pod's CAN node receives. S2 hull, 6 m/s airspeed limit, starting
+1.5 km downwind, 30 minutes, 0.5 m/s turbulence:
+
+| Wind | Final distance from station | RMS distance, second half | Gimbal saturated |
+| ---: | ---: | ---: | ---: |
+| 3 m/s | 23 m | 83 m | 46 % |
+| 5 m/s | 228 m | 554 m | 10 % |
+| 8 m/s | 5.4 km and growing | — | 8 % |
+
+It holds what its airspeed allows and loses ground head-to-wind above that.
+The gimbal working hard in light wind is the low-airspeed regime where fins
+do nothing and thrust is being throttled back; it is the handling case to
+watch on the SP1 trainer.
+
 ## Topics (namespace `/aiur`)
 
 Frames follow REP-103 and REP-105: `map` is ENU with its origin at the
@@ -57,6 +81,8 @@ y left, z up.
 | `wind/estimate` | `geometry_msgs/Vector3Stamped` | station_keeper → |
 | `cmd/terminate` | `std_msgs/Bool` | termination → plant |
 | `termination/command` | `std_msgs/Bool` | operator → termination |
+| `cmd/propulsion` | `aiur_msgs/PropulsionCommand` | attitude_controller → flight_plant |
+| `airspeed`, `imu/data`, `joint_states` | `std_msgs/Float32`, `sensor_msgs/Imu`, `sensor_msgs/JointState` | flight_plant → |
 | `/clock` | `rosgraph_msgs/Clock` | plant |
 
 ## From simulation to the vehicle
@@ -72,10 +98,10 @@ is the mapping. Two things do not map and are not meant to:
 - ArduPilot has no stock frame for a propeller airship (its Blimp vehicle is
   a finned indoor blimp; PX4's airship frame is unmaintained). The plan is
   ArduPilot in GUIDED mode as estimator, failsafe and actuator I/O, with the
-  heading/airspeed loop from `flight6dof.FlightController` on the companion.
-  That inner loop is in the 6-DoF model but **not yet a ROS node** — it is
-  the next piece of work, and the vehicle is not flyable from ROS until it
-  exists.
+  heading/airspeed loop (`attitude_controller`) on the companion sending
+  actuator targets. The bridge from `PropulsionCommand` to MAVLink actuator
+  commands is not written, and neither is the decision whether that loop
+  should instead live in the autopilot as a custom frame.
 
 ## Gazebo cross-check
 
@@ -102,10 +128,10 @@ A fin model in Gazebo is open work.
 
 ## Known gaps
 
-- No inner-loop (heading/airspeed) ROS node yet; the plant accepts an air
-  velocity and applies a first-order lag.
-- The plant has no attitude dynamics; the 6-DoF model does, but is not yet
-  behind a ROS node.
+- Two plants, not one: the mission plant has no attitude dynamics and the
+  6-DoF plant has no ascent. Joining them is open work.
+- No MAVLink actuator bridge; nothing here has talked to an autopilot or to
+  ArduPilot SITL.
 - Sensor noise, GNSS dropouts and link loss are not injected. The P0 twin's
   fault-injection pattern is the template.
 - `robot_localization` is installed but not in the loop; on the vehicle the

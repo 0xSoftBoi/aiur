@@ -27,6 +27,8 @@ class StationKeeperNode(Node):
                         float(p("station_north_m", 0.0).value))
         self.tau = float(p("wind_filter_s", 60.0).value)
         self.airspeed_lag_s = float(p("airspeed_lag_s", 20.0).value)
+        #: True when no float manager is running (float-phase simulations).
+        self.always_active = bool(p("always_active", False).value)
         self.phase = FlightPhase.PRELAUNCH.value
         self.wind = [0.0, 0.0]          # east, north
         self.air_est = [0.0, 0.0]       # achieved air velocity estimate
@@ -59,7 +61,7 @@ class StationKeeperNode(Node):
         out = TwistStamped()
         out.header.stamp = msg.header.stamp
         out.header.frame_id = "map"
-        if self.phase == FlightPhase.STATION_KEEP.value:
+        if self.always_active or self.phase == FlightPhase.STATION_KEEP.value:
             err_e = self.station[0] - msg.pose.pose.position.x
             err_n = self.station[1] - msg.pose.pose.position.y
             c = self.keeper.command(err_n, err_e, self.wind[1], self.wind[0])
