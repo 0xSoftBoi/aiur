@@ -1,0 +1,15 @@
+# How the simulation topics map onto a real vehicle running ArduPilot + MAVROS.
+# The flight nodes are unchanged; only remappings (and one small adapter for
+# the buoyancy state) differ.  See docs/strato/ros.md.
+sim_topic_to_vehicle_source:
+  /aiur/odom: /mavros/global_position/local            # nav_msgs/Odometry, ENU
+  /aiur/gps/fix: /mavros/global_position/global        # sensor_msgs/NavSatFix
+  /aiur/baro/pressure: /mavros/imu/static_pressure     # sensor_msgs/FluidPressure (external MS5611)
+  /aiur/battery: /mavros/battery                       # sensor_msgs/BatteryState
+  /aiur/temperature/ambient: rtd_node (MAX31865 on the companion SPI)
+  /aiur/temperature/gas: rtd_node
+  /aiur/buoyancy: buoyancy_estimator (gas RTD + hull dp sensor + actuator states)
+vehicle_sink_for_sim_command:
+  /aiur/cmd/air_velocity: /mavros/setpoint_velocity/cmd_vel   # geometry_msgs/TwistStamped, GUIDED
+  /aiur/cmd/float: actuator_bridge -> MAV_CMD_DO_SET_ACTUATOR (vent servo, ballast servo, gimbal pitch trim)
+  /aiur/cmd/terminate: NOT ROUTED. The cut-down is fired by the flight-termination unit only.

@@ -1,0 +1,14 @@
+{
+  "S1-touch/hull": {
+    "cruise_thrust_n": 0.44597371563268784,
+    "expected_airspeed_m_s": 3.0,
+    "mass_kg": 9.428482110992046,
+    "added_mass_x_kg": 0.7689610734759071
+  },
+  "S2-dayloiter/hull": {
+    "cruise_thrust_n": 2.507701193901548,
+    "expected_airspeed_m_s": 6.0,
+    "mass_kg": 15.255609995523372,
+    "added_mass_x_kg": 1.2442055996490744
+  }
+}

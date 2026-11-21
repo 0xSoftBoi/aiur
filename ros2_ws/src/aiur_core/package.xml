@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>aiur_core</name>
+  <version>0.1.0</version>
+  <description>Installs the repository's dependency-free `aiur` Python package (models and flight-software candidates) into the ROS 2 workspace. The `aiur` directory here is a symlink to the repository root package, so there is exactly one copy of the code.</description>
+  <maintainer email="noreply@aiur.invalid">Aiur</maintainer>
+  <license>Apache-2.0</license>
+  <export><build_type>ament_python</build_type></export>
+</package>

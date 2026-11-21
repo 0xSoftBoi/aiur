@@ -85,212 +85,270 @@ class AscentResult:
                            "events": self.events}, indent=2)
 
 
-def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
-    gas = GASES[cfg.gas]
-    wind = WindProfile(cfg.wind, cfg.wind_scale, cfg.wind_veer_deg)
-    env = RadiativeEnvironment(earth_ir_w_m2=cfg.earth_ir_w_m2)
-    ctl = FloatController(cfg.target_float_m, vent_enabled=cfg.cell_type != "zero-pressure")
-    keeper = StationKeeper(cfg.cruise_airspeed_m_s)
-    fence = Geofence(max_flight_s=cfg.max_time_s)
+class AscentSim:
+    """The plant, one step at a time.
 
-    z = cfg.launch_altitude_m
-    air = isa(z)
-    lift_per_kg = gas.lift_per_kg_gas(air)
-    m_gas = (cfg.dry_mass_kg + cfg.ballast_kg) * (1.0 + cfg.free_lift_fraction) / lift_per_kg
-    m_gas *= 1.0 + cfg.gas_fill_error
-    m_gas0 = m_gas
-    t_gas = air.temperature_k
-    ballast = cfg.ballast_kg
-    w = 0.0
-    north = east = 0.0
-    t = 0.0
-    phase = FlightPhase.ASCENT
-    events: list = []
-    series: list = []
-    float_entry_t = None
-    float_alts: list = []
-    max_alt = z
-    max_dp = 0.0
-    min_supertemp = 0.0
-    max_supertemp = 0.0
-    vented = 0.0
-    burst = False
-    energy_wh = 0.0
-    trim_energy = 0.0
-    next_rec = 0.0
-    max_range = 0.0
-    descent_mass = cfg.descent_mass_kg or cfg.dry_mass_kg
-    # Parachute sized for the stated sea-level descent rate.
-    chute_cda = 2.0 * descent_mass * G0 / (1.225 * cfg.descent_rate_sea_level_m_s**2)
-    vmax_cell = cfg.max_volume_m3
-    dt = cfg.dt_s
+    ``simulate`` wraps this with the flight-software controllers for batch
+    runs; the ROS 2 plant node steps the very same object and takes its
+    commands from topics instead.  There is one set of physics.
+    """
 
-    def log(msg: str) -> None:
-        events.append({"t_s": round(t, 1), "alt_m": round(z, 1), "event": msg})
+    def __init__(self, cfg: AscentConfig) -> None:
+        self.cfg = cfg
+        self.gas = GASES[cfg.gas]
+        self.wind = WindProfile(cfg.wind, cfg.wind_scale, cfg.wind_veer_deg)
+        self.env = RadiativeEnvironment(earth_ir_w_m2=cfg.earth_ir_w_m2)
+        self.z = cfg.launch_altitude_m
+        air = isa(self.z)
+        lift_per_kg = self.gas.lift_per_kg_gas(air)
+        self.m_gas = ((cfg.dry_mass_kg + cfg.ballast_kg) * (1.0 + cfg.free_lift_fraction)
+                      / lift_per_kg) * (1.0 + cfg.gas_fill_error)
+        self.m_gas0 = self.m_gas
+        self.t_gas = air.temperature_k
+        self.ballast = cfg.ballast_kg
+        self.w = 0.0
+        self.north = self.east = 0.0
+        self.vel_north = self.vel_east = 0.0
+        self.t = 0.0
+        self.volume = self.m_gas * self.gas.gas_constant * self.t_gas / air.pressure_pa
+        self.fill = self.volume / cfg.max_volume_m3
+        self.dp = 0.0
+        self.supertemp = 0.0
+        self.sun_el = 0.0
+        self.vented = 0.0
+        self.burst = False
+        self.descending = False
+        self.landed = False
+        self.landing_speed = 0.0
+        self.powered = False
+        self.air_speed_cmd = 0.0
+        self.descent_mass = cfg.descent_mass_kg or cfg.dry_mass_kg
+        self.chute_cda = (2.0 * self.descent_mass * G0
+                          / (1.225 * cfg.descent_rate_sea_level_m_s**2))
 
-    log(f"launch with {m_gas:.3f} kg {cfg.gas} "
-        f"({m_gas * gas.gas_constant * 288.15 / 101325:.1f} Nm3)")
+    @property
+    def air(self):
+        return isa(self.z)
 
-    while t < cfg.max_time_s + 4 * 3600.0:
-        air = isa(z)
-        hour = (cfg.launch_hour + t / 3600.0) % 24.0
-        sun_el = solar_elevation_deg(cfg.latitude_deg, cfg.day_of_year, hour)
-        wv = wind.at(z)
+    def terminate(self) -> None:
+        self.descending = True
 
-        if phase in (FlightPhase.DESCENT,):
+    def step(self, dt: float, vent_open: bool = False, ballast_kg_s: float = 0.0,
+             trim: float = 0.0, air_velocity_ne: tuple = (0.0, 0.0)) -> None:
+        if self.landed:
+            return
+        cfg, gas = self.cfg, self.gas
+        air = isa(self.z)
+        hour = (cfg.launch_hour + self.t / 3600.0) % 24.0
+        self.sun_el = solar_elevation_deg(cfg.latitude_deg, cfg.day_of_year, hour)
+        wv = self.wind.at(self.z)
+
+        if self.descending:
             # Under parachute: quasi-steady terminal velocity.
-            w = -math.sqrt(2.0 * descent_mass * G0 / (air.density_kg_m3 * chute_cda))
-            z += w * dt
-            north += wv.north_m_s * dt
-            east += wv.east_m_s * dt
-            t += dt
-            if z <= cfg.launch_altitude_m:
-                z = cfg.launch_altitude_m
-                phase = FlightPhase.LANDED
-                log(f"landed {math.hypot(north, east)/1000:.1f} km from launch, "
-                    f"{abs(w):.1f} m/s")
-                break
-            if t >= next_rec:
-                series.append(_row(t, z, w, 0.0, 0.0, 0.0, north, east, phase, sun_el, 0.0))
-                next_rec += record_every_s
-            continue
+            self.w = -math.sqrt(2.0 * self.descent_mass * G0
+                                / (air.density_kg_m3 * self.chute_cda))
+            self.z += self.w * dt
+            self.vel_north, self.vel_east = wv.north_m_s, wv.east_m_s
+            self.north += wv.north_m_s * dt
+            self.east += wv.east_m_s * dt
+            self.t += dt
+            self.fill = self.dp = self.supertemp = 0.0
+            if self.z <= cfg.launch_altitude_m:
+                self.z = cfg.launch_altitude_m
+                self.landing_speed = abs(self.w)
+                self.w = 0.0
+                self.vel_north = self.vel_east = 0.0
+                self.landed = True
+            return
 
         # --- gas state
-        p_gas_ambient = air.pressure_pa + (cfg.skin_pressure_pa if cfg.cell_type == "latex" else 0.0)
-        v_free = m_gas * gas.gas_constant * t_gas / p_gas_ambient
+        latex = cfg.cell_type == "latex"
+        p_gas = air.pressure_pa + (cfg.skin_pressure_pa if latex else 0.0)
+        v_free = self.m_gas * gas.gas_constant * self.t_gas / p_gas
+        vmax = cfg.max_volume_m3
         dp = 0.0
         if cfg.cell_type == "zero-pressure":
-            if v_free > vmax_cell:
-                new_m = p_gas_ambient * vmax_cell / (gas.gas_constant * t_gas)
-                vented += m_gas - new_m
-                m_gas = new_m
-                v_free = vmax_cell
+            if v_free > vmax:
+                new_m = p_gas * vmax / (gas.gas_constant * self.t_gas)
+                self.vented += self.m_gas - new_m
+                self.m_gas = new_m
+                v_free = vmax
             volume = v_free
         elif cfg.cell_type == "superpressure":
-            if v_free > vmax_cell:
-                dp = m_gas * gas.gas_constant * t_gas / vmax_cell - air.pressure_pa
+            if v_free > vmax:
+                dp = self.m_gas * gas.gas_constant * self.t_gas / vmax - air.pressure_pa
                 if dp > cfg.relief_pa and not cfg.valve_fail_closed:
-                    new_m = (air.pressure_pa + cfg.relief_pa) * vmax_cell / (gas.gas_constant * t_gas)
-                    vented += m_gas - new_m
-                    m_gas = new_m
+                    new_m = (air.pressure_pa + cfg.relief_pa) * vmax / (gas.gas_constant * self.t_gas)
+                    self.vented += self.m_gas - new_m
+                    self.m_gas = new_m
                     dp = cfg.relief_pa
                 if dp > cfg.burst_pa:
-                    burst = True
-                volume = vmax_cell
+                    self.burst = True
+                volume = vmax
             else:
                 volume = v_free
-        else:  # latex
+        else:
             volume = v_free
             dp = cfg.skin_pressure_pa
-            if volume > vmax_cell:
-                burst = True
-        max_dp = max(max_dp, dp)
-        fill = min(1.0, volume / vmax_cell)
+            if volume > vmax:
+                self.burst = True
+        self.volume, self.dp = volume, dp
+        fill = min(1.0, volume / vmax)
+        self.fill = fill
+        if self.burst:
+            self.descending = True
+            return
 
-        if burst:
-            log(f"BURST at {z:.0f} m (volume {volume:.0f} m3, dp {dp:.0f} Pa)")
-            phase = FlightPhase.DESCENT
-            continue
-
-        # --- control
-        cmd = ctl.command(z, w, dt)
-        vent_open = cmd.vent_open and not cfg.valve_fail_closed and phase != FlightPhase.TERMINATED
-        if vent_open:
-            if cfg.cell_type == "latex":
+        # --- commands
+        if vent_open and not cfg.valve_fail_closed:
+            if latex:
                 dpv = cfg.skin_pressure_pa
             elif cfg.cell_type == "superpressure":
                 dpv = max(dp, 2.0)
             else:
                 # Apex valve on a zero-pressure cell sees the gas head.
                 head = (volume / max(cfg.n_cells, 1) * 6.0 / math.pi) ** (1.0 / 3.0)
-                dpv = (air.density_kg_m3 - gas.density(air.pressure_pa, t_gas)) * G0 * head
-            rho_g = gas.density(p_gas_ambient, t_gas)
-            mdot = cfg.n_cells * cfg.valve_cd * cfg.valve_area_m2 * math.sqrt(2.0 * rho_g * max(dpv, 0.0))
-            dm = min(mdot * dt, 0.02 * m_gas)
-            m_gas -= dm
-            vented += dm
-        if cmd.ballast_kg_s > 0.0 and ballast > 0.0:
-            drop = min(ballast, cmd.ballast_kg_s * dt)
-            ballast -= drop
+                dpv = (air.density_kg_m3 - gas.density(air.pressure_pa, self.t_gas)) * G0 * head
+            rho_g = gas.density(p_gas, self.t_gas)
+            mdot = cfg.n_cells * cfg.valve_cd * cfg.valve_area_m2 * math.sqrt(
+                2.0 * rho_g * max(dpv, 0.0))
+            dm = min(mdot * dt, 0.02 * self.m_gas)
+            self.m_gas -= dm
+            self.vented += dm
+        if ballast_kg_s > 0.0 and self.ballast > 0.0:
+            self.ballast -= min(self.ballast, ballast_kg_s * dt)
 
         # --- vertical dynamics
-        mass = cfg.dry_mass_kg + ballast + m_gas
+        mass = cfg.dry_mass_kg + self.ballast + self.m_gas
         buoy = air.density_kg_m3 * volume * G0
         cell_v = volume / max(cfg.n_cells, 1)
         a_sphere = cfg.n_cells * math.pi * (3.0 * cell_v / (4.0 * math.pi)) ** (2.0 / 3.0)
-        if cfg.cell_type == "latex":
-            area = a_sphere
-        else:
-            area = (1.0 - fill**2) * a_sphere + fill**2 * cfg.cross_area_full_m2
+        area = a_sphere if latex else (1.0 - fill**2) * a_sphere + fill**2 * cfg.cross_area_full_m2
+        w = self.w
         drag = -0.5 * air.density_kg_m3 * cfg.ascent_cd * area * abs(w) * w
         virtual = mass + 0.5 * air.density_kg_m3 * volume
-        trim_n = cmd.trim * cfg.trim_thrust_n if phase in (
-            FlightPhase.FLOAT_ENTRY, FlightPhase.STATION_KEEP) else 0.0
-        trim_energy += abs(cmd.trim) * dt / 3600.0 if trim_n else 0.0
-        accel = (buoy - mass * G0 + drag + trim_n) / virtual
-        w += accel * dt
+        trim_n = max(-1.0, min(1.0, trim)) * cfg.trim_thrust_n
+        w += (buoy - mass * G0 + drag + trim_n) / virtual * dt
         w = max(-40.0, min(40.0, w))
-        z_new = z + w * dt
-        if z_new < cfg.launch_altitude_m and t > 60.0:
-            z = cfg.launch_altitude_m
-            log("returned to ground without termination")
-            phase = FlightPhase.LANDED
-            break
+        z_new = self.z + w * dt
+        if z_new < cfg.launch_altitude_m and self.t > 60.0:
+            self.z = cfg.launch_altitude_m
+            self.w = 0.0
+            self.landed = True
+            return
+
         # --- gas thermodynamics
         s_eff = cfg.n_cells * 4.0 * math.pi * (3.0 * cell_v / (4.0 * math.pi)) ** (2.0 / 3.0)
-        if cfg.cell_type != "latex":
+        if not latex:
             s_eff = (1.0 - fill) * s_eff + fill * cfg.full_surface_m2
-        rel_speed = math.hypot(w, cfg.cruise_airspeed_m_s if phase == FlightPhase.STATION_KEEP else 0.0)
-        h_ext = external_h_w_m2k(air, cfg.length_m, rel_speed, t_gas - air.temperature_k)
+        an, ae = air_velocity_ne
+        self.air_speed_cmd = math.hypot(an, ae)
+        rel_speed = math.hypot(w, self.air_speed_cmd)
+        h_ext = external_h_w_m2k(air, cfg.length_m, rel_speed, self.t_gas - air.temperature_k)
         h_int = 2.5
-        sun = direct_irradiance_w_m2(z, sun_el)
-        t_film = film_temperature_k(air, cfg.optics, t_gas, sun, sun_el, h_ext, h_int, env)
-        q = h_int * s_eff * (t_film - t_gas)
+        sun = direct_irradiance_w_m2(self.z, self.sun_el)
+        t_film = film_temperature_k(air, cfg.optics, self.t_gas, sun, self.sun_el,
+                                    h_ext, h_int, self.env)
+        q = h_int * s_eff * (t_film - self.t_gas)
         dp_amb = -air.density_kg_m3 * G0 * w * dt
         expanding = cfg.cell_type != "superpressure" or fill < 1.0
-        dt_adiabatic = (gas.gas_constant * t_gas / (gas.cp_j_kgk * air.pressure_pa)) * dp_amb \
+        dt_ad = (gas.gas_constant * self.t_gas / (gas.cp_j_kgk * air.pressure_pa)) * dp_amb \
             if expanding else 0.0
-        t_gas += q * dt / (m_gas * gas.cp_j_kgk) + dt_adiabatic
-        supertemp = t_gas - air.temperature_k
-        min_supertemp = min(min_supertemp, supertemp)
-        max_supertemp = max(max_supertemp, supertemp)
+        self.t_gas += q * dt / (self.m_gas * gas.cp_j_kgk) + dt_ad
+        self.supertemp = self.t_gas - air.temperature_k
 
-        # --- horizontal
-        if phase == FlightPhase.STATION_KEEP and cfg.use_station_keeping:
-            ac = keeper.command(-north, -east, wv.north_m_s, wv.east_m_s)
-            north += (wv.north_m_s + ac.north_m_s) * dt
-            east += (wv.east_m_s + ac.east_m_s) * dt
-            energy_wh += (ac.airspeed_m_s / max(cfg.cruise_airspeed_m_s, 0.1)) ** 3 * dt / 3600.0
+        # --- horizontal: the vehicle moves with the air plus its own airspeed
+        self.vel_north = wv.north_m_s + an
+        self.vel_east = wv.east_m_s + ae
+        self.north += self.vel_north * dt
+        self.east += self.vel_east * dt
+        self.z = z_new
+        self.w = w
+        self.t += dt
+
+    @property
+    def range_m(self) -> float:
+        return math.hypot(self.north, self.east)
+
+
+def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
+    sim = AscentSim(cfg)
+    ctl = FloatController(cfg.target_float_m, vent_enabled=cfg.cell_type != "zero-pressure")
+    keeper = StationKeeper(cfg.cruise_airspeed_m_s)
+    fence = Geofence(max_flight_s=cfg.max_time_s)
+    phase = FlightPhase.ASCENT
+    events: list = []
+    series: list = []
+    float_entry_t = None
+    float_alts: list = []
+    max_alt = sim.z
+    max_dp = 0.0
+    min_st = max_st = 0.0
+    energy_cube_h = 0.0
+    trim_h = 0.0
+    next_rec = 0.0
+    max_range = 0.0
+    dt = cfg.dt_s
+
+    def log(msg: str) -> None:
+        events.append({"t_s": round(sim.t, 1), "alt_m": round(sim.z, 1), "event": msg})
+
+    log(f"launch with {sim.m_gas:.3f} kg {cfg.gas} "
+        f"({sim.m_gas * sim.gas.gas_constant * 288.15 / 101325:.1f} Nm3)")
+
+    while sim.t < cfg.max_time_s + 4 * 3600.0 and not sim.landed:
+        if phase == FlightPhase.DESCENT:
+            sim.step(dt)
         else:
-            north += wv.north_m_s * dt
-            east += wv.east_m_s * dt
-        z = z_new
-        t += dt
-        max_alt = max(max_alt, z)
-        rng = math.hypot(north, east)
-        max_range = max(max_range, rng)
-
-        # --- phase logic
-        if phase == FlightPhase.ASCENT and z > cfg.target_float_m - ctl.approach_m:
+            cmd = ctl.command(sim.z, sim.w, dt)
+            trim = cmd.trim if phase in (FlightPhase.FLOAT_ENTRY, FlightPhase.STATION_KEEP) else 0.0
+            air_vel = (0.0, 0.0)
+            if phase == FlightPhase.STATION_KEEP and cfg.use_station_keeping:
+                wv = sim.wind.at(sim.z)
+                ac = keeper.command(-sim.north, -sim.east, wv.north_m_s, wv.east_m_s)
+                air_vel = (ac.north_m_s, ac.east_m_s)
+                energy_cube_h += (ac.airspeed_m_s / max(cfg.cruise_airspeed_m_s, 0.1)) ** 3 * dt / 3600.0
+            if trim and cfg.trim_thrust_n:
+                trim_h += abs(trim) * dt / 3600.0
+            was_burst = sim.burst
+            sim.step(dt, cmd.vent_open, cmd.ballast_kg_s, trim, air_vel)
+            if sim.burst and not was_burst:
+                log(f"BURST (volume {sim.volume:.0f} m3, dp {sim.dp:.0f} Pa)")
+                phase = FlightPhase.DESCENT
+                continue
+        max_alt = max(max_alt, sim.z)
+        max_dp = max(max_dp, sim.dp)
+        min_st, max_st = min(min_st, sim.supertemp), max(max_st, sim.supertemp)
+        max_range = max(max_range, sim.range_m)
+        if sim.landed:
+            if phase == FlightPhase.DESCENT:
+                log(f"landed {sim.range_m/1000:.1f} km from launch, {sim.landing_speed:.1f} m/s")
+            else:
+                log("returned to ground without termination")
+            phase = FlightPhase.LANDED
+            break
+        if phase == FlightPhase.ASCENT and sim.z > cfg.target_float_m - ctl.approach_m:
             phase = FlightPhase.FLOAT_ENTRY
-            log(f"float entry, climb {w:.2f} m/s, gas {supertemp:+.1f} K vs air")
-        if phase == FlightPhase.FLOAT_ENTRY and abs(w) < 0.3 and \
-                abs(z - cfg.target_float_m) < 1500.0 or \
-                (phase == FlightPhase.FLOAT_ENTRY and fill >= 0.999 and abs(w) < 0.3):
+            log(f"float entry, climb {sim.w:.2f} m/s, gas {sim.supertemp:+.1f} K vs air")
+        if phase == FlightPhase.FLOAT_ENTRY and abs(sim.w) < 0.3 and (
+                abs(sim.z - cfg.target_float_m) < 1500.0 or sim.fill >= 0.999):
             phase = FlightPhase.STATION_KEEP
-            float_entry_t = t
-            log(f"at float, {rng/1000:.1f} km downrange, fill {100*fill:.0f} %")
+            float_entry_t = sim.t
+            log(f"at float, {sim.range_m/1000:.1f} km downrange, fill {100*sim.fill:.0f} %")
         if phase == FlightPhase.STATION_KEEP:
-            float_alts.append(z)
-        term, why = fence.must_terminate(rng, z, t)
-        if phase == FlightPhase.STATION_KEEP and float_entry_t is not None and \
-                t - float_entry_t >= cfg.float_duration_s:
-            term, why = True, "mission complete"
-        if term and phase not in (FlightPhase.DESCENT, FlightPhase.LANDED):
-            log(f"terminate: {why}")
-            phase = FlightPhase.DESCENT
-        if t >= next_rec:
-            series.append(_row(t, z, w, supertemp, fill, dp, north, east, phase, sun_el, m_gas))
+            float_alts.append(sim.z)
+        if phase != FlightPhase.DESCENT:
+            term, why = fence.must_terminate(sim.range_m, sim.z, sim.t)
+            if phase == FlightPhase.STATION_KEEP and float_entry_t is not None and \
+                    sim.t - float_entry_t >= cfg.float_duration_s:
+                term, why = True, "mission complete"
+            if term:
+                log(f"terminate: {why}")
+                sim.terminate()
+                phase = FlightPhase.DESCENT
+        if sim.t >= next_rec:
+            series.append(_row(sim.t, sim.z, sim.w, sim.supertemp, sim.fill, sim.dp, sim.north,
+                               sim.east, phase, sim.sun_el, sim.m_gas))
             next_rec += record_every_s
 
     mean_float = sum(float_alts) / len(float_alts) if float_alts else float("nan")
@@ -304,20 +362,20 @@ def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
         "max_altitude_m": round(max_alt, 0),
         "float_mean_m": None if not float_alts else round(mean_float, 0),
         "float_sd_m": None if not float_alts else round(sd_float, 0),
-        "min_gas_supertemp_k": round(min_supertemp, 1),
-        "max_gas_supertemp_k": round(max_supertemp, 1),
+        "min_gas_supertemp_k": round(min_st, 1),
+        "max_gas_supertemp_k": round(max_st, 1),
         "max_superpressure_pa": round(max_dp, 1),
-        "gas_launch_kg": round(m_gas0, 3),
-        "gas_vented_kg": round(vented, 3),
-        "ballast_used_kg": round(cfg.ballast_kg - ballast, 3),
-        "burst": burst,
+        "gas_launch_kg": round(sim.m_gas0, 3),
+        "gas_vented_kg": round(sim.vented, 3),
+        "ballast_used_kg": round(cfg.ballast_kg - sim.ballast, 3),
+        "burst": sim.burst,
         "max_range_km": round(max_range / 1000.0, 1),
-        "landing_range_km": round(math.hypot(north, east) / 1000.0, 1),
-        "landing_bearing_deg": round(math.degrees(math.atan2(east, north)) % 360.0, 0),
-        "flight_time_h": round(t / 3600.0, 2),
+        "landing_range_km": round(sim.range_m / 1000.0, 1),
+        "landing_bearing_deg": round(math.degrees(math.atan2(sim.east, sim.north)) % 360.0, 0),
+        "flight_time_h": round(sim.t / 3600.0, 2),
         "final_phase": phase.value,
-        "station_keep_cube_hours": round(energy_wh, 3),
-        "trim_full_thrust_hours": round(trim_energy, 3),
+        "station_keep_cube_hours": round(energy_cube_h, 3),
+        "trim_full_thrust_hours": round(trim_h, 3),
     }
     return AscentResult(cfg.name, summary, series, events)
 
