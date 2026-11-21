@@ -63,7 +63,10 @@ class Mission:
     day_of_year: int = 172
     gas: str = "hydrogen"
     #: Launch free lift as a fraction of gross mass.
-    free_lift_fraction: float = 0.15
+    #: 0.45 not the textbook 0.10-0.15: a small vehicle climbs as mass^(1/6), and
+    #: the Monte Carlo loses a quarter of summer flights to jet-stream drift at
+    #: 15 %. Hydrogen is cents; range is the mission.
+    free_lift_fraction: float = 0.45
     recoverable: bool = True
     dry_margin: float = 0.10
 
@@ -73,8 +76,8 @@ class Avionics:
     """Fixed equipment; kept equal to hardware/strato/avionics/components.csv
     by ``python -m aiur.strato.harness --check-budget``."""
 
-    mass_kg: float = 0.62
-    power_w: float = 9.5
+    mass_kg: float = 0.31
+    power_w: float = 6.1
     bay_area_m2: float = 0.22
     bay_insulation_m: float = 0.025
     bay_mass_kg: float = 0.14

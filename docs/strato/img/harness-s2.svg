@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1890 570" font-family="Helvetica,Arial,sans-serif" font-size="11">
+<rect width="1890" height="570" fill="#ffffff"/>
+<text x="70" y="24" font-size="15" font-weight="bold">STRATO S2 avionics harness - generated from hardware/strato/avionics/*.csv</text>
+<text x="70" y="52" font-weight="bold" fill="#333">external</text>
+<text x="330" y="52" font-weight="bold" fill="#333">ftu-box</text>
+<text x="590" y="52" font-weight="bold" fill="#333">bay-lid</text>
+<text x="850" y="52" font-weight="bold" fill="#333">bay (heated, foam)</text>
+<text x="1110" y="52" font-weight="bold" fill="#333">bay (cont.)</text>
+<text x="1370" y="52" font-weight="bold" fill="#333">spine-bottom</text>
+<text x="1630" y="52" font-weight="bold" fill="#333">stern-pod</text>
+<path d="M1040,72.0 C1077,81.0 1077,127.0 1040,118.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,121.0 C1074,127.0 1074,173.0 1040,167.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,124.0 C1075.0,124.0 1075.0,124.0 1110,124.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,127.0 C1068,127.0 1068,219.0 1040,219.0" fill="none" stroke="#566573" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,176.0 C1071,173.0 1071,219.0 1040,222.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,179.0 C1074,173.0 1074,311.0 1040,317.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,182.0 C1077,173.0 1077,357.0 1040,366.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M850,164.0 C815.0,164.0 815.0,72.0 780,72.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,167.0 C1074,173.0 1074,265.0 1040,259.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,170.0 C1075.0,170.0 1075.0,78.0 1110,78.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,173.0 C1075.0,173.0 1075.0,173.0 1110,173.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,176.0 C1075.0,176.0 1075.0,222.0 1110,222.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,179.0 C1075.0,179.0 1075.0,271.0 1110,271.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,210.0 C1077,219.0 1077,311.0 1040,302.0" fill="none" stroke="#2471a3" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,213.0 C1074,219.0 1074,357.0 1040,351.0" fill="none" stroke="#2471a3" stroke-width="1.3" opacity="0.8"/>
+<path d="M850,216.0 C815.0,216.0 815.0,78.0 780,78.0" fill="none" stroke="#2471a3" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,219.0 C1068,219.0 1068,265.0 1040,265.0" fill="none" stroke="#1e8449" stroke-width="1.3" opacity="0.8"/>
+<path d="M850,222.0 C815.0,222.0 815.0,84.0 780,84.0" fill="none" stroke="#1e8449" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,225.0 C1075.0,225.0 1075.0,225.0 1110,225.0" fill="none" stroke="#1e8449" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,228.0 C1075.0,228.0 1075.0,274.0 1110,274.0" fill="none" stroke="#1e8449" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,210.0 C1075.0,210.0 1075.0,72.0 1110,72.0" fill="none" stroke="#b9770e" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,213.0 C1075.0,213.0 1075.0,121.0 1110,121.0" fill="none" stroke="#b9770e" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,311.0 C1075.0,311.0 1075.0,173.0 1110,173.0" fill="none" stroke="#148f77" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,84.0 C1851,81.0 1851,127.0 1820,130.0" fill="none" stroke="#922b21" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,363.0 C1205.0,363.0 1205.0,87.0 1370,87.0" fill="none" stroke="#99a3a4" stroke-width="1.3" opacity="0.8" stroke-dasharray="4 3"/>
+<path d="M520,136.0 C557,127.0 557,173.0 520,182.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M330,118.0 C295.0,118.0 295.0,164.0 260,164.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M330,121.0 C295.0,121.0 295.0,213.0 260,213.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M520,170.0 C551,173.0 551,81.0 520,78.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M520,173.0 C548,173.0 548,219.0 520,219.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M520,84.0 C551,81.0 551,219.0 520,222.0" fill="none" stroke="#1e8449" stroke-width="1.3" opacity="0.8"/>
+<path d="M330,87.0 C295.0,87.0 295.0,179.0 260,179.0" fill="none" stroke="#7d3c98" stroke-width="1.3" opacity="0.8"/>
+<path d="M330,90.0 C295.0,90.0 295.0,228.0 260,228.0" fill="none" stroke="#7d3c98" stroke-width="1.3" opacity="0.8"/>
+<path d="M330,72.0 C295.0,72.0 295.0,256.0 260,256.0" fill="none" stroke="#99a3a4" stroke-width="1.3" opacity="0.8" stroke-dasharray="4 3"/>
+<path d="M850,213.0 C685.0,213.0 685.0,75.0 520,75.0" fill="none" stroke="#d4ac0d" stroke-width="1.3" opacity="0.8" stroke-dasharray="4 3"/>
+<path d="M1040,216.0 C1335.0,216.0 1335.0,492.0 1630,492.0" fill="none" stroke="#e74c3c" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,357.0 C1848,357.0 1848,403.0 1820,403.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,406.0 C1851,403.0 1851,81.0 1820,84.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,409.0 C1854,403.0 1854,449.0 1820,455.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,412.0 C1857,403.0 1857,311.0 1820,320.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,440.0 C1857,449.0 1857,495.0 1820,486.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,443.0 C1854,449.0 1854,219.0 1820,213.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,446.0 C1851,449.0 1851,265.0 1820,262.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,403.0 C1848,403.0 1848,495.0 1820,495.0" fill="none" stroke="#566573" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,498.0 C1851,495.0 1851,81.0 1820,84.0" fill="none" stroke="#b9770e" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,501.0 C1854,495.0 1854,219.0 1820,225.0" fill="none" stroke="#b9770e" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,504.0 C1857,495.0 1857,265.0 1820,274.0" fill="none" stroke="#b9770e" stroke-width="1.3" opacity="0.8"/>
+<path d="M1820,486.0 C1857,495.0 1857,311.0 1820,302.0" fill="none" stroke="#b9770e" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,167.0 C1075.0,167.0 1075.0,305.0 1110,305.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,170.0 C1075.0,170.0 1075.0,354.0 1110,354.0" fill="none" stroke="#c0392b" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,311.0 C1075.0,311.0 1075.0,311.0 1110,311.0" fill="none" stroke="#2e86c1" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,314.0 C1075.0,314.0 1075.0,360.0 1110,360.0" fill="none" stroke="#2e86c1" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,317.0 C1075.0,317.0 1075.0,317.0 1110,317.0" fill="none" stroke="#7d3c98" stroke-width="1.3" opacity="0.8"/>
+<path d="M1040,320.0 C1075.0,320.0 1075.0,366.0 1110,366.0" fill="none" stroke="#7d3c98" stroke-width="1.3" opacity="0.8"/>
+<path d="M1110,302.0 C685.0,302.0 685.0,72.0 260,72.0" fill="none" stroke="#566573" stroke-width="1.3" opacity="0.8"/>
+<path d="M1110,351.0 C685.0,351.0 685.0,121.0 260,121.0" fill="none" stroke="#566573" stroke-width="1.3" opacity="0.8"/>
+<rect x="70" y="64" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="76" y="78" font-weight="bold">T_AMB</text>
+<text x="76" y="91" fill="#444" font-size="9.5">Ambient temperature probe</text>
+<rect x="70" y="110" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="76" y="124" font-weight="bold">T_GAS</text>
+<text x="76" y="137" fill="#444" font-size="9.5">Gas temperature probe</text>
+<rect x="70" y="156" width="190" height="34" rx="4" fill="#fdecea" stroke="#555"/>
+<text x="76" y="170" font-weight="bold">CUT_A</text>
+<text x="76" y="183" fill="#444" font-size="9.5">Cut-down A (suspension)</text>
+<rect x="70" y="202" width="190" height="34" rx="4" fill="#fdecea" stroke="#555"/>
+<text x="76" y="216" font-weight="bold">CUT_B</text>
+<text x="76" y="229" fill="#444" font-size="9.5">Cut-down B (envelope)</text>
+<rect x="70" y="248" width="190" height="34" rx="4" fill="#fdecea" stroke="#555"/>
+<text x="76" y="262" font-weight="bold">FTU_ANT</text>
+<text x="76" y="275" fill="#444" font-size="9.5">FTU antenna 868/433 MHz</text>
+<rect x="70" y="294" width="190" height="34" rx="4" fill="#eef7ee" stroke="#555"/>
+<text x="76" y="308" font-weight="bold">CHUTE</text>
+<text x="76" y="321" fill="#444" font-size="9.5">Recovery parachute 1.2 m</text>
+<rect x="70" y="340" width="190" height="34" rx="4" fill="#eef7ee" stroke="#555"/>
+<text x="76" y="354" font-weight="bold">REFL</text>
+<text x="76" y="367" fill="#444" font-size="9.5">Radar reflector</text>
+<rect x="330" y="64" width="190" height="34" rx="4" fill="#fdecea" stroke="#555"/>
+<text x="336" y="78" font-weight="bold">FTU</text>
+<text x="336" y="91" fill="#444" font-size="9.5">Flight termination unit</text>
+<rect x="330" y="110" width="190" height="34" rx="4" fill="#fdecea" stroke="#555"/>
+<text x="336" y="124" font-weight="bold">FTU_BAT</text>
+<text x="336" y="137" fill="#444" font-size="9.5">FTU primary battery</text>
+<rect x="330" y="156" width="190" height="34" rx="4" fill="#fdecea" stroke="#555"/>
+<text x="336" y="170" font-weight="bold">FTU_REG</text>
+<text x="336" y="183" fill="#444" font-size="9.5">FTU 3.3 V buck</text>
+<rect x="330" y="202" width="190" height="34" rx="4" fill="#fdecea" stroke="#555"/>
+<text x="336" y="216" font-weight="bold">FTU_BARO</text>
+<text x="336" y="229" fill="#444" font-size="9.5">FTU barometer</text>
+<rect x="590" y="64" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="596" y="78" font-weight="bold">GNSS</text>
+<text x="596" y="91" fill="#444" font-size="9.5">GNSS + compass</text>
+<rect x="850" y="64" width="190" height="34" rx="4" fill="#fff6e0" stroke="#555"/>
+<text x="856" y="78" font-weight="bold">BAT</text>
+<text x="856" y="91" fill="#444" font-size="9.5">Hotel battery 6SnP 21700</text>
+<rect x="850" y="110" width="190" height="34" rx="4" fill="#fff6e0" stroke="#555"/>
+<text x="856" y="124" font-weight="bold">PM</text>
+<text x="856" y="137" fill="#444" font-size="9.5">Power module + battery monitor</text>
+<rect x="850" y="156" width="190" height="34" rx="4" fill="#fff6e0" stroke="#555"/>
+<text x="856" y="170" font-weight="bold">BEC5</text>
+<text x="856" y="183" fill="#444" font-size="9.5">5 V 5 A switching regulator</text>
+<rect x="850" y="202" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="856" y="216" font-weight="bold">FC</text>
+<text x="856" y="229" fill="#444" font-size="9.5">Flight controller</text>
+<rect x="850" y="248" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="856" y="262" font-weight="bold">BARO</text>
+<text x="856" y="275" fill="#444" font-size="9.5">External barometer 10-1200 mbar</text>
+<rect x="850" y="294" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="856" y="308" font-weight="bold">CC</text>
+<text x="856" y="321" fill="#444" font-size="9.5">Companion computer (ROS 2)</text>
+<rect x="850" y="340" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="856" y="354" font-weight="bold">RX</text>
+<text x="856" y="367" fill="#444" font-size="9.5">C2 + telemetry radio (air)</text>
+<rect x="1110" y="64" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="1116" y="78" font-weight="bold">SRV_BAL</text>
+<text x="1116" y="91" fill="#444" font-size="9.5">Ballast dispenser servo</text>
+<rect x="1110" y="110" width="190" height="34" rx="4" fill="#fff6e0" stroke="#555"/>
+<text x="1116" y="124" font-weight="bold">HTR_BAY</text>
+<text x="1116" y="137" fill="#444" font-size="9.5">Bay heater</text>
+<rect x="1110" y="156" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="1116" y="170" font-weight="bold">T_BAY</text>
+<text x="1116" y="183" fill="#444" font-size="9.5">Bay temperature probe</text>
+<rect x="1110" y="202" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="1116" y="216" font-weight="bold">DP_HULL</text>
+<text x="1116" y="229" fill="#444" font-size="9.5">Hull differential pressure</text>
+<rect x="1110" y="248" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="1116" y="262" font-weight="bold">DP_PITOT</text>
+<text x="1116" y="275" fill="#444" font-size="9.5">Airspeed pitot</text>
+<rect x="1110" y="294" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="1116" y="308" font-weight="bold">RTD_A</text>
+<text x="1116" y="321" fill="#444" font-size="9.5">RTD amplifier (ambient)</text>
+<rect x="1110" y="340" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="1116" y="354" font-weight="bold">RTD_G</text>
+<text x="1116" y="367" fill="#444" font-size="9.5">RTD amplifier (gas)</text>
+<rect x="1370" y="64" width="190" height="34" rx="4" fill="#f4f4f4" stroke="#555"/>
+<text x="1376" y="78" font-weight="bold">RXANT</text>
+<text x="1376" y="91" fill="#444" font-size="9.5">C2 antenna 868/915 MHz</text>
+<rect x="1630" y="64" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="78" font-weight="bold">ESC</text>
+<text x="1636" y="91" fill="#444" font-size="9.5">Motor controller 6S 40 A</text>
+<rect x="1630" y="110" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="124" font-weight="bold">MOTOR</text>
+<text x="1636" y="137" fill="#444" font-size="9.5">Propulsion motor</text>
+<rect x="1630" y="156" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="170" font-weight="bold">PROP</text>
+<text x="1636" y="183" fill="#444" font-size="9.5">Propeller</text>
+<rect x="1630" y="202" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="216" font-weight="bold">SRV_GY</text>
+<text x="1636" y="229" fill="#444" font-size="9.5">Gimbal yaw servo</text>
+<rect x="1630" y="248" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="262" font-weight="bold">SRV_GP</text>
+<text x="1636" y="275" fill="#444" font-size="9.5">Gimbal pitch servo</text>
+<rect x="1630" y="294" width="190" height="34" rx="4" fill="#fff6e0" stroke="#555"/>
+<text x="1636" y="308" font-weight="bold">HTR_POD</text>
+<text x="1636" y="321" fill="#444" font-size="9.5">Stern pod heater</text>
+<rect x="1630" y="340" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="354" font-weight="bold">BAT_P</text>
+<text x="1636" y="367" fill="#444" font-size="9.5">Propulsion battery 6SnP 21700</text>
+<rect x="1630" y="386" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="400" font-weight="bold">PM_P</text>
+<text x="1636" y="413" fill="#444" font-size="9.5">Pod power module</text>
+<rect x="1630" y="432" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="446" font-weight="bold">BEC_POD</text>
+<text x="1636" y="459" fill="#444" font-size="9.5">Pod 5 V 3 A regulator</text>
+<rect x="1630" y="478" width="190" height="34" rx="4" fill="#eaf2fb" stroke="#555"/>
+<text x="1636" y="492" font-weight="bold">POD_NODE</text>
+<text x="1636" y="505" fill="#444" font-size="9.5">Pod CAN node</text>
+<line x1="70" y1="548" x2="92" y2="548" stroke="#c0392b" stroke-width="2.5"/>
+<text x="96" y="552">power</text>
+<line x1="162" y1="548" x2="184" y2="548" stroke="#2471a3" stroke-width="2.5"/>
+<text x="188" y="552">uart</text>
+<line x1="254" y1="548" x2="276" y2="548" stroke="#1e8449" stroke-width="2.5"/>
+<text x="280" y="552">i2c</text>
+<line x1="346" y1="548" x2="368" y2="548" stroke="#b9770e" stroke-width="2.5"/>
+<text x="372" y="552">pwm</text>
+<line x1="438" y1="548" x2="460" y2="548" stroke="#7d3c98" stroke-width="2.5"/>
+<text x="464" y="552">gpio</text>
+<line x1="530" y1="548" x2="552" y2="548" stroke="#566573" stroke-width="2.5"/>
+<text x="556" y="552">analog</text>
+<line x1="622" y1="548" x2="644" y2="548" stroke="#148f77" stroke-width="2.5"/>
+<text x="648" y="552">onewire</text>
+<line x1="714" y1="548" x2="736" y2="548" stroke="#99a3a4" stroke-width="2.5"/>
+<text x="740" y="552">rf</text>
+<line x1="806" y1="548" x2="828" y2="548" stroke="#922b21" stroke-width="2.5"/>
+<text x="832" y="552">phase</text>
+<line x1="898" y1="548" x2="920" y2="548" stroke="#d4ac0d" stroke-width="2.5"/>
+<text x="924" y="552">opto</text>
+<line x1="990" y1="548" x2="1012" y2="548" stroke="#e74c3c" stroke-width="2.5"/>
+<text x="1016" y="552">can</text>
+<line x1="1082" y1="548" x2="1104" y2="548" stroke="#2e86c1" stroke-width="2.5"/>
+<text x="1108" y="552">spi</text>
+</svg>
