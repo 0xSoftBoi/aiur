@@ -75,6 +75,26 @@ class FloatController:
     spill_margin_m: float = 150.0
     one_sided: bool = False
     _saturated_s: float = 0.0
+    _climb_lp: float = 5.0
+    _full_s: float = 0.0
+    _quiet_s: float = 0.0
+
+    def spill_finished(self, fill_fraction: float, climb_m_s: float, dt_s: float) -> bool:
+        """Has a zero-pressure hull finished filling and spilling?
+
+        Judged on climb rate low-passed over a minute, because turbulence
+        puts +/-0.5 m/s on the raw rate and a raw-rate test never passes in
+        rough air (fault case: 3x gusts flew to the time limit without ever
+        declaring float).  A hull that has simply been full for ten minutes
+        is also taken as settled.
+        """
+
+        a = min(1.0, dt_s / 60.0)
+        self._climb_lp += a * (climb_m_s - self._climb_lp)
+        full = fill_fraction >= 0.995
+        self._full_s = self._full_s + dt_s if full else 0.0
+        self._quiet_s = self._quiet_s + dt_s if full and abs(self._climb_lp) < 0.25 else 0.0
+        return self._quiet_s >= 60.0 or self._full_s >= 600.0
 
     def settle(self, spill_altitude_m: float) -> None:
         """Call once when a zero-pressure hull has filled: hold from here."""

@@ -20,25 +20,32 @@ into [`hardware/strato/bom-*.csv`](../../hardware/strato/).
               forward      under CV        9.5 m: one CAN twisted pair
 ```
 
-| | S1 touch (hull) | S2 day loiter |
-| --- | ---: | ---: |
-| Hull length × diameter | 14.8 × 3.7 m | 17.4 × 4.4 m |
-| Volume / film area | 106 m³ / 138 m² | 172 m³ / 191 m² |
-| Fin area, total | 13.4 m² | 18.5 m² |
-| Gross mass (no gas) | 8.73 kg | 14.12 kg |
-| Film + seams + fittings | 3.87 kg | 5.21 kg |
-| Fins | 1.34 kg | 1.77 kg |
-| Spine and rigging | 0.37 kg | 0.41 kg |
-| Propulsion pod (motor, prop, ESC, gimbal) | 0.41 kg | 0.45 kg |
-| Batteries | 0.46 kg (6S1P) | 1.39 kg (6S3P total) |
-| Solar | — | 0.40 kg, 0.41 m² |
-| Avionics + bay + harness | 0.58 kg | 0.65 kg |
-| Payload | 0.50 kg | 2.00 kg |
-| Recovery + ballast + margin | 1.21 kg | 1.83 kg |
-| Propeller | 0.74 m | 0.87 m |
-| Cruise / dash airspeed | 3 / 5 m/s | 6 / 10 m/s |
-| Cruise / dash electrical | 5 / 18 W | 40 / 188 W |
-| Hydrogen at launch | 11.2 Nm³ | 18.1 Nm³ |
+| | SP1 trainer | S1 touch (hull) | S2 day loiter |
+| --- | ---: | ---: | ---: |
+| Hull length x diameter | 5.1 x 1.3 m | 15.0 x 3.8 m | 17.6 x 4.4 m |
+| Volume / film area | 4.2 m3 / 16 m2 | 111 m3 / 142 m2 | 177 m3 / 195 m2 |
+| Envelope | TPU-coated ripstop, reusable | 20 um LLDPE, single use | 20 um LLDPE, single use |
+| Lift gas | helium | hydrogen | hydrogen |
+| Fin area, total | 1.3 m2 | 11.5 m2 | 15.8 m2 |
+| Gross mass (no gas) | 4.37 kg | 9.10 kg | 14.59 kg |
+| Film + seams + fittings | 1.65 kg | 3.99 kg | 5.35 kg |
+| Fins | 0.35 kg | 1.52 kg | 2.01 kg |
+| Spine and rigging | 0.19 kg | 0.37 kg | 0.42 kg |
+| Propulsion pod | 0.36 kg | 0.41 kg | 0.46 kg |
+| Batteries | 0.46 kg | 0.46 kg | 1.39 kg |
+| Solar | - | - | 0.40 kg, 0.42 m2 |
+| Avionics + bay + harness | 0.54 kg | 0.58 kg | 0.65 kg |
+| Payload | 0.30 kg | 0.50 kg | 2.00 kg |
+| Recovery + ballast + margin | 0.52 kg | 1.25 kg | 1.91 kg |
+| Propeller | 0.60 m | 0.75 m | 0.88 m |
+| Cruise / dash airspeed | 3 / 6 m/s | 3 / 5 m/s | 6 / 10 m/s |
+| Cruise / dash electrical | 6 / 42 W | 5 / 18 W | 41 / 193 W |
+| Gas at launch | 4.3 Nm3 | 11.6 Nm3 | 18.7 Nm3 |
+
+Cut patterns for every hull are generated into
+[`hardware/strato/patterns/`](../../hardware/strato/patterns/) (gore and fin
+SVG/DXF at 1:1, a station table for marking out by hand, a cut list); the
+build procedure is [build-envelope.md](build-envelope.md).
 
 The tandem alternative for S1 (two 1600 g latex cells, 6.4 m carbon boom,
 two 0.77 m propellers) weighs the same 8.8 kg and costs about the same, with
@@ -50,14 +57,15 @@ way to a first flight and a dead end after it.
 
 - **Hull.** Twelve gores of 20 µm linear low-density polyethylene, impulse
   heat-sealed, with a taped load patch every 1.5 m along the keel line for
-  the spine. Hoop load at the 20 Pa relief setting is 43–51 N/m against a
+  the spine. Hoop load at the 20 Pa relief setting is 44–52 N/m against a
   100 N/m sustained allowable (20 % of a 500 N/m short-term ultimate).
   Single-use: the cut-down opens a rip panel.
 - **Relief/fill port.** A weighted flap at the low point: gas spills when the
   hull is full. No active vent on the hull.
 - **Fins.** Four at 45°, each a film skin over two sealed TPU-ripstop
-  air-beam spars inflated to 3 kPa on the ground, with 10 kPa relief valves
-  (a sealed beam would reach 73 kPa at float). No moving surfaces.
+  air-beam spars inflated to 10 kPa on the ground and held there by relief
+  valves (a sealed beam would reach 73 kPa at float). Spar diameter is set
+  by wrinkling under launch loads: 180 mm on S1. No moving surfaces.
 - **Spine.** 12 mm UHMWPE webbing under the hull. At launch the hull is a
   bubble at the top and everything hangs in a vertical chain, stern pod
   lowest; the propeller is a folder for that reason.
@@ -86,9 +94,11 @@ connector. A pod can be swapped on the launch field.
 **3. Termination (FTU box).** LilyGO T-Beam Supreme-class board: ESP32-S3,
 SX1262 LoRa, u-blox M10. Six lithium AA primaries. Its own MS5611. Two
 hot-wire cutters: one drops the equipment string onto its parachute, one
-opens the hull. It runs `aiur.strato.guidance.Geofence` — range, altitude,
-flight time, loss of heartbeat, loss of link, ground command — and nothing
-else. It shares no power rail, no bus and no ground-referenced signal with
+opens the hull, fed through a remove-before-flight plug and fired one at a
+time. It runs the firmware in [`firmware/ftu`](../../firmware/ftu/), whose
+decision function is checked against `aiur.strato.guidance.Geofence` on
+29,318 vectors — range, altitude, flight time, loss of link, ground command,
+plus a heartbeat-loss timer — and nothing else. See [ftu.md](ftu.md). It shares no power rail, no bus and no ground-referenced signal with
 systems 1 and 2; the single crossing is an opto-isolated heartbeat, and the
 harness checker fails the build if that ever stops being true.
 
@@ -110,7 +120,7 @@ harness checker fails the build if that ever stops being true.
 
 Every wire is a row in
 [`connections.csv`](../../hardware/strato/avionics/connections.csv):
-56 connections among 37 components on S2. By bus:
+59 connections among 40 components on S2. By bus:
 
 | Net | From → to | Carries |
 | --- | --- | --- |
@@ -161,12 +171,14 @@ at 10°, and 504 km to the geometric horizon.
 
 | | First unit | 100th | 1,000th | Per flight at 1,000th* |
 | --- | ---: | ---: | ---: | ---: |
-| S1 tandem | $2,150 | $1,260 | $990 | $850 |
-| S1 hull | $2,250 | $1,220 | $940 | $810 |
-| S2 hull | $2,730 | $1,530 | $1,190 | $930 |
+| SP1 trainer | $1,975 | $1,080 | $840 | reusable |
+| S1 tandem | $2,150 | $1,260 | $1,000 | $850 |
+| S1 hull | $2,330 | $1,270 | $980 | $830 |
+| S2 hull | $2,840 | $1,600 | $1,250 | $950 |
+| S3 netted hull | $4,260 | $2,420 | $1,890 | $1,220 |
 
 \*Hydrogen, single-use film, 70 % hardware recovery, chase crew. With helium
-add $300–480.
+add $300-480.
 
 Parts are 61–65 % of the first unit and ~80 % of the thousandth: the same
 shape as Ukrainian FPV production, where parts are ~90 % at volume. The

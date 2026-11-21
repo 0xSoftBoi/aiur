@@ -137,6 +137,11 @@ def review(data: dict, tier: str = "S2", propulsion_peak_a: float = 9.0) -> dict
         if n > 1:
             errors.append(f"{end[0]}.{end[1]} is a single-use port wired {n} times")
     # Downstream loads of a pass-through source: PM feeds everything on VBAT.
+    # The remove-before-flight plug passes the cutter current through.
+    if ("RBF", "OUT") in rail_load and ("FTU_BAT", "OUT") in rail_load:
+        # Cutters fire one at a time (firmware sequencer): count the larger.
+        rail_load[("FTU_BAT", "OUT")] += rail_load[("RBF", "OUT")] / 2.0
+        rail_load[("RBF", "OUT")] /= 2.0
     for pm, bat, bec in (("PM", "BAT", "BEC5"), ("PM_P", "BAT_P", "BEC_POD")):
         if (pm, "BAT_OUT") in rail_load:
             rail_load[(bat, "MAIN")] = rail_load[(pm, "BAT_OUT")] + \

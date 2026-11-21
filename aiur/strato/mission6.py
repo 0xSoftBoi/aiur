@@ -272,13 +272,11 @@ class UnifiedSim:
             self.log(f"float entry, climb {w:.2f} m/s")
         # A zero-pressure hull is at float when it has filled, not merely slowed.
         if self.zero_p:
-            # Full, and no longer climbing for two minutes: the spill is over.
-            quiet = self.asc.fill >= 0.999 and abs(w) < 0.25
-            self._quiet_s = self._quiet_s + 1.0 if quiet else 0.0
-            settled = self._quiet_s >= 60.0
+            settled = self.phase == FlightPhase.FLOAT_ENTRY and \
+                self.float_ctl.spill_finished(self.asc.fill, w, 1.0)
         else:
             settled = abs(z - self.cfg.target_float_m) < 1500.0
-        if self.phase == FlightPhase.FLOAT_ENTRY and abs(w) < 0.3 and settled:
+        if self.phase == FlightPhase.FLOAT_ENTRY and settled and (abs(w) < 0.3 or self.zero_p):
             self.phase = FlightPhase.STATION_KEEP
             self.float_entry_t = self.t
             if self.zero_p:

@@ -95,3 +95,10 @@ RTD_G,CS,gpio,3.3,0
 RTD_G,RTD,analog,3.3,0
 T_AMB,RTD,analog,3.3,0
 T_GAS,RTD,analog,3.3,0
+FTU,ADC_VBAT,analog,3.3,0
+FTU_VSENSE,IN,power_in,4.8,0
+FTU_VSENSE,OUT,analog,3.3,0
+RBF,IN,power_in,4.8,0
+RBF,OUT,power_out,4.8,5.0
+FTU_PULLDN,A,gpio,3.3,0
+FTU_PULLDN,B,gpio,3.3,0

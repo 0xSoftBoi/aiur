@@ -12,5 +12,5 @@ setup(
     zip_safe=True,
     description="Simulated STRATO vehicle behind standard ROS 2 topics",
     license="Apache-2.0",
-    entry_points={"console_scripts": ['plant = aiur_strato_sim.plant_node:main', 'flight_plant = aiur_strato_sim.flight_plant_node:main']},
+    entry_points={"console_scripts": ['plant = aiur_strato_sim.plant_node:main', 'flight_plant = aiur_strato_sim.flight_plant_node:main', 'unified_plant = aiur_strato_sim.unified_plant_node:main']},
 )

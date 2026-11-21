@@ -13,7 +13,7 @@ from geometry_msgs.msg import TwistStamped, Vector3Stamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 
-from aiur.strato.guidance import FlightPhase, StationKeeper
+from aiur.strato.guidance import EntryGuidance, FlightPhase, StationKeeper
 from aiur_msgs.msg import FlightStatus
 
 
@@ -29,6 +29,9 @@ class StationKeeperNode(Node):
         self.airspeed_lag_s = float(p("airspeed_lag_s", 20.0).value)
         #: True when no float manager is running (float-phase simulations).
         self.always_active = bool(p("always_active", False).value)
+        self.entry = EntryGuidance(self.keeper.max_airspeed_m_s)
+        self.use_entry = bool(p("entry_guidance", False).value)
+        self.trim = self.climb = 0.0
         self.phase = FlightPhase.PRELAUNCH.value
         self.wind = [0.0, 0.0]          # east, north
         self.air_est = [0.0, 0.0]       # achieved air velocity estimate
@@ -41,6 +44,7 @@ class StationKeeperNode(Node):
 
     def on_status(self, msg: FlightStatus) -> None:
         self.phase = msg.phase
+        self.trim, self.climb = msg.trim_command, msg.climb_rate_m_s
 
     def on_odom(self, msg: Odometry) -> None:
         t = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
@@ -66,6 +70,19 @@ class StationKeeperNode(Node):
             err_n = self.station[1] - msg.pose.pose.position.y
             c = self.keeper.command(err_n, err_e, self.wind[1], self.wind[0])
             self.cmd = [c.east_m_s, c.north_m_s]
+            if self.use_entry:
+                floor = self.entry.airspeed_command(self.phase, self.trim, self.climb, c.airspeed_m_s)
+                if floor > c.airspeed_m_s > 0.05:
+                    k = floor / c.airspeed_m_s
+                    self.cmd = [c.east_m_s * k, c.north_m_s * k]
+        elif self.use_entry:
+            # Before float: head into the estimated wind at the entry airspeed.
+            speed = self.entry.airspeed_command(self.phase, self.trim, self.climb, 0.0)
+            wmag = math.hypot(self.wind[0], self.wind[1])
+            if speed > 0.0 and wmag > 0.2:
+                self.cmd = [-self.wind[0] / wmag * speed, -self.wind[1] / wmag * speed]
+            else:
+                self.cmd = [0.0, speed]
         else:
             self.cmd = [0.0, 0.0]
         out.twist.linear.x, out.twist.linear.y = self.cmd

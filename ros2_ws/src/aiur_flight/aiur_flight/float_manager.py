@@ -12,7 +12,7 @@ import rclpy
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 
-from aiur.strato.guidance import FlightPhase, FloatController
+from aiur.strato.guidance import EntryGuidance, FlightPhase, FloatController
 from aiur_msgs.msg import BuoyancyState, FlightStatus, FloatCommand
 
 
@@ -24,7 +24,17 @@ class FloatManager(Node):
         self.launch_alt = float(p("launch_altitude_m", 150.0).value)
         self.float_duration = float(p("float_duration_s", 3600.0).value)
         vent_enabled = bool(p("vent_enabled", False).value)
-        self.ctl = FloatController(self.target, vent_enabled=vent_enabled)
+        # No vent means a zero-pressure hull: leave it alone until it has
+        # filled and spilled, then hold from the altitude it reached.
+        self.zero_p = not vent_enabled
+        self.ctl = FloatController(self.target, vent_enabled=vent_enabled,
+                                   hold_enabled=not self.zero_p)
+        self.entry = EntryGuidance(float(p("cruise_airspeed_m_s", 3.0).value))
+        self.airspeed = 0.0
+        self.max_alt = 0.0
+        self.quiet_s = 0.0
+        from std_msgs.msg import Float32
+        self.create_subscription(Float32, "airspeed", lambda m: setattr(self, "airspeed", m.data), 10)
         self.phase = FlightPhase.PRELAUNCH
         self.fill = 0.0
         self.burst = False
@@ -48,6 +58,7 @@ class FloatManager(Node):
         self.last_t = t
         alt = msg.pose.pose.position.z + self.launch_alt
         climb = msg.twist.twist.linear.z
+        self.max_alt = max(self.max_alt, alt)
         rng = math.hypot(msg.pose.pose.position.x, msg.pose.pose.position.y)
         request, reason = False, ""
 
@@ -56,10 +67,16 @@ class FloatManager(Node):
             self.phase = FlightPhase.ASCENT
         elif self.phase == FlightPhase.ASCENT and alt > self.target - self.ctl.approach_m:
             self.phase = FlightPhase.FLOAT_ENTRY
-        elif self.phase == FlightPhase.FLOAT_ENTRY and abs(climb) < 0.3 and (
-                abs(alt - self.target) < 1500.0 or self.fill >= 0.999):
-            self.phase = FlightPhase.STATION_KEEP
-            self.float_entry = t
+        elif self.phase == FlightPhase.FLOAT_ENTRY:
+            if self.zero_p:
+                settled = self.ctl.spill_finished(self.fill, climb, dt)
+            else:
+                settled = abs(alt - self.target) < 1500.0 and abs(climb) < 0.3
+            if settled:
+                self.phase = FlightPhase.STATION_KEEP
+                self.float_entry = t
+                if self.zero_p:
+                    self.ctl.settle(self.max_alt)
         if self.phase in (FlightPhase.ASCENT, FlightPhase.FLOAT_ENTRY, FlightPhase.STATION_KEEP):
             # A falling vehicle with an empty cell has been cut down or has burst.
             if self.burst or (climb < -3.0 and self.fill < 0.01):
@@ -76,8 +93,9 @@ class FloatManager(Node):
             c = self.ctl.command(alt, climb, dt)
             cmd.vent_open = c.vent_open
             cmd.ballast_rate_kg_s = float(c.ballast_kg_s)
-            if self.phase != FlightPhase.ASCENT:
-                cmd.trim = float(c.trim)
+            cmd.trim = float(c.trim)
+            cmd.pitch_cmd_rad = float(self.entry.pitch_command_rad(
+                self.phase.value, c.trim, climb, self.airspeed))
         self.pub_cmd.publish(cmd)
 
         if self.phase == FlightPhase.STATION_KEEP and self.float_entry is not None \

@@ -27,8 +27,8 @@ ONEWIRE,CC,GPIO4,T_BAY,DQ,onewire,28,0.05,JST-GH 3,,
 PHASE,ESC,PHASE,MOTOR,PHASE,phase,18,0.10,3.5 mm bullets,,
 RF_C2_A,RX,ANT1,RXANT,FEED,rf,0,0.30,U.FL,,
 FTU_RAW,FTU_BAT,OUT,FTU_REG,VIN,power,24,0.05,solder,,
-FTU_RAW,FTU_BAT,OUT,CUT_A,VIN,power,22,1.20,JST-SM,,cutters draw from the primary cells directly
-FTU_RAW,FTU_BAT,OUT,CUT_B,VIN,power,20,2.50,JST-SM,,
+FTU_CUT,RBF,OUT,CUT_A,VIN,power,22,1.20,JST-SM,,cutters draw from the primary cells directly
+FTU_CUT,RBF,OUT,CUT_B,VIN,power,20,2.50,JST-SM,,
 FTU_3V3,FTU_REG,3V3,FTU,3V3_IN,power,26,0.05,solder,,
 FTU_3V3,FTU_REG,3V3,FTU_BARO,VCC,power,28,0.05,solder,,
 I2C_FTU,FTU,I2C,FTU_BARO,I2C,i2c,28,0.05,solder,0x77,
@@ -57,3 +57,6 @@ CS_A,CC,CS0,RTD_A,CS,gpio,28,0.05,JST-GH 6,,
 CS_G,CC,CS1,RTD_G,CS,gpio,28,0.05,JST-GH 6,,
 RTD_AMB,RTD_A,RTD,T_AMB,RTD,analog,28,0.5,JST-GH 4,,4-wire RTD lead
 RTD_GAS,RTD_G,RTD,T_GAS,RTD,analog,28,2.0,JST-GH 4,,4-wire RTD lead
+FTU_RAW,FTU_BAT,OUT,RBF,IN,power,20,0.05,solder,,cutter supply passes through the remove-before-flight plug
+FTU_RAW,FTU_BAT,OUT,FTU_VSENSE,IN,power,28,0.03,solder,,
+FTU_VBAT_SENSE,FTU_VSENSE,OUT,FTU,ADC_VBAT,analog,28,0.03,solder,,under-voltage stop for the cutter sequencer

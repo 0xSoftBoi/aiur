@@ -37,6 +37,35 @@ A recorded run is in [`evidence/`](evidence/): float entry at 5,168 s,
 float held at 19,876 ± 38 m for an hour, landing 64.5 km out — the batch
 model gives 5,172 s and 64.6 km.
 
+## The whole mission over MAVLink
+
+```
+ros2 launch aiur_bringup sim_mission6.launch.py design:=S2-dayloiter/hull
+```
+
+`unified_plant` is `mission6.UnifiedSim` - buoyancy model plus 6-DoF, with
+the attitude inner loop inside it, as it is inside an autopilot - behind a
+MAVLink 2 UDP port. `mavlink_bridge` is the only thing that talks to it.
+The flight nodes see standard topics and cannot tell the difference.
+
+| Direction | MAVLink | ROS |
+| --- | --- | --- |
+| in | `GLOBAL_POSITION_INT` + `ATTITUDE` | `odom` (ENU/FLU), `gps/fix` |
+| in | `VFR_HUD`, `SCALED_PRESSURE`, `SYS_STATUS` | `airspeed`, `baro/pressure`, `battery` |
+| in | `NAMED_VALUE_FLOAT` (gas_temp, fill, dp, ballast) | `buoyancy`, `temperature/*` |
+| out | `SET_ATTITUDE_TARGET` (heading + pitch quaternion, thrust = airspeed / dash) | `cmd/air_velocity`, `cmd/float.pitch_cmd_rad` |
+| out | `COMMAND_LONG MAV_CMD_DO_SET_ACTUATOR` (vent, ballast rate, trim) | `cmd/float` |
+
+One recorded run: 164,220 frames received, 23,460 sent; float held at
+19,870 m (sd 178 m); landing 59.3 km from launch. Fault arguments
+`gimbal_jam_at_s` and `motor_fail_at_s` inject failures mid-flight.
+
+What this does and does not show: the mapping and the bridge work on the
+real wire format. The thing on the other end is this repo's simulation, not
+ArduPilot. ArduPilot SITL has not been run, and ArduPilot has no stock frame
+that accepts these two messages for a propeller airship - that custom frame
+is unwritten.
+
 ## Station-keeping with the full control chain
 
 ```
@@ -128,11 +157,11 @@ A fin model in Gazebo is open work.
 
 ## Known gaps
 
-- Two plants, not one: the mission plant has no attitude dynamics and the
-  6-DoF plant has no ascent. Joining them is open work.
-- No MAVLink actuator bridge; nothing here has talked to an autopilot or to
-  ArduPilot SITL.
-- Sensor noise, GNSS dropouts and link loss are not injected. The P0 twin's
-  fault-injection pattern is the template.
+- ArduPilot itself has never been in the loop: no SITL, no custom airship
+  frame, no parameter file.
+- Sensor noise, GNSS dropouts and radio loss are not injected at the
+  message level (motor and gimbal faults are).
+- Gazebo has no fin model, so only the bare-hull terms are cross-checked.
+- The termination node never exercises link loss; the firmware does.
 - `robot_localization` is installed but not in the loop; on the vehicle the
   autopilot's EKF is the estimator.

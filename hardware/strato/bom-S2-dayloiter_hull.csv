@@ -29,6 +29,9 @@ core,RTD_G,RTD amplifier (gas),MAX31865 breakout,1,ea,12.0,12.0,0.002,estimate,A
 propulsion,PM_P,Pod power module,generic 60 A hall sensor,1,ea,22.0,22.0,0.014,estimate,
 propulsion,BEC_POD,Pod 5 V 3 A regulator,Pololu D36V28F5 class,1,ea,13.0,13.0,0.004,estimate,
 propulsion,POD_NODE,Pod CAN node,Matek AP_PERIPH CAN-L431,1,ea,30.0,30.0,0.005,estimate,any AP_Periph node
+termination,FTU_VSENSE,FTU cell-voltage divider,2 x 100k 1 % resistors to an ADC pin,1,ea,0.2,0.2,0.0002,estimate,
+termination,FTU_PULLDN,Cutter gate pull-downs,2 x 10k resistors gate-to-source,1,ea,0.2,0.2,0.0002,estimate,
+termination,RBF,Remove-before-flight plug,2-pin shorting plug with streamer in series with both cutter feeds,1,ea,4.0,4.0,0.006,estimate,
 envelope,-,Hull film incl. gore nesting waste (x1.38),LLDPE balloon film 20 um,269.0,m2,0.45,121.0,3.625,sized,
 envelope,-,"Seam tape, load patches, relief valve, fill port, nose cap",PE seam tape; 3D-printed fittings,1,set,235.0,235.0,1.734,sized,
 envelope,-,Fins x4: film skin on sealed air-beam spars with relief valves,LLDPE skin; TPU-coated ripstop beams,15.8,m2,16.52,261.0,2.015,sized,

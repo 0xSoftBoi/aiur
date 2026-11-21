@@ -183,6 +183,133 @@ a tendon-reinforced (pumpkin) polyethylene envelope where load tapes, not
 film, carry the pressure — and that is its own structural model and its own
 test article. S1 and S2 are day flights and do not need it.
 
+## Rev H — join the two models, and four things break
+
+*Design.* Two simulations, each with a blind spot: the ascent model had
+buoyancy physics but no attitude, the 6-DoF model had attitude but no
+buoyancy. The ascent model held altitude with an abstract "trim thrust".
+
+```
+python -m aiur.strato.mission6
+```
+
+`mission6.UnifiedSim` flies launch to landing as one plant. The first run
+stalled 500 m short of float, pitched to 24 degrees, saturated the gimbal
+62 % of the time and spent all its ballast. Four separate causes:
+
+| What the joined model showed | Cause | Change |
+| --- | --- | --- |
+| Hull held down at 19.3 km against 1 kg of free lift | Float controller braking the climb of a hull that had not finished spilling | Hold is disabled until the spill is over, then one-sided (lift only) against a reference that ratchets up with the hull |
+| Altitude trim far weaker than assumed | Vertical force comes from pitching the whole hull: 8 degrees at cruise is worth ~0.25 of dash thrust, not the 0.6 assumed | Recalibrated; sustained up-trim is offloaded to ballast |
+| Pitch diverging nose-up with the gimbal pinned | **Sign error**: stern side-force gives yaw moment -arm*Fy but pitch moment +arm*Fz, and the controller used the same sign for both. Pendulum stability hid it at zero pitch command | Fixed. Every earlier handling number for pitch was contaminated |
+| Hull flying itself downward during float entry | Powered flight while still climbing at 3 m/s puts the hull at 45 degrees of incidence | Idle until climb < 1.2 m/s, then fly the flight-path angle |
+| 9 degrees of standing pitch error | Munk, fins and pendulum nearly cancel in pitch at cruise: the airframe has no stiffness and a PD loop has no reason to return | Integrator on pitch only (one on yaw overshot 38 degrees on a turn) |
+
+With the sign fixed the fin study changes its answer:
+
+| Fins / V^(2/3) | Gimbal saturated in 90 degree turn | Overshoot | Same, fin lift slope 27 % lower |
+| ---: | ---: | ---: | --- |
+| 0.30 | 45 % | 83 deg | - |
+| 0.45 | 2 % | 13 deg | 9 % / 22 deg |
+| **0.50** | **1 %** | **8 deg** | **3 % / 19 deg** |
+| 0.60 | 2 % | 2 deg | 3 % / 13 deg |
+
+*Change.* Fins 0.50. S2 now holds 19.6-19.9 km at about 2 degrees mean pitch
+with no ballast used.
+
+## Rev I — measure the wind instead of estimating it
+
+```
+python tools/strato_winds.py --station GMM00010393 --cache <dir>
+```
+
+NOAA IGRA v2, 2005 onward, six stations, 88,857 soundings
+([winds.md](winds.md)). Against the estimated tables:
+
+| | Estimated p50 / p90 | Measured p50 / p90 |
+| --- | ---: | ---: |
+| Summer, 20 km | 6 / 12 m/s | 4.5 / 7.2 m/s |
+| Summer, 12 km (jet) | 20 / 37 | 17.8 / 32.9 |
+| Winter, 20 km | 15 / 28 | 20.2 / 36.8 |
+| Winter jet peak | 36 / 62 at 11 km | 24 / 46 at 9 km |
+
+Wind at 20 km is below 6 m/s on 80 % of summer days and 6 % of winter days.
+The calm season is five months long, not a brief turnaround. Over Europe
+there is no winter minimum-wind layer at all. *Change:* `WIND_PROFILES` is
+the measured data. S2's 6 m/s is confirmed as the right airspeed for
+summer; nothing at this size works in winter.
+
+## Rev J — cut patterns correct the budget
+
+```
+python -m aiur.strato.patterns
+```
+
+Developing the hull into flat gores (area agrees with the smooth hull to
+0.001 %) and nesting them on a film roll showed three budget errors:
+
+- **Film purchased is 1.38x hull area**, not 1.18x. A gore fills 73 % of
+  its bounding rectangle and nests badly.
+- **Fins weigh 0.115 kg/m2**, not 0.085. Spar diameter is set by wrinkling
+  under launch loads, not by fabric strength.
+- **Twelve flat gores enclose 2.2 % less volume** than the smooth hull. Each
+  gore is cut 1.1 % wider to recover it.
+
+Net effect: S1 grew from 8.3 to 9.1 kg and $2,250 to $2,330.
+
+## Rev K — the termination unit becomes firmware
+
+```
+make -C firmware/ftu/host clean test
+```
+
+`firmware/ftu` is C++ for an ESP32-S3 LoRa board. Its decision function
+replays 29,318 test vectors generated from the Python `Geofence` with zero
+mismatches, and an ESP32-S3 build links (nothing flashed). Writing it found
+gaps in the hardware data, now fixed in the netlist:
+
+- no cell-voltage sense line, so the under-voltage stop would have fired blind;
+- no pull-downs on the cutter gates, which float through reset;
+- no remove-before-flight plug in the cutter supply.
+
+It also found that the documents claimed a heartbeat-loss criterion the
+reference did not have. The firmware implements one (loss starts a 10 minute
+timer rather than an immediate cut); see [ftu.md](ftu.md).
+
+## Rev L — overnight is a net, not a laminate
+
+```
+python -m aiur.strato.trades      # overnight
+```
+
+Rev G concluded that monolithic film cannot hold the day-night pressure
+swing. A tendon net can: UHMWPE lines carry the load and the film only
+spans between them, so film stress depends on the mesh pitch (0.35 m), not
+the hull radius.
+
+| Approach | Size | Net | First unit |
+| --- | --- | --- | ---: |
+| Zero-pressure + 2 kg ballast per night | 404 m3, 33 kg | - | $4,060 |
+| UHMWPE laminate | 241 m3, 20 kg | - | $17,600 |
+| **Tendon-netted LLDPE 20 um** | **308 m3, 25 kg** | **1.6 km of line, 2.8 kg** | **$4,260** |
+
+This is a sizing result, not a design: the net is 1.6 km of line to lay and
+tape, the film-to-tendon bond is unspecified, and the lobed surface will
+cost drag that is not yet modelled.
+
+## Rev M — fault cases
+
+```
+python -m aiur.strato.faults
+```
+
+Nine cases on the unified plant (motor fails, gimbal jams, 3x turbulence,
+fill errors, 90th-percentile wind). All end under parachute inside the
+fence. One exposed a logic gap: in 3x turbulence the raw climb rate never
+went quiet, the float manager never declared float, and the flight ran to
+its time limit. The test is now on climb rate filtered over a minute, with
+a ten-minute fallback.
+
 ## Where the model was checked
 
 - **Lamb added-mass factors** reproduce Munk's NACA Report 184 table to
@@ -197,8 +324,14 @@ test article. S1 and S2 are day flights and do not need it.
   6.18 m/s against 6.00 expected (S2) and 3.14 against 3.00 (S1), and an
   initial acceleration within 1 %. Off its rail, the finless Gazebo hull
   tumbles, as Munk says it must.
-- **ROS 2 vs batch.** The same mission through the ROS nodes reaches float
-  at 5,168 s and lands 64.5 km out; the batch run says 5,172 s and 64.6 km.
+- **ROS 2 vs batch.** The first mission through the ROS nodes reached float
+  at 5,168 s and landed 64.5 km out against 5,172 s and 64.6 km in batch.
+- **Over MAVLink.** The unified plant behind a MAVLink UDP port, the flight
+  nodes on the other side of a bridge: 164,220 frames in, 23,460 out, float
+  held at 19,870 m, landing 59.3 km out.
+- **Firmware vs reference.** 29,318 vectors, zero mismatches; 11 injected
+  faults all caught.
+- **Patterns vs hull.** Flat gore area matches the smooth hull to 0.001 %.
 
 ## Estimates that a bench must replace
 
@@ -212,7 +345,7 @@ In rough order of how much they could move the design:
    *Vacuum-chamber thrust stand.*
 4. Ascent drag coefficient of a 10 %-full hull (0.65 assumed).
 5. Seam strength and creep of heat-sealed 20 µm film at −60 °C.
-6. Stratospheric wind statistics for the actual launch site: the tables are
-   an envelope from published ranges, not ERA5 for a place.
+6. Wind at the actual launch site on the actual day. The climatology is
+   now measured; the forecast is not part of the model.
 7. Motor heat rejection at 5.5 kPa (a third of sea level assumed).
 8. Li-ion capacity in the bay as actually insulated.
