@@ -1,0 +1,460 @@
+{
+  "checks": {
+    "area_agreement_pct": 0.00095,
+    "flat_gore_area_x_n_plus_tail_disc_m2": 281.51263,
+    "geometry_matches_design_point": true,
+    "hull_surface_area_m2": 281.50995,
+    "hull_volume_m3": 307.8129,
+    "meridian_volume_m3": 307.81379,
+    "volume_agreement_pct": 0.00029
+  },
+  "closures": {
+    "nose_cap": {
+      "cut_radius_m": 0.14473,
+      "gore_cut_s_m": 0.11473,
+      "gore_cut_x_m": 0.00497,
+      "hull_radius_at_cut_m": 0.11459,
+      "misfit_strain_pct": 0.12538,
+      "nose_curvature_radius_m": 1.32283,
+      "ring_seam_m": 0.72,
+      "seal_radius_m": 0.11473,
+      "type": "flat disc laid over the gore tips, taped/sealed on a ring"
+    },
+    "tail_disc": {
+      "cut_radius_m": 0.14459,
+      "gore_cut_s_m": 22.65987,
+      "gore_cut_x_m": 21.14635,
+      "hull_radius_at_cut_m": 0.11459,
+      "profile_tail_radius_m": 0.0926,
+      "ring_seam_m": 0.72,
+      "seal_radius_m": 0.11459,
+      "type": "flat disc with collar; gore ends pleated onto the collar and taped",
+      "volume_lost_m3": 0.00065
+    }
+  },
+  "design": "S3-diurnal/hull-netted",
+  "film": {
+    "name": "LLDPE balloon film 20 um",
+    "plies_equiv": 1.0,
+    "seam_method": "impulse heat seal"
+  },
+  "film_totals": {
+    "closures_cut_area_m2": 0.13149,
+    "fin_roll_length_m": null,
+    "fin_skin_cut_area_m2": 48.83711,
+    "gores_cut_area_m2": 289.56982,
+    "gores_net_area_m2": 281.42535,
+    "hull_roll_area_m2": 541.56327,
+    "hull_roll_length_m": 270.78163,
+    "hull_smooth_area_m2": 281.50995,
+    "seam_allowance_overhead_pct": 2.89401,
+    "spar_fabric_area_m2": 33.30536
+  },
+  "fin": {
+    "area_m2": 5.6986,
+    "centroid_height_m": 1.12087,
+    "centroid_x_m": 18.20217,
+    "clock_deg": [
+      45.0,
+      135.0,
+      225.0,
+      315.0
+    ],
+    "le_sweep_deg": 35.88254,
+    "mass_kg": {
+      "four_fins": 3.51352,
+      "one_fin": 0.87838,
+      "sizing_budget_four_fins": 2.8214,
+      "skin_film": 0.21725,
+      "spars": 0.64113,
+      "valves": 0.02
+    },
+    "pattern_area_m2": 5.9036,
+    "perimeter_seal_m": 6.91028,
+    "root_arc_m": 3.24601,
+    "root_chord_m": 3.13514,
+    "root_on": "seam",
+    "skin_chord_takeup": 0.03598,
+    "span_m": 2.30099,
+    "spar": {
+      "ascent_rate_m_s": 5.62221,
+      "cases": {
+        "float_dash": {
+          "fin_force_n": 21.01074,
+          "gauge_pa": 10000.0,
+          "moment_per_spar_nm": 11.5685,
+          "q_pa": 6.40151,
+          "radius_required_m": 0.10338
+        },
+        "launch": {
+          "fin_force_n": 63.54479,
+          "gauge_pa": 3000.0,
+          "moment_per_spar_nm": 34.98773,
+          "q_pa": 19.36069,
+          "radius_required_m": 0.22332
+        }
+      },
+      "design_cn": 0.57596,
+      "diameter_if_filled_to_relief_on_ground_m": 0.29899,
+      "diameter_m": 0.45,
+      "fabric_allowable_n_per_m": 2250.0,
+      "fabric_limited_ideal": {
+        "diameter_m": 0.24372,
+        "gauge_pressure_pa": 18464.18778
+      },
+      "flat_width_m": 1.43372,
+      "governing_case": "launch",
+      "hoop_at_relief_n_per_m": 2250.0,
+      "hoop_ok": true,
+      "sealed_gauge_at_float_pa": 72909.05185
+    },
+    "spars": [
+      {
+        "chord_fraction": 0.25,
+        "length_m": 2.36308,
+        "pattern_length_m": 2.81308,
+        "pattern_width_m": 1.43372,
+        "root_xy_m": [
+          17.04883,
+          1.7004
+        ],
+        "tip_xy_m": [
+          18.10694,
+          3.81335
+        ]
+      },
+      {
+        "chord_fraction": 0.75,
+        "length_m": 2.54444,
+        "pattern_length_m": 2.99444,
+        "pattern_width_m": 1.43372,
+        "root_xy_m": [
+          18.6164,
+          1.29348
+        ],
+        "tip_xy_m": [
+          18.9691,
+          3.81335
+        ]
+      }
+    ],
+    "tip_chord_m": 1.72433,
+    "x_le_m": 16.26505,
+    "x_te_m": 19.40019,
+    "x_tip_le_m": 17.67586,
+    "y_tip_m": 3.81335
+  },
+  "fin_nesting": null,
+  "gore": {
+    "cut_area_m2": 24.13082,
+    "cut_length_m": 22.54514,
+    "max_cut_width_m": 1.41527,
+    "max_net_width_m": 1.38527,
+    "n": 12,
+    "net_area_m2": 23.45211,
+    "nose_cut_s_m": 0.11473,
+    "seam_line_length_m": 22.62354,
+    "seam_minus_centre_mm": 78.40636,
+    "tail_cut_s_m": 22.65987,
+    "width_scale": 1.0
+  },
+  "hull": {
+    "diameter_m": 5.29133,
+    "fineness": 4.0,
+    "length_m": 21.16532,
+    "meridian_length_m": 22.68892,
+    "surface_area_m2": 281.50995,
+    "volume_m3": 307.8129
+  },
+  "labour": {
+    "cost_model_cut_and_seal_h": 14.24779,
+    "cost_model_fin_h": 6.0,
+    "cost_model_fin_seam_m": 56.0,
+    "cost_model_hull_seam_m": 279.38221,
+    "cost_model_seam_m": 335.38221,
+    "cut_and_seal_h_same_formula_all_seams": 15.03274,
+    "fin_sealing_h_at_rate": 1.22429,
+    "fin_seam_m": 88.14903,
+    "fin_seam_vs_cost_model_pct": 57.40898,
+    "hull_cut_and_seal_h_cost_formula": 12.3393,
+    "hull_sealing_h_at_rate": 3.79059,
+    "hull_seam_m": 272.92251,
+    "hull_seam_vs_cost_model_pct": -2.31214,
+    "seal_rate_m_per_min": 1.2,
+    "seam_m_vs_cost_model_pct": 7.65972
+  },
+  "lobing": [
+    {
+      "extra_film_to_recover_volume_pct": 2.59592,
+      "gore_max_width_m": 2.0779,
+      "length_error_pct": 1.07419,
+      "max_flat_depth_mm": 206.66004,
+      "n_gores": 8,
+      "seam_radius_excess_pct": 2.61722,
+      "section_area_ratio": 0.94806,
+      "surface_area_error_pct": 0.0,
+      "volume_error_pct": -4.99646,
+      "volume_ratio": 0.95004,
+      "width_scale_to_recover_volume": 1.02596
+    },
+    {
+      "extra_film_to_recover_volume_pct": 1.11992,
+      "gore_max_width_m": 1.38527,
+      "length_error_pct": 0.53761,
+      "max_flat_depth_mm": 91.18692,
+      "n_gores": 12,
+      "seam_radius_excess_pct": 1.15152,
+      "section_area_ratio": 0.97705,
+      "surface_area_error_pct": 0.0,
+      "volume_error_pct": -2.20277,
+      "volume_ratio": 0.97797,
+      "width_scale_to_recover_volume": 1.0112
+    },
+    {
+      "extra_film_to_recover_volume_pct": 0.62354,
+      "gore_max_width_m": 1.03895,
+      "length_error_pct": 0.32598,
+      "max_flat_depth_mm": 51.16383,
+      "n_gores": 16,
+      "seam_radius_excess_pct": 0.64545,
+      "section_area_ratio": 0.98712,
+      "surface_area_error_pct": 0.0,
+      "volume_error_pct": -1.23551,
+      "volume_ratio": 0.98764,
+      "width_scale_to_recover_volume": 1.00624
+    },
+    {
+      "extra_film_to_recover_volume_pct": 0.27512,
+      "gore_max_width_m": 0.69263,
+      "length_error_pct": 0.15951,
+      "max_flat_depth_mm": 22.6988,
+      "n_gores": 24,
+      "seam_radius_excess_pct": 0.28615,
+      "section_area_ratio": 0.99428,
+      "surface_area_error_pct": 0.0,
+      "volume_error_pct": -0.54798,
+      "volume_ratio": 0.99452,
+      "width_scale_to_recover_volume": 1.00275
+    }
+  ],
+  "lobing_chosen": {
+    "extra_film_to_recover_volume_pct": 1.11992,
+    "gore_max_width_m": 1.38527,
+    "length_error_pct": 0.53761,
+    "max_flat_depth_mm": 91.18692,
+    "n_gores": 12,
+    "seam_radius_excess_pct": 1.15152,
+    "section_area_ratio": 0.97705,
+    "surface_area_error_pct": 0.0,
+    "volume_error_pct": -2.20277,
+    "volume_ratio": 0.97797,
+    "width_scale_to_recover_volume": 1.0112
+  },
+  "marks": {
+    "fin_root_on": "seam",
+    "fin_root_s_m": [
+      17.42675,
+      20.67276
+    ],
+    "gore_centres_clock_deg": "0 (crown), then every 30.0; keel gore at 180",
+    "load_patch_count": 13,
+    "load_patches_s_m": [
+      2.73168,
+      4.23168,
+      5.73168,
+      7.23168,
+      8.73168,
+      10.23168,
+      11.73168,
+      13.23168,
+      14.73168,
+      16.23168,
+      17.73168,
+      19.23168,
+      20.73168
+    ],
+    "load_patches_x_m": [
+      1.70925,
+      3.13149,
+      4.61537,
+      6.11491,
+      7.61483,
+      9.11434,
+      10.61276,
+      12.109,
+      13.60144,
+      15.08771,
+      16.56413,
+      18.02443,
+      19.45553
+    ],
+    "load_per_patch_n": 13.73783,
+    "patch_edge_capacity_n": 47.12389,
+    "port_area_margin": 3.02437,
+    "port_area_required_m2": 0.00584,
+    "port_diameter_m": 0.15,
+    "port_flow_basis": {
+      "climb_m_s": 5.62221,
+      "relief_pa": 20.0,
+      "vent_flow_m3_s": 0.2729
+    },
+    "port_s_m": 6.48168,
+    "port_x_m": 5.36491,
+    "rip_length_m": 1.05827,
+    "rip_s_m": [
+      6.93723,
+      7.9955
+    ],
+    "rip_x_m": [
+      5.82047,
+      6.87872
+    ]
+  },
+  "nesting": {
+    "1.50": {
+      "abreast": 1,
+      "band_width_m": 1.41527,
+      "best_gore_count_for_roll": {
+        "abreast": 2,
+        "film_factor_vs_hull_area": 1.35308,
+        "n_gores": 22
+      },
+      "cost_model_film_factor": 1.18,
+      "feasible": true,
+      "film_factor_difference": 0.26284,
+      "film_factor_vs_hull_area": 1.44284,
+      "fits_one_width": true,
+      "gore_cut_width_m": 1.41527,
+      "head_to_tail": false,
+      "layout": "lanes",
+      "min_gores_unsplit": 12,
+      "piece_area_m2": 289.70131,
+      "pieces": 12,
+      "pitch_m": [],
+      "roll_area_m2": 406.17245,
+      "roll_length_m": 270.78163,
+      "roll_width_m": 1.5,
+      "rows": 12,
+      "split": false,
+      "stagger_m": 0.0,
+      "waste_fraction": 0.28675,
+      "waste_fraction_on_band_width": 0.24405
+    },
+    "2.00": {
+      "abreast": 1,
+      "band_width_m": 1.41527,
+      "best_gore_count_for_roll": {
+        "abreast": 2,
+        "film_factor_vs_hull_area": 1.44284,
+        "n_gores": 18
+      },
+      "cost_model_film_factor": 1.18,
+      "feasible": true,
+      "film_factor_difference": 0.74378,
+      "film_factor_vs_hull_area": 1.92378,
+      "fits_one_width": true,
+      "gore_cut_width_m": 1.41527,
+      "head_to_tail": false,
+      "layout": "lanes",
+      "min_gores_unsplit": 12,
+      "piece_area_m2": 289.70131,
+      "pieces": 12,
+      "pitch_m": [],
+      "roll_area_m2": 541.56327,
+      "roll_length_m": 270.78163,
+      "roll_width_m": 2.0,
+      "rows": 12,
+      "split": false,
+      "split_alternative": {
+        "abreast": 3,
+        "extra_seam_m": 270.54163,
+        "film_factor_vs_hull_area": 1.69297,
+        "roll_length_m": 238.29425
+      },
+      "stagger_m": 0.0,
+      "waste_fraction": 0.46506,
+      "waste_fraction_on_band_width": 0.24405
+    },
+    "3.00": {
+      "abreast": 2,
+      "band_width_m": 2.79715,
+      "best_gore_count_for_roll": {
+        "abreast": 2,
+        "film_factor_vs_hull_area": 1.44284,
+        "n_gores": 12
+      },
+      "cost_model_film_factor": 1.18,
+      "feasible": true,
+      "film_factor_difference": 0.26284,
+      "film_factor_vs_hull_area": 1.44284,
+      "fits_one_width": true,
+      "gore_cut_width_m": 1.41527,
+      "head_to_tail": true,
+      "layout": "lanes",
+      "min_gores_unsplit": 12,
+      "piece_area_m2": 289.70131,
+      "pieces": 12,
+      "pitch_m": [
+        1.38188,
+        1.38188
+      ],
+      "roll_area_m2": 406.17245,
+      "roll_length_m": 135.39082,
+      "roll_width_m": 3.0,
+      "rows": 6,
+      "split": false,
+      "stagger_m": 0.0,
+      "waste_fraction": 0.28675,
+      "waste_fraction_on_band_width": 0.23503
+    }
+  },
+  "options": {
+    "cap_overlap_m": 0.03,
+    "compensate_lobing": false,
+    "cut_gap_m": 0.02,
+    "fin_aspect": 1.0,
+    "fin_flange_m": 0.03,
+    "fin_incidence_deg": 15.0,
+    "fin_taper": 0.55,
+    "keel_span_frac": [
+      0.08,
+      0.92
+    ],
+    "n_gores": 12,
+    "patch_diameter_m": 0.15,
+    "patch_pitch_m": 1.5,
+    "port_area_margin": 3.0,
+    "port_diameter_m": 0.1,
+    "port_station_frac": 0.25,
+    "rip_station_frac": 0.3,
+    "roll_width_m": 2.0,
+    "seam_allowance_m": 0.015,
+    "spar_lap_m": 0.02,
+    "station_pitch_m": 0.5,
+    "tip_width_m": 0.06
+  },
+  "pieces_total": 44,
+  "seams_m": {
+    "fin_perimeter_heat_seal_m": 27.64111,
+    "fin_root_to_hull_m": 25.9681,
+    "fin_total_m": 88.14903,
+    "gore_meridional_heat_seal_m": 271.48251,
+    "gore_split_centre_heat_seal_m": 0.0,
+    "hull_total_m": 272.92251,
+    "nose_cap_ring_m": 0.72,
+    "spar_end_weld_m": 11.30973,
+    "spar_longitudinal_weld_m": 23.23008,
+    "tail_disc_ring_m": 0.72,
+    "total_m": 361.07154
+  },
+  "slug": "S3-diurnal_hull-netted",
+  "tape_m": {
+    "fin_root_m": 25.9681,
+    "load_patches_m": 10.4,
+    "nose_cap_ring_m": 0.72,
+    "port_reinforcement_m": 0.62832,
+    "rip_line_m": 2.11653,
+    "tail_collar_m": 1.44,
+    "total_m": 41.27295
+  }
+}

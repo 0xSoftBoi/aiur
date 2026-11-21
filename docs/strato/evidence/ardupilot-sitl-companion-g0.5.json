@@ -1,0 +1,101 @@
+{
+ "test": "station",
+ "guidance": "companion",
+ "wind_ned": [
+  0.0,
+  -4.0,
+  0.0
+ ],
+ "upwind_m": 1500.0,
+ "duration_s": 1800.0,
+ "t_start_s": 100.1,
+ "t_end_s": 1900.1,
+ "target_ne": [
+  2.9,
+  1458.5
+ ],
+ "ekf": {
+  "final_distance_m": 103.4,
+  "rms_distance_second_half_m": 147.9,
+  "max_distance_second_half_m": 194.8,
+  "time_to_within_50m_s": null,
+  "altitude_excursion_m": 35.9,
+  "steering_saturated_fraction": 0.299,
+  "throttle_saturated_fraction": 0.0,
+  "mean_throttle_pct": 23.7
+ },
+ "truth": {
+  "final_distance_m": 103.8,
+  "rms_distance_second_half_m": 148.3,
+  "max_distance_second_half_m": 195.3,
+  "altitude_excursion_m": 36.0,
+  "mean_thrust_power_w": 9.47,
+  "mean_airspeed_m_s": 4.93,
+  "max_airspeed_m_s": 7.13,
+  "gimbal_saturated_fraction": 0.263,
+  "max_abs_pitch_deg": 7.52,
+  "ekf_origin_offset_ne_m": [
+   3.6,
+   12.8
+  ],
+  "ekf_position_error_final_m": 0.39
+ },
+ "statustext": [
+  [
+   0.0,
+   "Barometer 1 calibration complete"
+  ],
+  [
+   0.0,
+   "Barometer 2 calibration complete"
+  ],
+  [
+   0.0,
+   "Beginning INS calibration. Do not move vehicle"
+  ],
+  [
+   1.9,
+   "ArduPilot Ready"
+  ],
+  [
+   1.9,
+   "aiur_pitch.lua loaded"
+  ],
+  [
+   1.9,
+   "RCInput: decoding UDP (Pulses)"
+  ],
+  [
+   1.9,
+   "AHRS: DCM active"
+  ],
+  [
+   3.9,
+   "EKF3 IMU0 initialised"
+  ],
+  [
+   3.9,
+   "EKF3 IMU1 initialised"
+  ],
+  [
+   5.5,
+   "EKF3 IMU0 tilt alignment complete"
+  ],
+  [
+   5.5,
+   "EKF3 IMU1 tilt alignment complete"
+  ],
+  [
+   5.5,
+   "EKF3 IMU0 MAG0 initial yaw alignment complete"
+  ],
+  [
+   5.5,
+   "EKF3 IMU1 MAG0 initial yaw alignment complete"
+  ],
+  [
+   5.5,
+   "AHRS: EKF3 active"
+  ]
+ ]
+}

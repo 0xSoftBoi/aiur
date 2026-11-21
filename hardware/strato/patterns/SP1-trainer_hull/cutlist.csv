@@ -1,0 +1,9 @@
+piece,material,qty,length_mm,width_mm,area_each_m2,drawing,note
+gore,TPU-coated 20D nylon ripstop,12,5170,362,1.4954,gore.svg / gore.dxf / gore_stations.csv,"seam allowance 15 mm each edge; 1 keel, 1 crown, rest plain"
+nose cap,TPU-coated 20D nylon ripstop,1,294,294,0.0680,gore.svg,"disc, from offcut; double it for the nose fitting"
+tail disc,TPU-coated 20D nylon ripstop,1,289,289,0.0657,gore.svg,"disc + collar, from offcut"
+load patch,PE/polyester tape 48 mm,3,150,150,0.0177,gore.svg (KEEL_GORE_ONLY),every 1.5 m of keel arc; 10.0 N each
+port reinforcement ring,TPU-coated 20D nylon ripstop x2,1,200,200,0.0314,gore.svg (KEEL_GORE_ONLY),port 100 mm
+fin skin,TPU-coated 20D nylon ripstop,8,780,713,0.3860,fin.svg / fin.dxf,"2 per fin, mirror pairs are identical"
+spar tube 25% chord,TPU-coated 20D nylon ripstop,4,665,334,0.2223,fin.svg / fin.dxf,"dia 100 mm, lap 20 mm, pillow ends"
+spar tube 75% chord,TPU-coated 20D nylon ripstop,4,709,334,0.2368,fin.svg / fin.dxf,"dia 100 mm, lap 20 mm, pillow ends"

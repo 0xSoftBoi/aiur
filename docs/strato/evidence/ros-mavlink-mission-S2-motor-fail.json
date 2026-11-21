@@ -1,0 +1,50 @@
+{
+  "phases": [
+    {
+      "phase": "PRELAUNCH",
+      "t_s": 0.0,
+      "alt_m": 152.0,
+      "range_km": 0.0
+    },
+    {
+      "phase": "ASCENT",
+      "t_s": 5.0,
+      "alt_m": 173.0,
+      "range_km": 0.0
+    },
+    {
+      "phase": "FLOAT_ENTRY",
+      "t_s": 3911.0,
+      "alt_m": 17503.0,
+      "range_km": 47.0
+    },
+    {
+      "phase": "STATION_KEEP",
+      "t_s": 4536.0,
+      "alt_m": 19091.0,
+      "range_km": 50.4
+    },
+    {
+      "phase": "DESCENT",
+      "t_s": 8141.0,
+      "alt_m": 19956.0,
+      "range_km": 45.7
+    },
+    {
+      "phase": "LANDED",
+      "t_s": 10096.0,
+      "alt_m": 150.0,
+      "range_km": 67.1
+    }
+  ],
+  "reached_float": true,
+  "max_altitude_m": 20026.0,
+  "float_mean_m": 19668.0,
+  "float_sd_m": 283.0,
+  "station_error_at_float_end_km": 45.7,
+  "landing_range_km": 67.1,
+  "flight_time_h": 2.8,
+  "termination_reason": "commanded",
+  "battery_remaining": 0.53,
+  "ballast_remaining_kg": 0.391
+}

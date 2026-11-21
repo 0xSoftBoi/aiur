@@ -38,6 +38,14 @@ jobs:
         run: python -m aiur.tolerance
       - name: Practice-adoption register
         run: python -m aiur.adoption_loop
+      - name: STRATO design ladder closes
+        run: python -m aiur.strato.sizing
+      - name: STRATO harness review and budget
+        run: python -m aiur.strato.harness --check-budget
+      - name: STRATO termination firmware matches the Python reference
+        run: make -C firmware/ftu/host clean test
+      - name: STRATO unified mission reaches float and lands
+        run: python -m aiur.strato.mission6 S1-touch/hull
 
   sil-screen:
     name: SIL safety screen (not a gate)

@@ -1,0 +1,779 @@
+[
+ {
+  "id": "bare_added-mass-only",
+  "group": "convention",
+  "world": "fins/S2-dayloiter_hull_bare_added-mass-only.sdf",
+  "note": "no LTA plugin: is the Munk moment in the physics engine?",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 2.84,
+   "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
+   "airspeed_end_m_s": 0.194,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "bare_lta-zero",
+  "group": "convention",
+  "world": "fins/S2-dayloiter_hull_bare_lta-zero.sdf",
+  "note": "LTA plugin, four coefficients zero: its added-mass Coriolis terms and axial drag",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 2.84,
+   "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
+   "airspeed_end_m_s": 0.194,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "bare_as-generated",
+  "group": "convention",
+  "world": "fins/S2-dayloiter_hull_bare_as-generated.sdf",
+  "note": "the existing sdf() model unchanged",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 2.84,
+   "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
+   "airspeed_end_m_s": 0.194,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "bare_li-nahon",
+  "group": "convention",
+  "world": "fins/S2-dayloiter_hull_bare_li-nahon.sdf",
+  "note": "coefficients from lta_coefficients('li-nahon')",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 2.84,
+   "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
+   "airspeed_end_m_s": 0.194,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "bare_equivalent",
+  "group": "convention",
+  "world": "fins/S2-dayloiter_hull_bare_equivalent.sdf",
+  "note": "coefficients from lta_coefficients('equivalent')",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 2.84,
+   "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
+   "airspeed_end_m_s": 0.194,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins030_equivalent_yaw2",
+  "group": "yaw2",
+  "fin_ratio": 0.3,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins030_equivalent.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 4.48,
+   "peak_turn_deg": -180.0,
+   "turn_end_deg": -176.82,
+   "drift_last10s_deg": 4.28,
+   "airspeed_end_m_s": 0.206,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins030_equivalent_pitch2",
+  "group": "pitch2",
+  "fin_ratio": 0.3,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins030_equivalent.sdf",
+  "axis": "pitch",
+  "vel_frd": [
+   5.996344962114574,
+   0.0,
+   0.2093969802150058
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": null,
+   "peak_turn_deg": 7.17,
+   "turn_end_deg": 0.12,
+   "drift_last10s_deg": -0.01,
+   "airspeed_end_m_s": 2.585,
+   "verdict": "settles"
+  }
+ },
+ {
+  "id": "fins030_equivalent_cruise",
+  "group": "cruise",
+  "fin_ratio": 0.3,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins030_equivalent.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 2.5647781811471386,
+  "duration_s": 240.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 4.38,
+   "peak_turn_deg": 180.0,
+   "turn_end_deg": 17.35,
+   "drift_last10s_deg": 59.43,
+   "airspeed_end_m_s": 1.969,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins030_li-nahon_yaw2",
+  "group": "yaw2",
+  "fin_ratio": 0.3,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins030_li-nahon.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 4.48,
+   "peak_turn_deg": -180.0,
+   "turn_end_deg": -176.82,
+   "drift_last10s_deg": 4.28,
+   "airspeed_end_m_s": 0.206,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins030_li-nahon_pitch2",
+  "group": "pitch2",
+  "fin_ratio": 0.3,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins030_li-nahon.sdf",
+  "axis": "pitch",
+  "vel_frd": [
+   5.996344962114574,
+   0.0,
+   0.2093969802150058
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": null,
+   "peak_turn_deg": 7.17,
+   "turn_end_deg": 0.12,
+   "drift_last10s_deg": -0.01,
+   "airspeed_end_m_s": 2.585,
+   "verdict": "settles"
+  }
+ },
+ {
+  "id": "fins030_li-nahon_cruise",
+  "group": "cruise",
+  "fin_ratio": 0.3,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins030_li-nahon.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 2.5647781811471386,
+  "duration_s": 240.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 4.38,
+   "peak_turn_deg": 180.0,
+   "turn_end_deg": 17.35,
+   "drift_last10s_deg": 59.43,
+   "airspeed_end_m_s": 1.969,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins050_equivalent_yaw2",
+  "group": "yaw2",
+  "fin_ratio": 0.5,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins050_equivalent.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 7.76,
+   "peak_turn_deg": 120.35,
+   "turn_end_deg": 120.35,
+   "drift_last10s_deg": 17.17,
+   "airspeed_end_m_s": 1.875,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins050_equivalent_pitch2",
+  "group": "pitch2",
+  "fin_ratio": 0.5,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins050_equivalent.sdf",
+  "axis": "pitch",
+  "vel_frd": [
+   5.996344962114574,
+   0.0,
+   0.2093969802150058
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": null,
+   "peak_turn_deg": 3.41,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
+   "airspeed_end_m_s": 2.589,
+   "verdict": "settles"
+  }
+ },
+ {
+  "id": "fins050_equivalent_cruise",
+  "group": "cruise",
+  "fin_ratio": 0.5,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins050_equivalent.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 2.5647781811471386,
+  "duration_s": 240.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 7.57,
+   "peak_turn_deg": 179.99,
+   "turn_end_deg": 79.42,
+   "drift_last10s_deg": 34.05,
+   "airspeed_end_m_s": 4.991,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins050_li-nahon_yaw2",
+  "group": "yaw2",
+  "fin_ratio": 0.5,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins050_li-nahon.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 7.76,
+   "peak_turn_deg": 120.35,
+   "turn_end_deg": 120.35,
+   "drift_last10s_deg": 17.17,
+   "airspeed_end_m_s": 1.875,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins050_li-nahon_pitch2",
+  "group": "pitch2",
+  "fin_ratio": 0.5,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins050_li-nahon.sdf",
+  "axis": "pitch",
+  "vel_frd": [
+   5.996344962114574,
+   0.0,
+   0.2093969802150058
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": null,
+   "peak_turn_deg": 3.41,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
+   "airspeed_end_m_s": 2.589,
+   "verdict": "settles"
+  }
+ },
+ {
+  "id": "fins050_li-nahon_cruise",
+  "group": "cruise",
+  "fin_ratio": 0.5,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins050_li-nahon.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 2.5647781811471386,
+  "duration_s": 240.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 7.57,
+   "peak_turn_deg": 179.99,
+   "turn_end_deg": 79.42,
+   "drift_last10s_deg": 34.05,
+   "airspeed_end_m_s": 4.991,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins060_equivalent_yaw2",
+  "group": "yaw2",
+  "fin_ratio": 0.6,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins060_equivalent.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 13.18,
+   "peak_turn_deg": 37.54,
+   "turn_end_deg": 37.54,
+   "drift_last10s_deg": 4.84,
+   "airspeed_end_m_s": 2.527,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins060_equivalent_pitch2",
+  "group": "pitch2",
+  "fin_ratio": 0.6,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins060_equivalent.sdf",
+  "axis": "pitch",
+  "vel_frd": [
+   5.996344962114574,
+   0.0,
+   0.2093969802150058
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": null,
+   "peak_turn_deg": 2.46,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
+   "airspeed_end_m_s": 2.59,
+   "verdict": "settles"
+  }
+ },
+ {
+  "id": "fins060_equivalent_cruise",
+  "group": "cruise",
+  "fin_ratio": 0.6,
+  "hull_model": "equivalent",
+  "world": "fins/S2-dayloiter_hull_fins060_equivalent.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 2.5647781811471386,
+  "duration_s": 240.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 13.01,
+   "peak_turn_deg": 128.02,
+   "turn_end_deg": 128.02,
+   "drift_last10s_deg": 4.47,
+   "airspeed_end_m_s": 6.141,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins060_li-nahon_yaw2",
+  "group": "yaw2",
+  "fin_ratio": 0.6,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins060_li-nahon.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 13.18,
+   "peak_turn_deg": 37.54,
+   "turn_end_deg": 37.54,
+   "drift_last10s_deg": 4.84,
+   "airspeed_end_m_s": 2.527,
+   "verdict": "diverges"
+  }
+ },
+ {
+  "id": "fins060_li-nahon_pitch2",
+  "group": "pitch2",
+  "fin_ratio": 0.6,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins060_li-nahon.sdf",
+  "axis": "pitch",
+  "vel_frd": [
+   5.996344962114574,
+   0.0,
+   0.2093969802150058
+  ],
+  "thrust_n": 0.0,
+  "duration_s": 60.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": null,
+   "peak_turn_deg": 2.46,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
+   "airspeed_end_m_s": 2.59,
+   "verdict": "settles"
+  }
+ },
+ {
+  "id": "fins060_li-nahon_cruise",
+  "group": "cruise",
+  "fin_ratio": 0.6,
+  "hull_model": "li-nahon",
+  "world": "fins/S2-dayloiter_hull_fins060_li-nahon.sdf",
+  "axis": "yaw",
+  "vel_frd": [
+   5.996344962114574,
+   0.2093969802150058,
+   0.0
+  ],
+  "thrust_n": 2.5647781811471386,
+  "duration_s": 240.0,
+  "mass_kg": 15.761944977552169,
+  "added_mass_kg": [
+   1.2855005379424602,
+   13.551495298195253,
+   13.551495298195253
+  ],
+  "com_link_m": [
+   -0.0,
+   0.0,
+   -1.2139090114290259
+  ],
+  "python": {
+   "t10_s": 13.01,
+   "peak_turn_deg": 128.02,
+   "turn_end_deg": 128.02,
+   "drift_last10s_deg": 4.47,
+   "airspeed_end_m_s": 6.141,
+   "verdict": "diverges"
+  }
+ }
+]

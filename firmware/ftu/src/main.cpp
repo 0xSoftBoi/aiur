@@ -1,0 +1,720 @@
+// FTU glue for the LilyGO T-Beam S3 Supreme (ESP32-S3FN8, SX1262, u-blox
+// MAX-M10S, AXP2101) with an external MS5611, two cutter gates and an opto
+// heartbeat input.
+//
+// This builds for the SX1262 + u-blox variant ONLY.  The board is also sold
+// with a Quectel L76K (no UBX: gnss.begin() fails, no position, no airborne
+// model) and with an LR1121 radio (different driver, TCXO 3.0 V, RF switch
+// on DIO5/DIO6: radio.begin() fails).  Neither is supported here.
+//
+// Everything that decides anything is in geofence.cpp and protocol.cpp, which
+// are tested on the host.  This file only moves bytes: sensors -> Sample,
+// radio -> Command, Outputs -> two GPIOs, Persist -> NVS.  Keep it that way;
+// logic added here is logic that no test sees.
+//
+// STATUS: this file has been compiled (see docs/strato/ftu.md for the exact
+// build) but has NEVER run on hardware.  Pin numbers, PMU rails, the TCXO
+// voltage and the GNSS baud rate have been checked against the vendor's
+// schematics and pin definitions (sources below) - against documents, not
+// against a board.  Anything still tagged UNVERIFIED was not found in a
+// primary source.
+//
+// Sources, cited by tag in the comments below:
+//  [SCH-CORE] LilyGO T-Beam-S3-Core.pdf (schematic V3.0; p1 Power, p2 ESP32S3,
+//             p3 Radio & GNSS)
+//  [SCH-SUP]  LilyGO T-Beam-S3-Supreme-V3.1.pdf (carrier board; one page)
+//             both in github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series @5f537f1,
+//             schematic/T-Beam-S3-Supreme/
+//  [LG-UTIL]  same repo, examples/ArduinoLoRa/LoRaReceiver/utilities.h
+//             L480-552 (T_BEAM_S3_SUPREME block)
+//  [LG-BRD]   same repo, .../LoRaReceiver/LoRaBoards.cpp L172-224 (PMU rails)
+//  [LG-FACT]  same repo, examples/Factory/Factory.ino L1421, L1476, L1617
+//  [LG-HW]    same repo, docs/en/t_beam_supreme/t_beam_supreme_hw.md
+//             (pin map L82-121, I2C addresses L134-151, PMU channels L171-187)
+//  [MESH]     github.com/meshtastic/firmware @fe89ac1,
+//             variants/esp32s3/tbeam-s3-core/variant.h
+//  [S3-DS]    Espressif ESP32-S3 Series Datasheet v2.2: Table 2-1 (pin
+//             defaults), Table 2-2 (power-up glitches), Table 3-1 (strapping)
+#include <Arduino.h>
+#include <Preferences.h>
+#include <SPI.h>
+#include <Wire.h>
+
+#include <RadioLib.h>
+#include <SparkFun_u-blox_GNSS_v3.h>
+#include <esp_idf_version.h>
+#include <esp_system.h>
+#include <esp_task_wdt.h>
+#include <esp_timer.h>
+
+#include "geofence.hpp"
+#include "protocol.hpp"
+
+#ifndef FTU_HAS_AXP2101
+#define FTU_HAS_AXP2101 1
+#endif
+#if FTU_HAS_AXP2101
+#define XPOWERS_CHIP_AXP2101
+#include <XPowersLib.h>
+#endif
+
+#if __has_include("ftu_secrets.h")
+#include "ftu_secrets.h"  // defines FTU_VEHICLE_ID and FTU_PSK; not in the repository
+#elif defined(FTU_REQUIRE_KEY) && FTU_REQUIRE_KEY
+// The flight environment refuses to build without a private key: with the
+// development key below, anyone who has read this repository can DISARM or
+// TERMINATE the vehicle.
+#error "ftu_secrets.h not found (copy src/ftu_secrets.example.h). The flight build needs a private key."
+#else
+#warning "ftu_secrets.h not found: building with the PUBLIC development key. Bench only."
+#define FTU_VEHICLE_ID 1
+#define FTU_PSK {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
+#define FTU_DEVELOPMENT_KEY 1
+#endif
+
+// ---------------------------------------------------------------------------
+// Pins.  "board" = fixed by the PCB.  "harness" = our choice among the GPIOs
+// that the Supreme carrier really breaks out.  Header PN1 carries GPIO48, 21,
+// 3, 38, 39, 45, 46, GPS_PPS, RADIO_RETAIN(GPIO2), SDA/SCL(17/18) and A_LDO1;
+// header PM1 carries U0TXD/U0RXD(43/44), CHIP_PU and the power rails
+// [SCH-SUP].  Nothing else is reachable: in particular GPIO15/16 (used for the
+// cutters before this file was checked) are the 32.768 kHz crystal [SCH-CORE
+// p2] and are not on any header.  Header pin POSITIONS are those of carrier
+// V3.1; V3.0 carries the same nets but its positions were not checked.
+// *** STILL BUZZ OUT EVERY HARNESS PIN ON THE BOARD IN HAND BEFORE POWERING
+// A CUTTER. ***
+// ---------------------------------------------------------------------------
+namespace pin {
+// board: SX1262 (HPD16A module).  [SCH-CORE p2/p3] [LG-UTIL L513-520]
+// [MESH L19-21, L25, L61-64].  DIO2 and DIO3 are not brought out of the module.
+constexpr int kLoraSck = 12, kLoraMiso = 13, kLoraMosi = 11, kLoraCs = 10;
+constexpr int kLoraRst = 5, kLoraDio1 = 1, kLoraBusy = 4;
+// board: GNSS UART, named from the ESP32 side: GPIO9 receives the module's
+// TXD, GPIO8 drives its RXD, each through 100 R.  [SCH-CORE p2/p3]
+// [LG-UTIL L503-504] [MESH L66-67]
+constexpr int kGnssRx = 9, kGnssTx = 8;
+// board: GNSS pin 5.  WAKE_UP on the L76K build; the vendor code drives it
+// high on every Supreme [LG-BRD L726-729] [LG-HW L110, L125].  There is no
+// GNSS reset GPIO: RESET_N is not routed to the ESP32 [SCH-CORE p3].  PPS is
+// GPIO6 through a diode and is not used here.
+constexpr int kGnssWake = 7;
+// board: I2C bus 0 = on-board OLED (0x3C/0x3D), magnetometer and BME280
+// (0x77), and the SDA/SCL pins of header PN1 (pins 1/2), with 4.7 k pull-ups
+// to ALDO1.  [SCH-SUP] [LG-UTIL L496-497] [LG-HW L134-151] [MESH L6-7]
+constexpr int kI2cSda = 17, kI2cScl = 18;
+// board: I2C bus 1 = AXP2101 (0x34) and PCF8563 RTC (0x51) only.
+// [SCH-CORE p1] [LG-UTIL L499-500] [MESH L3-4]
+constexpr int kPmuSda = 42, kPmuScl = 41;
+// board: BOOT button, to ground, 10 k pull-up.  [SCH-CORE p2] [LG-UTIL L508]
+// [MESH L9].  Strapping pin: held low at reset it selects download mode, so
+// press it AFTER power-up/reset for the 3 s ground reset.
+constexpr int kButton = 0;
+// harness: CUT_A_GATE = GPIO38 (PN1 pin 8), CUT_B_GATE = GPIO21 (PN1 pin 12)
+// [SCH-SUP].  Why these two: neither is a strapping pin (0, 3, 45, 46), a USB
+// pin (19, 20), a UART0 pin (43 prints ROM boot messages) or a pad-JTAG pin
+// with a reset pull-up (39 = MTCK); neither is in the power-up glitch table;
+// both come out of reset high-impedance with no pull [S3-DS Tables 2-1, 2-2,
+// 3-1].  They are not adjacent on the header.  Each MOSFET needs its own gate
+// pull-down (10 k) on the FTU side.
+constexpr int kCutA = 38, kCutB = 21;
+// harness: HEARTBEAT = GPIO39 (PN1 pin 7), opto-transistor to ground.  39 is
+// MTCK: with pad JTAG not disabled by eFuse it has a weak pull-up from reset
+// [S3-DS Table 2-1 note 7], which is the idle level wanted here anyway.
+constexpr int kHeartbeat = 39;
+// harness: FTU_VBAT_SENSE = GPIO3 (PN1 pin 10) = ADC1_CH2, the only ADC pin
+// on the headers that nothing else uses (GPIO2/ADC1_CH1 is also there but is
+// wired to radio module pin 6 as RADIO_RETAIN) [SCH-SUP] [SCH-CORE p2/p3].
+// ADC1, so no ADC2/Wi-Fi restriction.  GPIO3 is the JTAG-source strapping
+// pin; it is "floating" by default and is only read if eFuse
+// STRAP_JTAG_SEL has been burnt, which is not the factory state [S3-DS
+// Table 3-1], so a divider on it is harmless.
+constexpr int kVbatSense = 3;
+}  // namespace pin
+
+// FTU_RAW divider: 100 k over 47 k puts 5.4 V at 1.73 V on the pin.
+constexpr float kVbatDivider = (100.0f + 47.0f) / 47.0f;
+
+#ifndef FTU_FREQ_MHZ
+#define FTU_FREQ_MHZ 869.525  // EU 869.40-869.65 MHz: 500 mW ERP, 10 % duty.  Site-specific.
+#endif
+#ifndef FTU_TCXO_V
+// DIO3 powers the module's TCXO and DIO2 drives its RF switch, both inside the
+// HPD16A can (DIO3 is "not connected on PCB, but internally" [MESH L22]).
+// 1.8 V is Meshtastic's fielded value for this board [MESH L30-31]; the
+// vendor's own example calls radio.begin() with RadioLib's default 1.6 V and
+// setDio2AsRfSwitch(true) [LG-FACT L1421, L1476].  The TCXO's rated supply is
+// UNVERIFIED (no HPD16A datasheet found); both values are in use on this board.
+#define FTU_TCXO_V 1.8
+#endif
+#ifndef FTU_GNSS_BAUD
+// 9600 for both GNSS builds of this board [LG-UTIL L539].  A receiver that
+// earlier firmware reconfigured can keep another rate while its backup supply
+// lasts; the vendor code probes 9600..921600 for that reason [LG-BRD L841].
+#define FTU_GNSS_BAUD 9600
+#endif
+// The carrier has a BME280 on this same bus at 0x77 (SDO pulled high, R11)
+// [SCH-SUP] [LG-HW L139], which is the MS5611's default address.  The MS5611
+// must therefore be strapped to 0x76 (CSB high), or the BME280 moved to 0x76
+// (address resistor, carrier V3.1 only [LG-HW L156, L281]) and this set to 0x77.
+#ifndef FTU_MS5611_ADDR
+#define FTU_MS5611_ADDR 0x76
+#endif
+#ifndef FTU_DEBUG_SERIAL
+#define FTU_DEBUG_SERIAL 0
+#endif
+
+// Native-USB serial can stall for ~100 ms per write with no host attached,
+// which in flight is always.  Logging is therefore compiled out of the flight
+// build rather than left to time out inside the 10 Hz loop.
+#if FTU_DEBUG_SERIAL
+#define LOG(...) Serial.printf(__VA_ARGS__)
+#else
+#define LOG(...) do { } while (0)
+#endif
+
+using ftu::Gate;
+using ftu::State;
+namespace proto = ftu::proto;
+
+namespace {
+
+const uint8_t kKey[proto::kKeyLen] = FTU_PSK;
+
+constexpr uint32_t kStepMs = 100;            // decision rate, 10 Hz
+constexpr uint32_t kWatchdogS = 8;
+constexpr uint32_t kTelemetryMs = 30000;     // 370.7 ms on air -> 1.24 % duty
+constexpr uint32_t kTelemetryTermMs = 10000; // after termination -> 3.71 % duty
+constexpr uint32_t kSensorStaleMs = 3000;
+constexpr uint32_t kStoredMagic = 0x46545531;  // "FTU1": bump on any Persist layout change
+
+ftu::Config g_cfg;  // flight defaults; edit in geofence.hpp, where the tests see them
+ftu::Ftu g_ftu(g_cfg);
+Preferences g_nvs;
+proto::CommandReceiver* g_rx = nullptr;  // points at a static in setup(); no heap
+uint8_t g_boot_count = 0;
+
+SX1262 g_radio = new Module(pin::kLoraCs, pin::kLoraDio1, pin::kLoraRst, pin::kLoraBusy);
+bool g_radio_ok = false;
+bool g_tx_active = false;
+uint64_t g_tx_start_ms = 0;
+uint64_t g_radio_retry_ms = 0;
+volatile bool g_dio1 = false;
+
+SFE_UBLOX_GNSS_SERIAL g_gnss;
+bool g_gnss_ok = false;
+bool g_gnss_airborne = false;
+uint64_t g_gnss_retry_ms = 0;
+uint64_t g_fix_ms = 0;
+bool g_fix_valid = false;
+double g_lat = 0.0, g_lon = 0.0, g_gnss_alt = 0.0;
+
+uint16_t g_prom[8] = {0};
+bool g_baro_present = false;
+enum class BaroPhase : uint8_t { Idle, WaitD1, WaitD2 };
+BaroPhase g_baro_phase = BaroPhase::Idle;
+uint64_t g_baro_phase_ms = 0;
+uint32_t g_baro_d1 = 0;
+uint64_t g_baro_ms = 0;
+bool g_baro_valid = false;
+double g_baro_alt = 0.0;
+
+volatile uint32_t g_hb_edges = 0;
+
+uint64_t g_next_step_ms = 0;
+uint64_t g_next_tele_ms = 0;
+bool g_tele_now = false;
+
+#if FTU_HAS_AXP2101
+XPowersPMU g_pmu;
+#endif
+
+uint64_t now_ms() { return static_cast<uint64_t>(esp_timer_get_time() / 1000); }
+
+void IRAM_ATTR on_dio1() { g_dio1 = true; }
+void IRAM_ATTR on_heartbeat() { g_hb_edges = g_hb_edges + 1; }
+
+// ---------------------------------------------------------------------------
+// Gates
+// ---------------------------------------------------------------------------
+
+/// Break before make.  ftu::Gate cannot express "both"; this keeps the pins
+/// from overlapping for the microseconds between two writes as well.
+void apply_gate(Gate g) {
+    if (g != Gate::A) digitalWrite(pin::kCutA, LOW);
+    if (g != Gate::B) digitalWrite(pin::kCutB, LOW);
+    if (g == Gate::A) digitalWrite(pin::kCutA, HIGH);
+    if (g == Gate::B) digitalWrite(pin::kCutB, HIGH);
+}
+
+// ---------------------------------------------------------------------------
+// Persistent state
+// ---------------------------------------------------------------------------
+
+struct Stored {
+    uint32_t magic;
+    ftu::Persist p;
+};
+
+void save_state() {
+    Stored s{kStoredMagic, g_ftu.persist()};
+    g_nvs.putBytes("st", &s, sizeof s);
+}
+
+void load_state() {
+    Stored s;
+    if (g_nvs.getBytesLength("st") == sizeof s && g_nvs.getBytes("st", &s, sizeof s) == sizeof s &&
+        s.magic == kStoredMagic) {
+        g_ftu.restore(s.p);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MS5611 (I2C FTU_MS5611_ADDR).  Non-blocking: one conversion is ~9 ms at OSR 4096 and
+// the loop must not wait for it.
+// ---------------------------------------------------------------------------
+
+constexpr uint8_t kMsAddr = FTU_MS5611_ADDR;
+
+bool ms_cmd(uint8_t cmd) {
+    Wire.beginTransmission(kMsAddr);
+    Wire.write(cmd);
+    return Wire.endTransmission() == 0;
+}
+
+bool ms_read(uint8_t cmd, uint8_t* buf, uint8_t n) {
+    if (!ms_cmd(cmd)) return false;
+    if (Wire.requestFrom(kMsAddr, n) != n) return false;
+    for (uint8_t i = 0; i < n; ++i) buf[i] = static_cast<uint8_t>(Wire.read());
+    return true;
+}
+
+bool ms_begin() {
+    if (!ms_cmd(0x1E)) return false;  // reset; reloads the PROM into the ASIC
+    delay(4);
+    for (uint8_t i = 0; i < 8; ++i) {
+        uint8_t b[2];
+        if (!ms_read(static_cast<uint8_t>(0xA0 + 2 * i), b, 2)) return false;
+        g_prom[i] = static_cast<uint16_t>((b[0] << 8) | b[1]);
+    }
+    return true;
+}
+
+void baro_service(uint64_t now) {
+    if (!g_baro_present) {
+        // Retry once a second: the sensor is on a soldered pigtail and this
+        // unit runs for 16 h in the cold.
+        if (now - g_baro_phase_ms >= 1000) {
+            g_baro_phase_ms = now;
+            g_baro_present = ms_begin();
+        }
+        return;
+    }
+    uint8_t b[3];
+    switch (g_baro_phase) {
+        case BaroPhase::Idle:
+            if (now - g_baro_phase_ms >= 400) {
+                g_baro_phase = ms_cmd(0x48) ? BaroPhase::WaitD1 : BaroPhase::Idle;  // D1, OSR 4096
+                g_baro_phase_ms = now;
+                if (g_baro_phase == BaroPhase::Idle) g_baro_present = false;
+            }
+            break;
+        case BaroPhase::WaitD1:
+            if (now - g_baro_phase_ms >= 12) {
+                if (ms_read(0x00, b, 3) && ms_cmd(0x58)) {  // read ADC, start D2
+                    g_baro_d1 = (static_cast<uint32_t>(b[0]) << 16) | (static_cast<uint32_t>(b[1]) << 8) | b[2];
+                    g_baro_phase = BaroPhase::WaitD2;
+                } else {
+                    g_baro_phase = BaroPhase::Idle;
+                    g_baro_present = false;
+                }
+                g_baro_phase_ms = now;
+            }
+            break;
+        case BaroPhase::WaitD2:
+            if (now - g_baro_phase_ms >= 12) {
+                if (ms_read(0x00, b, 3)) {
+                    const uint32_t d2 = (static_cast<uint32_t>(b[0]) << 16) | (static_cast<uint32_t>(b[1]) << 8) | b[2];
+                    const ftu::Ms5611Reading m = ftu::ms5611_compensate(g_prom, g_baro_d1, d2);
+                    const double alt = m.ok ? ftu::pressure_altitude_m(m.pressure_pa) : NAN;
+                    if (m.ok && !isnan(alt)) {
+                        g_baro_alt = alt;
+                        g_baro_ms = now;
+                        g_baro_valid = true;
+                    }
+                } else {
+                    g_baro_present = false;
+                }
+                g_baro_phase = BaroPhase::Idle;
+                g_baro_phase_ms = now;
+            }
+            break;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// GNSS
+// ---------------------------------------------------------------------------
+
+/// The one GNSS setting this unit cannot fly without.  In the default
+/// "portable" model a u-blox receiver stops reporting above 12 km; the
+/// airborne <1 g model is good to 80 km.  The setting is read back, not
+/// assumed, and the result is a telemetry flag that the pre-launch check
+/// must see set.
+void gnss_configure() {
+    if (!g_gnss_ok) {
+        g_gnss_ok = g_gnss.begin(Serial1);
+        if (!g_gnss_ok) return;
+        g_gnss.setUART1Output(COM_TYPE_UBX);
+        g_gnss.setNavigationFrequency(1);
+        g_gnss.setAutoPVT(true);
+    }
+    if (!g_gnss_airborne) {
+        g_gnss.setDynamicModel(DYN_MODEL_AIRBORNE1g);
+        g_gnss_airborne = g_gnss.getDynamicModel() == DYN_MODEL_AIRBORNE1g;
+    }
+}
+
+void gnss_service(uint64_t now) {
+    if (!g_gnss_ok || !g_gnss_airborne) {
+        // The configuration calls block for up to about a second each.  That
+        // is acceptable before and during flight, not during a cutter pulse.
+        if (g_ftu.gate() == Gate::None && now - g_gnss_retry_ms >= 30000) {
+            g_gnss_retry_ms = now;
+            gnss_configure();
+        }
+        if (!g_gnss_ok) return;
+    }
+    g_gnss.checkUblox();
+    if (g_gnss.getPVT()) {  // true once per fresh NAV-PVT; does not block with auto-PVT
+        const bool ok = g_gnss.getFixType() == 3 && g_gnss.getGnssFixOk() &&
+                        !g_gnss.getInvalidLlh() && g_gnss.getSIV() >= 5;
+        if (ok) {
+            g_lat = g_gnss.getLatitude() * 1e-7;
+            g_lon = g_gnss.getLongitude() * 1e-7;
+            g_gnss_alt = g_gnss.getAltitudeMSL() * 1e-3;
+            g_fix_ms = now;
+        }
+        g_fix_valid = ok;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Radio
+// ---------------------------------------------------------------------------
+
+void radio_begin() {
+    // SF10 / 125 kHz / CR 4/5, private sync word, 22 dBm, 8-symbol preamble.
+    const int st = g_radio.begin(FTU_FREQ_MHZ, 125.0, 10, 5, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 22,
+                                 8, FTU_TCXO_V, false);
+    g_radio_ok = st == RADIOLIB_ERR_NONE;
+    if (!g_radio_ok) {
+        LOG("radio begin failed: %d\n", st);
+        return;
+    }
+    g_radio.setDio2AsRfSwitch(true);
+    g_radio.setCurrentLimit(140.0);
+    g_radio.setCRC(2);
+    g_radio.setDio1Action(on_dio1);
+    g_radio.startReceive();
+}
+
+void handle_uplink(const uint8_t* buf, size_t len, uint64_t now) {
+    proto::Command c;
+    const proto::Status st = g_rx->accept(buf, len, c);
+    if (st != proto::Status::Ok) {
+        LOG("uplink rejected: %u\n", static_cast<unsigned>(st));
+        return;
+    }
+    // Store the counter before acting: if the action resets the unit, the
+    // same packet must not be accepted again after the reboot.
+    g_nvs.putUInt("ctr", g_rx->last_counter());
+    ftu::Command cmd = ftu::Command::Ping;
+    switch (c.cmd) {
+        case proto::Cmd::Ping: cmd = ftu::Command::Ping; break;
+        case proto::Cmd::Arm: cmd = ftu::Command::Arm; break;
+        case proto::Cmd::Disarm: cmd = ftu::Command::Disarm; break;
+        case proto::Cmd::Terminate: cmd = ftu::Command::Terminate; break;
+    }
+    const ftu::CommandResult r = g_ftu.on_command(cmd, c.arg, now);
+    LOG("uplink cmd %u arg %u -> %u\n", static_cast<unsigned>(c.cmd), c.arg, static_cast<unsigned>(r));
+    (void)r;
+    g_tele_now = true;  // the next telemetry packet is the acknowledgement
+}
+
+void radio_service(uint64_t now) {
+    if (!g_radio_ok) {
+        // A unit without a radio still fences autonomously, and link loss
+        // will bring it down after 3 h.  Keep trying in the meantime.
+        if (g_ftu.gate() == Gate::None && now - g_radio_retry_ms >= 30000) {
+            g_radio_retry_ms = now;
+            radio_begin();
+        }
+        return;
+    }
+    if (g_dio1) {
+        g_dio1 = false;
+        if (g_tx_active) {
+            g_radio.finishTransmit();
+            g_tx_active = false;
+        } else {
+            uint8_t buf[64];
+            const size_t n = g_radio.getPacketLength();
+            if (n > 0 && n <= sizeof buf && g_radio.readData(buf, n) == RADIOLIB_ERR_NONE) {
+                handle_uplink(buf, n, now);
+            }
+        }
+        g_radio.startReceive();
+    }
+    if (g_tx_active && now - g_tx_start_ms > 2000) {
+        // TX-done never arrived.  Do not sit deaf to TERMINATE because of it.
+        g_tx_active = false;
+        g_radio.standby();
+        g_radio.startReceive();
+    }
+}
+
+void send_telemetry(uint64_t now, bool batt_valid, uint16_t batt_mv) {
+    proto::Telemetry t;
+    t.vehicle_id = FTU_VEHICLE_ID;
+    t.lat_deg = g_lat;
+    t.lon_deg = g_lon;
+    t.gnss_alt_m = g_gnss_alt;
+    t.baro_alt_m = g_baro_alt;
+    t.gate = static_cast<uint8_t>(g_ftu.gate());
+    t.state = static_cast<uint8_t>(g_ftu.state());
+    t.reason = static_cast<uint8_t>(g_ftu.reason());
+    uint8_t flags = 0;
+    if (g_fix_valid && now - g_fix_ms < kSensorStaleMs) flags |= proto::kFlagGnssValid;
+    if (g_baro_valid && now - g_baro_ms < kSensorStaleMs) flags |= proto::kFlagBaroValid;
+    if (g_ftu.home_set()) flags |= proto::kFlagHomeSet;
+    if (g_ftu.heartbeat_present()) flags |= proto::kFlagHeartbeat;
+    if (g_ftu.altitude_disagree()) flags |= proto::kFlagAltDisagree;
+    if (g_gnss_airborne) flags |= proto::kFlagGnssAirborne;
+    if (g_ftu.disarm_hold_active()) flags |= proto::kFlagDisarmHold;
+    if (g_ftu.sequencer().stop() == ftu::SequencerStop::UnderVoltage) flags |= proto::kFlagUnderVoltage;
+    t.flags = flags;
+    t.batt_mv = batt_valid ? batt_mv : 0;
+    t.flight_s = g_ftu.flight_s();
+    t.ack = static_cast<uint16_t>(g_rx->last_counter());
+    t.boot_count = g_boot_count;
+    t.pulses = g_ftu.sequencer().pulses_started();
+    t.rx_rejects = g_rx->rejects();
+
+    uint8_t buf[proto::kTelemetryLen];
+    if (proto::encode_telemetry(t, buf, sizeof buf) != proto::kTelemetryLen) return;
+    if (g_radio.startTransmit(buf, sizeof buf) == RADIOLIB_ERR_NONE) {
+        g_tx_active = true;
+        g_tx_start_ms = now;
+    } else {
+        g_radio.startReceive();
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Cell voltage
+// ---------------------------------------------------------------------------
+
+/// Returns false if the reading cannot be a 3S lithium primary pack that is
+/// running this processor.  An unfitted or broken divider reads near zero,
+/// and a "0 V" battery would otherwise tell the sequencer to stop before the
+/// first pulse.  An implausible reading is treated as no reading, and the
+/// sequencer then fires without the under-voltage checks.
+bool read_battery(uint16_t* mv) {
+#if FTU_HAS_VBAT_SENSE
+    uint32_t sum = 0;
+    for (int i = 0; i < 8; ++i) sum += analogReadMilliVolts(pin::kVbatSense);
+    const float v = static_cast<float>(sum) / 8.0f * kVbatDivider;
+    if (v < 2500.0f || v > 6500.0f) return false;
+    *mv = static_cast<uint16_t>(v);
+    return true;
+#else
+    (void)mv;
+    return false;
+#endif
+}
+
+// ---------------------------------------------------------------------------
+// PMU
+// ---------------------------------------------------------------------------
+
+void pmu_begin() {
+#if FTU_HAS_AXP2101
+    // Rail map [SCH-CORE p1/p3] [LG-HW L171-187] [LG-BRD L172-205]; Meshtastic
+    // sets the same rails to the same 3.3 V (src/Power.cpp L1259-1289):
+    //   DCDC1 -> VDD3V3 (ESP32-S3), on by default, never touched here
+    //   ALDO1 -> OLED, magnetometer, BME280, I2C bus 0 pull-ups, PN1 pin 4
+    //   ALDO2 -> "sensor" (IMU); the vendor keeps it on for bus access
+    //   ALDO3 -> SX1262 VCC          ALDO4 -> GNSS VCC
+    // ALDO1 must be up before bus 0 is touched or the bus hangs [LG-HW
+    // L143-147].  All LDO inputs are VSYS, which exists only when the PMU is
+    // fed at VBUS or BAT: a board fed at its VDD3V3 pin runs the ESP32 with
+    // the radio and GNSS dead, and the PMU will not answer here.
+    if (!g_pmu.begin(Wire1, AXP2101_SLAVE_ADDRESS, pin::kPmuSda, pin::kPmuScl)) {
+        LOG("no AXP2101: radio and GNSS are unpowered\n");
+        return;
+    }
+    g_pmu.setALDO1Voltage(3300); g_pmu.enableALDO1();
+    g_pmu.setALDO2Voltage(3300); g_pmu.enableALDO2();
+    g_pmu.setALDO3Voltage(3300); g_pmu.enableALDO3();
+    g_pmu.setALDO4Voltage(3300); g_pmu.enableALDO4();
+    // No thermistor on the TS pin of this board (Meshtastic Power.cpp
+    // L1325-1327).
+    g_pmu.disableTSPinMeasure();
+    // The PMU's own protections must not switch the FTU off in flight.  The
+    // power key is not reachable in the box, and a battery "low voltage
+    // shutdown" is meaningless here (there is no Li-ion on the PMU input).
+    g_pmu.disableIRQ(XPOWERS_AXP2101_ALL_IRQ);
+    g_pmu.clearIrqStatus();
+    g_pmu.setPowerKeyPressOffTime(XPOWERS_POWEROFF_10S);  // the longest the chip offers
+#endif
+}
+
+}  // namespace
+
+// ---------------------------------------------------------------------------
+
+void setup() {
+    // 1. Gates low before anything else.  Until this line they are
+    //    high-impedance and held off by the external pull-downs.
+    pinMode(pin::kCutA, OUTPUT);
+    digitalWrite(pin::kCutA, LOW);
+    pinMode(pin::kCutB, OUTPUT);
+    digitalWrite(pin::kCutB, LOW);
+
+#if FTU_DEBUG_SERIAL
+    Serial.begin(115200);
+#endif
+
+    // 2. Watchdog: a hung I2C bus or radio driver resets the unit within 8 s.
+    //    A reset puts the gates back to high-impedance (off) and the state
+    //    comes back from flash, so a reset is always safe to take.
+#if ESP_IDF_VERSION_MAJOR >= 5
+    esp_task_wdt_config_t wdt = {};
+    wdt.timeout_ms = kWatchdogS * 1000;
+    wdt.idle_core_mask = 0;
+    wdt.trigger_panic = true;
+    if (esp_task_wdt_reconfigure(&wdt) != ESP_OK) esp_task_wdt_init(&wdt);
+#else
+    esp_task_wdt_init(kWatchdogS, true);
+#endif
+    esp_task_wdt_add(nullptr);
+
+    // 3. Brown-out.  The ESP32's brown-out detector is left enabled (the
+    //    framework default).  If a cutter pulse drags the 3V3 rail down, a
+    //    clean reset with the gates released is better than a processor
+    //    running outside its supply range with a gate held on.  The pulse
+    //    counter is in flash before the gate opens, so the sequence resumes
+    //    with the *next* pulse rather than repeating the one that failed.
+    //
+    //    Sleep: this firmware never enters light or deep sleep and never
+    //    starts Wi-Fi or Bluetooth.  There is no code path that calls
+    //    esp_deep_sleep_start(), esp_light_sleep_start() or enables automatic
+    //    light sleep; do not add one.  An FTU that is asleep is not an FTU.
+
+    // 4. Persistent state.
+    g_nvs.begin("ftu", false);
+    const uint32_t boots = g_nvs.getUInt("boot", 0) + 1;
+    g_nvs.putUInt("boot", boots);
+    g_boot_count = static_cast<uint8_t>(boots);
+    LOG("boot %u, reset reason %d\n", static_cast<unsigned>(boots), static_cast<int>(esp_reset_reason()));
+
+    //    Ground reset: BOOT button held for 3 s just after power-up forgets the last
+    //    flight (state, references, flight clock).  Without this a unit
+    //    recovered in ARMED or TERMINATED would come back up in that state
+    //    on the bench.  The uplink counter is deliberately kept.
+    //    BOOT is GPIO0, a strapping pin: held low THROUGH a reset it puts the
+    //    chip in download mode and this code never runs [S3-DS Table 3-3].  So
+    //    the press has to begin after the reset; after a power-on or RST-pin
+    //    reset (never after a watchdog, brown-out or panic reset, which are
+    //    the in-flight ones) wait up to 1.5 s for it to begin.
+    pinMode(pin::kButton, INPUT_PULLUP);
+    bool held = digitalRead(pin::kButton) == LOW;
+    const esp_reset_reason_t why = esp_reset_reason();
+    if (why == ESP_RST_POWERON || why == ESP_RST_EXT) {
+        for (int i = 0; !held && i < 15; ++i) {
+            delay(100);
+            esp_task_wdt_reset();
+            held = digitalRead(pin::kButton) == LOW;
+        }
+    }
+    for (int i = 0; held && i < 30; ++i) {
+        delay(100);
+        esp_task_wdt_reset();
+        held = digitalRead(pin::kButton) == LOW;
+    }
+    if (held) {
+        g_nvs.remove("st");
+        LOG("flight state cleared\n");
+    }
+    load_state();
+
+    static proto::CommandReceiver rx(kKey, FTU_VEHICLE_ID, g_nvs.getUInt("ctr", 0));
+    g_rx = &rx;
+
+    // 5. Power rails, buses, sensors, radio.
+    pmu_begin();
+    Wire.begin(pin::kI2cSda, pin::kI2cScl, 400000);
+    Wire.setTimeOut(50);  // a stuck bus costs 50 ms, not the watchdog
+    g_baro_present = ms_begin();
+
+    pinMode(pin::kHeartbeat, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(pin::kHeartbeat), on_heartbeat, CHANGE);
+
+    pinMode(pin::kGnssWake, OUTPUT);
+    digitalWrite(pin::kGnssWake, HIGH);
+    Serial1.begin(FTU_GNSS_BAUD, SERIAL_8N1, pin::kGnssRx, pin::kGnssTx);
+    esp_task_wdt_reset();
+    gnss_configure();
+    esp_task_wdt_reset();
+
+    SPI.begin(pin::kLoraSck, pin::kLoraMiso, pin::kLoraMosi, pin::kLoraCs);
+    radio_begin();
+
+    const uint64_t now = now_ms();
+    g_next_step_ms = now;
+    g_next_tele_ms = now + 2000;
+}
+
+void loop() {
+    esp_task_wdt_reset();
+    const uint64_t now = now_ms();
+
+    radio_service(now);
+    gnss_service(now);
+    baro_service(now);
+
+    if (now >= g_next_step_ms) {
+        g_next_step_ms = now + kStepMs;
+
+        ftu::Sample s;
+        s.now_ms = now;
+        s.gnss_valid = g_fix_valid && (now - g_fix_ms) < kSensorStaleMs;
+        s.lat_deg = g_lat;
+        s.lon_deg = g_lon;
+        s.gnss_alt_m = g_gnss_alt;
+        s.baro_valid = g_baro_valid && (now - g_baro_ms) < kSensorStaleMs;
+        s.baro_alt_m = g_baro_alt;
+        noInterrupts();
+        s.hb_edges = g_hb_edges;
+        g_hb_edges = 0;
+        interrupts();
+        s.batt_valid = read_battery(&s.batt_mv);
+
+        const ftu::Outputs out = g_ftu.step(s);
+        // Order matters: flash first, gate second (see Outputs::persist_dirty).
+        if (out.persist_dirty) save_state();
+        apply_gate(out.gate);
+
+        // Telemetry.  Not started while a gate is on: a 22 dBm burst adds
+        // ~120 mA to the 3V3 rail at the moment the cells are loaded hardest,
+        // and the 3 s gaps between pulses are long enough for a packet.
+        const uint32_t period = out.state == State::Terminated ? kTelemetryTermMs : kTelemetryMs;
+        if (g_radio_ok && !g_tx_active && out.gate == Gate::None &&
+            (g_tele_now || now >= g_next_tele_ms)) {
+            g_tele_now = false;
+            g_next_tele_ms = now + period;
+            send_telemetry(now, s.batt_valid, s.batt_mv);
+        }
+    }
+    delay(1);  // yield to the idle task; not sleep
+}

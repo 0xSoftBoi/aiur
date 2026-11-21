@@ -1,0 +1,62 @@
+net,from,from_port,to,to_port,kind,awg,length_m,connector,i2c_addr,note
+VBAT_RAW,BAT,MAIN,PM,BAT_IN,power,14,0.15,XT60,,main pack through the sensing power module
+VBAT,PM,BAT_OUT,BEC5,VIN,power,20,0.10,solder,,
+VBAT,PM,BAT_OUT,HTR_BAY,VIN,power,24,0.10,JST-SM,,
+VSENSE,PM,SENSE,FC,VBAT_SENSE,analog,28,0.10,JST-GH 6,,voltage + current
+5V,BEC5,5V,FC,5V_IN,power,22,0.08,JST-GH,,
+5V,BEC5,5V,CC,5V_IN,power,22,0.08,USB-C,,
+5V,BEC5,5V,RX,VCC,power,26,0.08,JST-GH 4,,
+5V,BEC5,5V,GNSS,VCC,power,26,0.60,JST-GH 6,,GNSS sits on top of the spine clear of the pack
+5V,BEC5,5V,BARO,VCC,power,28,0.05,JST-GH 4,,
+5V,BEC5,5V,SRV_BAL,VCC,power,26,0.15,servo 3-pin,,
+5V,BEC5,5V,T_BAY,VCC,power,28,0.05,JST-GH 3,,
+5V,BEC5,5V,DP_HULL,VCC,power,28,0.05,JST-GH 4,,
+5V,BEC5,5V,DP_PITOT,VCC,power,28,0.05,JST-GH 4,,
+5V,BEC5,5V,STROBE,VCC,power,26,0.50,JST-GH 2,,
+MAVLINK_CC,FC,UART1,CC,UART,uart,28,0.08,JST-GH 6,,MAVLink 2 at 921600 to the ROS 2 companion (MAVROS)
+MAVLINK_RF,FC,UART2,RX,UART,uart,28,0.08,JST-GH 4,,ELRS in MAVLink mode: C2 and telemetry on one link
+GNSS_UART,FC,UART3,GNSS,UART,uart,28,0.60,JST-GH 6,,
+I2C_FC,FC,I2C,BARO,I2C,i2c,28,0.05,JST-GH 4,0x77,
+I2C_FC,FC,I2C,GNSS,I2C,i2c,28,0.60,JST-GH 6,0x0D,QMC5883 compass
+I2C_FC,FC,I2C,DP_HULL,I2C,i2c,28,0.05,JST-GH 4,0x25,
+I2C_FC,FC,I2C,DP_PITOT,I2C,i2c,28,0.05,JST-GH 4,0x26,
+PWM_BAL,FC,S4,SRV_BAL,SIG,pwm,28,0.15,servo 3-pin,,
+PWM_HTR_BAY,FC,S5,HTR_BAY,GATE,pwm,28,0.10,JST-GH 2,,
+STROBE_EN,FC,GPIO1,STROBE,GATE,gpio,28,0.50,JST-GH 2,,
+ONEWIRE,CC,GPIO4,T_BAY,DQ,onewire,28,0.05,JST-GH 3,,
+PHASE,ESC,PHASE,MOTOR,PHASE,phase,18,0.10,3.5 mm bullets,,
+RF_C2_A,RX,ANT1,RXANT,FEED,rf,0,0.30,U.FL,,
+FTU_RAW,FTU_BAT,OUT,FTU_REG,VIN,power,24,0.05,solder,,
+FTU_CUT,RBF,OUT,CUT_A,VIN,power,22,1.20,JST-SM,,cutters draw from the primary cells directly
+FTU_CUT,RBF,OUT,CUT_B,VIN,power,20,2.50,JST-SM,,
+FTU_5V,FTU_REG,5V,FTU,VBUS,power,26,0.05,solder,,"header PM1-2, ground PM1-3"
+FTU_ALDO1,FTU,A_LDO1,FTU_BARO,VCC,power,28,0.05,solder,,header PN1-4; same rail as the bus pull-ups
+I2C_FTU,FTU,I2C,FTU_BARO,I2C,i2c,28,0.05,solder,0x76,header PN1-1/PN1-2 (bus 0)
+CUT_A_GATE,FTU,GPIO_A,CUT_A,GATE,gpio,28,1.20,JST-SM,,"GPIO38, header PN1-8"
+CUT_B_GATE,FTU,GPIO_B,CUT_B,GATE,gpio,28,2.50,JST-SM,,"GPIO21, header PN1-12"
+RF_FTU,FTU,LORA_ANT,FTU_ANT,FEED,rf,0,0.10,SMA,,
+HEARTBEAT,FC,HB_OUT,FTU,HB_IN,opto,28,0.30,JST-GH 2,,"optically isolated, GPIO39 (PN1-7): the only crossing between the two systems and it carries no power"
+SPINE_CAN,FC,CAN,POD_NODE,CAN,can,26,9.5,JST-GH 4 at bay / M8 4-pin at pod,,"the whole stern pod interface: one twisted pair + reference, 9.5 m"
+VPOD_RAW,BAT_P,MAIN,PM_P,BAT_IN,power,14,0.12,XT60,,
+VPOD,PM_P,BAT_OUT,ESC,VIN,power,16,0.12,XT30,,
+VPOD,PM_P,BAT_OUT,BEC_POD,VIN,power,22,0.08,solder,,
+VPOD,PM_P,BAT_OUT,HTR_POD,VIN,power,24,0.1,JST-SM,,
+5V_POD,BEC_POD,5V,POD_NODE,5V_IN,power,26,0.05,JST-GH,,
+5V_POD,BEC_POD,5V,SRV_GY,VCC,power,24,0.15,servo 3-pin,,
+5V_POD,BEC_POD,5V,SRV_GP,VCC,power,24,0.15,servo 3-pin,,
+POD_SENSE,PM_P,SENSE,POD_NODE,ADC,analog,28,0.08,JST-GH 6,,pod pack voltage/current reported over CAN
+PWM_THR,POD_NODE,PWM1,ESC,SIG,pwm,28,0.1,servo 3-pin,,
+PWM_GY,POD_NODE,PWM2,SRV_GY,SIG,pwm,28,0.15,servo 3-pin,,
+PWM_GP,POD_NODE,PWM3,SRV_GP,SIG,pwm,28,0.15,servo 3-pin,,
+PWM_HTR_POD,POD_NODE,PWM4,HTR_POD,GATE,pwm,28,0.1,JST-GH 2,,
+5V,BEC5,5V,RTD_A,VCC,power,28,0.05,JST-GH 4,,
+5V,BEC5,5V,RTD_G,VCC,power,28,0.05,JST-GH 4,,
+SPI_CC,CC,SPI,RTD_A,SPI,spi,28,0.05,JST-GH 6,,
+SPI_CC,CC,SPI,RTD_G,SPI,spi,28,0.05,JST-GH 6,,
+CS_A,CC,CS0,RTD_A,CS,gpio,28,0.05,JST-GH 6,,
+CS_G,CC,CS1,RTD_G,CS,gpio,28,0.05,JST-GH 6,,
+RTD_AMB,RTD_A,RTD,T_AMB,RTD,analog,28,0.5,JST-GH 4,,4-wire RTD lead
+RTD_GAS,RTD_G,RTD,T_GAS,RTD,analog,28,2.0,JST-GH 4,,4-wire RTD lead
+FTU_RAW,FTU_BAT,OUT,RBF,IN,power,20,0.05,solder,,cutter supply passes through the remove-before-flight plug
+FTU_RAW,FTU_BAT,OUT,FTU_VSENSE,IN,power,28,0.03,solder,,
+FTU_VBAT_SENSE,FTU_VSENSE,OUT,FTU,ADC_VBAT,analog,28,0.03,solder,,GPIO3 (PN1-10); under-voltage stop for the cutter sequencer

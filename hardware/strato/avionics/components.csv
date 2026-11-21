@@ -1,0 +1,45 @@
+id,name,part,group,location,qty,mass_g,unit_usd,v_min,v_max,power_w_avg,power_w_peak,temp_min_c,tiers,provenance,alternate,note
+BAT,Hotel battery 6SnP 21700,Samsung 50S class cells spot-welded in-house,power,bay,1,0,0,18.0,25.2,0,0,-20,S1 S2,cited,Molicel P45B,avionics + payload + bay heater; mass and cost carried by the sizing model; 6S2P/6S3P is the Ukrainian field-pack format
+PM,Power module + battery monitor,Matek FCHUB-12S / generic 60 A hall sensor,power,bay,1,14,22,7,52,0.2,0.3,-40,S1 S2,estimate,Holybro PM02,voltage and current sense to the autopilot
+BEC5,5 V 5 A switching regulator,Matek UBEC DUO 5V,power,bay,1,13,16,7,26,0.4,0.6,-40,S1 S2,estimate,Pololu D36V50F5,losses only; load is on the consumers
+FC,Flight controller,Matek H743-WING V3 (or H7A3-WING),core,bay,1,30,135,4.8,5.5,1.2,1.6,-40,S1 S2,cited,SpeedyBee F405 WING (no CAN: PWM-over-spine variant),"ArduPilot; chosen over the F405 for its CAN port, which is what makes the stern pod a two-wire module; onboard SPL06 barometer is not rated below 300 hPa so BARO is primary"
+BARO,External barometer 10-1200 mbar,TE MS5611 on GY-63 breakout,core,bay,1,1.3,9,3.0,5.5,0.01,0.01,-40,S1 S2,cited,MS5607,the only common MEMS barometer rated to 10 mbar (31 km); BMP388/390 and SPL06 stop near 9 km
+GNSS,GNSS + compass,Matek M10Q-5883 (u-blox M10),core,bay-lid,1,9,28,4.5,5.5,0.15,0.2,-40,S1 S2,cited,Holybro M10,airborne <1g dynamic model: valid to 80 km; must be set or the fix drops near 12 km; sits under a foam cap on the bay lid for warmth
+CC,Companion computer (ROS 2),Radxa Zero 3W 4 GB,core,bay,1,13,40,4.8,5.3,2.2,4.0,0,S1 S2,estimate,Raspberry Pi Zero 2 W / Pi 5,Pi list prices were unstable through 2026; any arm64 Linux SBC with one UART works
+RX,C2 + telemetry radio (air),mLRS 868/915 MHz 1 W module (MatekSys mR900-30 class),core,bay,1,8,45,4.5,5.5,1.2,4.0,-20,S1 S2,estimate,RadioMaster DBR4 dual-band ELRS (100 mW),1 W symmetric MAVLink link: the link budget gives a 100 mW ELRS receiver only ~130 km with margin and the vehicle drifts ~100 km; band is a swap-in module decision
+RXANT,C2 antenna 868/915 MHz,T-dipoles on 300 mm coax,core,spine-bottom,1,4,4,0,0,0,0,-90,S1 S2,estimate,,nadir-pointing pattern; see link budget
+ESC,Motor controller 6S 40 A,AM32/BLHeli_32 40 A single,propulsion,stern-pod,1,10,25,12,26,0.3,0.5,-40,S1 S2,estimate,any AM32 6S ESC,in the stern pod next to its own pack: no high-current lead runs the spine
+MOTOR,Propulsion motor,5008 170 kV outrunner,propulsion,stern-pod,1,128,55,0,26,0,0,-90,S1 S2,estimate,Motor-G / SunnySky equivalent,power carried by the sizing model; bearings regreased with low-temperature grease
+PROP,Propeller,28-32 in folding carbon,propulsion,stern-pod,1,60,45,0,0,0,0,-90,S1 S2,estimate,,slow thin-air propeller; folding protects it in the flaccid launch chain
+SRV_GY,Gimbal yaw servo,KST X08H class HV digital,propulsion,stern-pod,1,9,38,3.8,8.4,0.15,2.5,-20,S1 S2,estimate,Hitec D85MG,cold: degrease and re-lubricate; fed from the pod regulator
+SRV_GP,Gimbal pitch servo,KST X08H class HV digital,propulsion,stern-pod,1,9,38,3.8,8.4,0.15,2.5,-20,S1 S2,estimate,Hitec D85MG,doubles as vertical trim
+SRV_BAL,Ballast dispenser servo,9 g metal-gear micro servo,core,bay,1,12,8,4.8,6.0,0.05,2.0,-20,S1 S2,estimate,,steel-shot hopper; never water
+HTR_BAY,Bay heater,Polyimide film heater 10 W + MOSFET switch,power,bay,1,6,7,10,26,4.0,10.0,-60,S1 S2,estimate,,thermostat on FC relay output; average from the bay thermal model
+HTR_POD,Stern pod heater,Polyimide film heater 3 W,power,stern-pod,1,3,5,10,26,1.0,3.0,-60,S1 S2,estimate,,keeps gimbal servos and the propulsion pack above -20 C
+T_AMB,Ambient temperature probe,PT1000 thin-film RTD,core,external,1,2,6,0,0,0,0,-200,S1 S2,estimate,,DS18B20 stops at -55 C and the tropopause does not; RTD is passive and read by RTD_A in the bay
+T_GAS,Gas temperature probe,PT1000 thin-film RTD on 2 m lead,core,external,1,4,6,0,0,0,0,-200,S1 S2,estimate,,inside the fill neck: measures superheat directly
+T_BAY,Bay temperature probe,DS18B20,core,bay,1,2,2,3.0,5.5,0.005,0.01,-55,S1 S2,cited,,thermostat feedback; the one place a DS18B20 is inside its rating
+DP_HULL,Hull differential pressure,Sensirion SDP810-125Pa,core,bay,1,6,32,3.0,5.5,0.02,0.02,-40,S2,cited,,I2C 0x25; tube to hull; the hull is a 20-60 Pa vessel so this is the structural sensor
+DP_PITOT,Airspeed pitot,Sensirion SDP811-125Pa,core,bay,1,6,32,3.0,5.5,0.02,0.02,-40,S2,cited,,I2C 0x26; q is 1.6 Pa at 6 m/s so only a 125 Pa-class sensor resolves it
+STROBE,Anti-collision strobe,1 W white LED strobe,core,external,1,5,6,4.5,5.5,0.25,1.0,-40,night,estimate,,required below 60 000 ft at night under Part 101 Subpart D; not fitted for day flights; needs a cold-rated driver before it is
+FTU,Flight termination unit,"LilyGO T-Beam S3 Supreme, u-blox + SX1262 build",termination,ftu-box,1,38,48,3.9,6.0,0.6,1.2,-20,S1 S2,estimate,RP2040 + SX1262 + MAX-M10S custom,independent processor + GNSS + radio; reject the L76K-GNSS or LR1121-radio builds - the firmware supports neither; pins per docs/strato/ftu.md
+FTU_BAT,FTU primary battery,6 x Energizer L91 lithium AA (3S2P),termination,ftu-box,1,90,18,3.3,5.4,0,0,-40,S1 S2,cited,,primary lithium: rated to -40 C and never shares a rail with any main pack; 2P for cold-cell sag margin - the firmware fires the cutters one at a time and never together
+FTU_REG,FTU 5 V buck-boost,Pololu S7V8F5 class (input range to be confirmed against its datasheet),termination,ftu-box,1,2,7,2.7,11.8,0.05,0.1,-40,S1 S2,estimate,,the board must be fed at VBUS (3.9-6 V): its radio and GNSS sit behind PMU rails that are dead if 3.3 V is back-fed; the pack sags below 3.9 V so it cannot feed VBUS directly
+FTU_BARO,FTU barometer,MS5611 breakout,termination,ftu-box,1,1.3,9,3.0,3.6,0.01,0.01,-40,S1 S2,cited,,second altitude source independent of the autopilot; CSB tied high for address 0x76 because the board carries a BME280 at 0x77; powered from the board ALDO1 rail that also feeds the bus pull-ups
+CUT_A,Cut-down A (suspension),Nichrome hot-wire cutter + logic MOSFET,termination,external,1,6,5,3.0,5.4,0,5.0,-90,S1 S2,estimate,pyro line cutter,"separates the equipment string from the cells; passive wire outside, MOSFET inside the FTU box"
+CUT_B,Cut-down B (envelope),Nichrome hot-wire on rip panel + MOSFET,termination,external,1,6,5,3.0,5.4,0,5.0,-90,S1 S2,estimate,,"opens the cell: second independent termination; passive wire outside, MOSFET inside the FTU box"
+FTU_ANT,FTU antenna 868/433 MHz,quarter-wave whip,termination,external,1,3,3,0,0,0,0,-90,S1 S2,estimate,,
+CHUTE,Recovery parachute 1.2 m,ripstop cross parachute,recovery,external,1,95,35,0,0,0,0,-90,S1 S2,estimate,,sized for 6 m/s at sea level under the equipment string; mass carried by the sizing model
+REFL,Radar reflector,foil-laminate octahedral,recovery,external,1,30,6,0,0,0,0,-90,S1 S2,estimate,,required by Part 101 Subpart D
+SATCOM,Satellite tracker (option),RockBLOCK 9603 Iridium SBD,option,bay,1,39,250,4.5,5.5,0.3,2.3,-40,opt,cited,SPOT Trace,beyond-horizon position; airtime extra
+VIDEO,Digital video downlink (option),OpenIPC Thinker AIO 5.8 GHz,option,bay,1,13.4,55,7,26,3.5,5.0,-20,opt,cited,RunCam WiFiLink 2,payload bay item not part of the vehicle
+SLMINI,Broadband backhaul (option),Starlink Mini,option,payload,1,1100,300,12,48,30,75,-30,opt,cited,,1.1 kg and 25-40 W: an S4 payload not an S1 one
+RTD_A,RTD amplifier (ambient),MAX31865 breakout,core,bay,1,2,12,3.0,5.5,0.02,0.02,-40,S1 S2,estimate,ADS1220,SPI to the companion
+RTD_G,RTD amplifier (gas),MAX31865 breakout,core,bay,1,2,12,3.0,5.5,0.02,0.02,-40,S1 S2,estimate,ADS1220,
+BAT_P,Propulsion battery 6SnP 21700,same cells as BAT,propulsion,stern-pod,1,0,0,18.0,25.2,0,0,-20,S1 S2,cited,,its own pack in the pod: losing propulsion power cannot brown out the autopilot; mass carried by the sizing model
+PM_P,Pod power module,generic 60 A hall sensor,propulsion,stern-pod,1,14,22,7,52,0.2,0.3,-40,S1 S2,estimate,,
+BEC_POD,Pod 5 V 3 A regulator,Pololu D36V28F5 class,propulsion,stern-pod,1,4,13,7,26,0.2,0.4,-40,S1 S2,estimate,,servos and pod node powered locally
+POD_NODE,Pod CAN node,Matek AP_PERIPH CAN-L431,propulsion,stern-pod,1,5,30,4.5,5.5,0.25,0.3,-40,S1 S2,estimate,any AP_Periph node,DroneCAN: turns three PWM runs and two sense lines into one twisted pair; the pod becomes a swap-in module on one connector
+FTU_VSENSE,FTU cell-voltage divider,100k over 47k 1 % divider to GPIO3 (ADC1),termination,ftu-box,1,0.2,0.2,0,12,0,0,-55,S1 S2,estimate,,divide by 3.13 to match the firmware; the firmware stops a cutter pulse on cell under-voltage and without this line it fires blind
+FTU_PULLDN,Cutter gate pull-downs,2 x 10k resistors gate-to-source,termination,ftu-box,1,0.2,0.2,0,0,0,0,-55,S1 S2,estimate,,the processor pins float through reset and brown-out; the gates must not
+RBF,Remove-before-flight plug,2-pin shorting plug with streamer in series with both cutter feeds,termination,ftu-box,1,6,4,0,12,0,0,-55,S1 S2,estimate,,physically opens the cutter supply on the ground; pulled as the last act before release

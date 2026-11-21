@@ -1,0 +1,9 @@
+piece,material,qty,length_mm,width_mm,area_each_m2,drawing,note
+gore,LLDPE balloon film 20 um,12,22545,1415,24.1308,gore.svg / gore.dxf / gore_stations.csv,"seam allowance 15 mm each edge; 1 keel, 1 crown, rest plain"
+nose cap,LLDPE balloon film 20 um,1,289,289,0.0658,gore.svg,"disc, from offcut; double it for the nose fitting"
+tail disc,LLDPE balloon film 20 um,1,289,289,0.0657,gore.svg,"disc + collar, from offcut"
+load patch,PE/polyester tape 48 mm,13,150,150,0.0177,gore.svg (KEEL_GORE_ONLY),every 1.5 m of keel arc; 13.7 N each
+port reinforcement ring,LLDPE balloon film 20 um x2,1,250,250,0.0491,gore.svg (KEEL_GORE_ONLY),port 150 mm
+fin skin,LLDPE balloon film 20 um,8,3165,2827,6.1046,fin.svg / fin.dxf,"2 per fin, mirror pairs are identical"
+spar tube 25% chord,TPU-coated 20D nylon ripstop,4,2813,1434,4.0332,fin.svg / fin.dxf,"dia 450 mm, lap 20 mm, pillow ends"
+spar tube 75% chord,TPU-coated 20D nylon ripstop,4,2994,1434,4.2932,fin.svg / fin.dxf,"dia 450 mm, lap 20 mm, pillow ends"
