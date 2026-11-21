@@ -25,15 +25,11 @@
   ],
   "python": {
    "t10_s": 2.84,
-   "turn_at_t10_deg": 10.04,
-   "turn_5s_deg": 38.795,
-   "turn_end_deg": 104.9,
    "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
    "airspeed_end_m_s": 0.194,
-   "u_end_m_s": 0.058,
-   "yaw_end_deg": -104.9,
-   "pitch_end_deg": -0.25,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -62,15 +58,11 @@
   ],
   "python": {
    "t10_s": 2.84,
-   "turn_at_t10_deg": 10.04,
-   "turn_5s_deg": 38.795,
-   "turn_end_deg": 104.9,
    "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
    "airspeed_end_m_s": 0.194,
-   "u_end_m_s": 0.058,
-   "yaw_end_deg": -104.9,
-   "pitch_end_deg": -0.25,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -99,15 +91,11 @@
   ],
   "python": {
    "t10_s": 2.84,
-   "turn_at_t10_deg": 10.04,
-   "turn_5s_deg": 38.795,
-   "turn_end_deg": 104.9,
    "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
    "airspeed_end_m_s": 0.194,
-   "u_end_m_s": 0.058,
-   "yaw_end_deg": -104.9,
-   "pitch_end_deg": -0.25,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -136,15 +124,11 @@
   ],
   "python": {
    "t10_s": 2.84,
-   "turn_at_t10_deg": 10.04,
-   "turn_5s_deg": 38.795,
-   "turn_end_deg": 104.9,
    "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
    "airspeed_end_m_s": 0.194,
-   "u_end_m_s": 0.058,
-   "yaw_end_deg": -104.9,
-   "pitch_end_deg": -0.25,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -173,15 +157,11 @@
   ],
   "python": {
    "t10_s": 2.84,
-   "turn_at_t10_deg": 10.04,
-   "turn_5s_deg": 38.795,
-   "turn_end_deg": 104.9,
    "peak_turn_deg": 137.86,
+   "turn_end_deg": 104.9,
+   "drift_last10s_deg": -3.88,
    "airspeed_end_m_s": 0.194,
-   "u_end_m_s": 0.058,
-   "yaw_end_deg": -104.9,
-   "pitch_end_deg": -0.25,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -211,15 +191,11 @@
   ],
   "python": {
    "t10_s": 4.48,
-   "turn_at_t10_deg": 10.04,
-   "turn_5s_deg": 12.384,
-   "turn_end_deg": -176.82,
    "peak_turn_deg": -180.0,
+   "turn_end_deg": -176.82,
+   "drift_last10s_deg": 4.28,
    "airspeed_end_m_s": 0.206,
-   "u_end_m_s": 0.078,
-   "yaw_end_deg": 176.82,
-   "pitch_end_deg": -0.03,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -249,15 +225,11 @@
   ],
   "python": {
    "t10_s": null,
-   "turn_at_t10_deg": null,
-   "turn_5s_deg": 7.006,
-   "turn_end_deg": 0.12,
    "peak_turn_deg": 7.17,
+   "turn_end_deg": 0.12,
+   "drift_last10s_deg": -0.01,
    "airspeed_end_m_s": 2.585,
-   "u_end_m_s": 2.585,
-   "yaw_end_deg": 0.0,
-   "pitch_end_deg": 0.12,
-   "completed": true
+   "verdict": "settles"
   }
  },
  {
@@ -287,15 +259,11 @@
   ],
   "python": {
    "t10_s": 4.38,
-   "turn_at_t10_deg": 10.02,
-   "turn_5s_deg": 13.019,
-   "turn_end_deg": 17.35,
    "peak_turn_deg": 180.0,
+   "turn_end_deg": 17.35,
+   "drift_last10s_deg": 59.43,
    "airspeed_end_m_s": 1.969,
-   "u_end_m_s": 1.816,
-   "yaw_end_deg": -17.35,
-   "pitch_end_deg": -0.46,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -325,15 +293,11 @@
   ],
   "python": {
    "t10_s": 4.48,
-   "turn_at_t10_deg": 10.04,
-   "turn_5s_deg": 12.384,
-   "turn_end_deg": -176.82,
    "peak_turn_deg": -180.0,
+   "turn_end_deg": -176.82,
+   "drift_last10s_deg": 4.28,
    "airspeed_end_m_s": 0.206,
-   "u_end_m_s": 0.078,
-   "yaw_end_deg": 176.82,
-   "pitch_end_deg": -0.03,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -363,15 +327,11 @@
   ],
   "python": {
    "t10_s": null,
-   "turn_at_t10_deg": null,
-   "turn_5s_deg": 7.006,
-   "turn_end_deg": 0.12,
    "peak_turn_deg": 7.17,
+   "turn_end_deg": 0.12,
+   "drift_last10s_deg": -0.01,
    "airspeed_end_m_s": 2.585,
-   "u_end_m_s": 2.585,
-   "yaw_end_deg": 0.0,
-   "pitch_end_deg": 0.12,
-   "completed": true
+   "verdict": "settles"
   }
  },
  {
@@ -401,15 +361,11 @@
   ],
   "python": {
    "t10_s": 4.38,
-   "turn_at_t10_deg": 10.02,
-   "turn_5s_deg": 13.019,
-   "turn_end_deg": 17.35,
    "peak_turn_deg": 180.0,
+   "turn_end_deg": 17.35,
+   "drift_last10s_deg": 59.43,
    "airspeed_end_m_s": 1.969,
-   "u_end_m_s": 1.816,
-   "yaw_end_deg": -17.35,
-   "pitch_end_deg": -0.46,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -439,15 +395,11 @@
   ],
   "python": {
    "t10_s": 7.76,
-   "turn_at_t10_deg": 10.0,
-   "turn_5s_deg": 5.353,
-   "turn_end_deg": 120.35,
    "peak_turn_deg": 120.35,
+   "turn_end_deg": 120.35,
+   "drift_last10s_deg": 17.17,
    "airspeed_end_m_s": 1.875,
-   "u_end_m_s": 1.854,
-   "yaw_end_deg": -120.35,
-   "pitch_end_deg": 0.12,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -477,15 +429,11 @@
   ],
   "python": {
    "t10_s": null,
-   "turn_at_t10_deg": null,
-   "turn_5s_deg": 3.404,
-   "turn_end_deg": 0.14,
    "peak_turn_deg": 3.41,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
    "airspeed_end_m_s": 2.589,
-   "u_end_m_s": 2.589,
-   "yaw_end_deg": 0.0,
-   "pitch_end_deg": 0.14,
-   "completed": true
+   "verdict": "settles"
   }
  },
  {
@@ -515,15 +463,11 @@
   ],
   "python": {
    "t10_s": 7.57,
-   "turn_at_t10_deg": 10.0,
-   "turn_5s_deg": 5.456,
-   "turn_end_deg": 79.42,
    "peak_turn_deg": 179.99,
+   "turn_end_deg": 79.42,
+   "drift_last10s_deg": 34.05,
    "airspeed_end_m_s": 4.991,
-   "u_end_m_s": 4.96,
-   "yaw_end_deg": -79.42,
-   "pitch_end_deg": -0.18,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -553,15 +497,11 @@
   ],
   "python": {
    "t10_s": 7.76,
-   "turn_at_t10_deg": 10.0,
-   "turn_5s_deg": 5.353,
-   "turn_end_deg": 120.35,
    "peak_turn_deg": 120.35,
+   "turn_end_deg": 120.35,
+   "drift_last10s_deg": 17.17,
    "airspeed_end_m_s": 1.875,
-   "u_end_m_s": 1.854,
-   "yaw_end_deg": -120.35,
-   "pitch_end_deg": 0.12,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -591,15 +531,11 @@
   ],
   "python": {
    "t10_s": null,
-   "turn_at_t10_deg": null,
-   "turn_5s_deg": 3.404,
-   "turn_end_deg": 0.14,
    "peak_turn_deg": 3.41,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
    "airspeed_end_m_s": 2.589,
-   "u_end_m_s": 2.589,
-   "yaw_end_deg": 0.0,
-   "pitch_end_deg": 0.14,
-   "completed": true
+   "verdict": "settles"
   }
  },
  {
@@ -629,15 +565,11 @@
   ],
   "python": {
    "t10_s": 7.57,
-   "turn_at_t10_deg": 10.0,
-   "turn_5s_deg": 5.456,
-   "turn_end_deg": 79.42,
    "peak_turn_deg": 179.99,
+   "turn_end_deg": 79.42,
+   "drift_last10s_deg": 34.05,
    "airspeed_end_m_s": 4.991,
-   "u_end_m_s": 4.96,
-   "yaw_end_deg": -79.42,
-   "pitch_end_deg": -0.18,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -667,15 +599,11 @@
   ],
   "python": {
    "t10_s": 13.18,
-   "turn_at_t10_deg": 10.01,
-   "turn_5s_deg": 3.447,
-   "turn_end_deg": 37.54,
    "peak_turn_deg": 37.54,
+   "turn_end_deg": 37.54,
+   "drift_last10s_deg": 4.84,
    "airspeed_end_m_s": 2.527,
-   "u_end_m_s": 2.526,
-   "yaw_end_deg": -37.54,
-   "pitch_end_deg": 0.14,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -705,15 +633,11 @@
   ],
   "python": {
    "t10_s": null,
-   "turn_at_t10_deg": null,
-   "turn_5s_deg": 2.446,
-   "turn_end_deg": 0.14,
    "peak_turn_deg": 2.46,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
    "airspeed_end_m_s": 2.59,
-   "u_end_m_s": 2.59,
-   "yaw_end_deg": 0.0,
-   "pitch_end_deg": 0.14,
-   "completed": true
+   "verdict": "settles"
   }
  },
  {
@@ -743,15 +667,11 @@
   ],
   "python": {
    "t10_s": 13.01,
-   "turn_at_t10_deg": 10.0,
-   "turn_5s_deg": 3.469,
-   "turn_end_deg": 128.02,
    "peak_turn_deg": 128.02,
+   "turn_end_deg": 128.02,
+   "drift_last10s_deg": 4.47,
    "airspeed_end_m_s": 6.141,
-   "u_end_m_s": 6.141,
-   "yaw_end_deg": -128.02,
-   "pitch_end_deg": -0.0,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -781,15 +701,11 @@
   ],
   "python": {
    "t10_s": 13.18,
-   "turn_at_t10_deg": 10.01,
-   "turn_5s_deg": 3.447,
-   "turn_end_deg": 37.54,
    "peak_turn_deg": 37.54,
+   "turn_end_deg": 37.54,
+   "drift_last10s_deg": 4.84,
    "airspeed_end_m_s": 2.527,
-   "u_end_m_s": 2.526,
-   "yaw_end_deg": -37.54,
-   "pitch_end_deg": 0.14,
-   "completed": true
+   "verdict": "diverges"
   }
  },
  {
@@ -819,15 +735,11 @@
   ],
   "python": {
    "t10_s": null,
-   "turn_at_t10_deg": null,
-   "turn_5s_deg": 2.446,
-   "turn_end_deg": 0.14,
    "peak_turn_deg": 2.46,
+   "turn_end_deg": 0.14,
+   "drift_last10s_deg": -0.02,
    "airspeed_end_m_s": 2.59,
-   "u_end_m_s": 2.59,
-   "yaw_end_deg": 0.0,
-   "pitch_end_deg": 0.14,
-   "completed": true
+   "verdict": "settles"
   }
  },
  {
@@ -857,15 +769,11 @@
   ],
   "python": {
    "t10_s": 13.01,
-   "turn_at_t10_deg": 10.0,
-   "turn_5s_deg": 3.469,
-   "turn_end_deg": 128.02,
    "peak_turn_deg": 128.02,
+   "turn_end_deg": 128.02,
+   "drift_last10s_deg": 4.47,
    "airspeed_end_m_s": 6.141,
-   "u_end_m_s": 6.141,
-   "yaw_end_deg": -128.02,
-   "pitch_end_deg": -0.0,
-   "completed": true
+   "verdict": "diverges"
   }
  }
 ]

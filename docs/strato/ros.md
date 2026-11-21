@@ -153,9 +153,30 @@ sizing model's cruise thrust, bridges odometry into ROS and prints one line:
 | Free hull, no thrust, 590 s | 3.6 m altitude drift | neutral |
 
 That checks drag, mass, added mass and buoyancy against physics written by
-someone else. It does not check the fins: the stock plugin models a bare
-hull, which is why the comparison runs on a rail — off it, the hull tumbles.
-A fin model in Gazebo is open work.
+someone else.
+
+### With fins, off the rail
+
+```
+ros2 launch aiur_description gz_fins.launch.py csv_dir:=/tmp/aiur_gz_fins
+```
+
+Twenty-three open-loop cases with four `LiftDrag` fins on the hull
+([gazebo-fins.md](gazebo-fins.md)). Time for a 2 degree sideslip to grow to
+10 degrees of yaw at 6 m/s:
+
+| Fins / V^(2/3) | In-repo 6-DoF | Gazebo, same hull assumptions | Gazebo, plugin's own hull model |
+| ---: | ---: | ---: | --- |
+| 0.30 | 4.5 s | 4.2 s | 8.6 s, diverges |
+| 0.50 | 7.8 s | 7.0 s | never: settles 5.6 degrees off |
+| 0.60 | 13.2 s | 11.2 s | never: settles 1.8 degrees off |
+
+The two agree within 7-15 % where they share assumptions, and the
+difference is traced term by term. Where they differ in kind, Gazebo's hull
+model (which lets flow separation remove a quarter of the Munk moment) says
+the in-repo model is conservative. Both use the same assumed fin lift
+slope, so that number is still untested, and "does 0.50 hold heading
+unaided" flips on how much of the Munk moment is real.
 
 ## Known gaps
 
@@ -163,7 +184,8 @@ A fin model in Gazebo is open work.
   frame, no parameter file.
 - Sensor noise and radio loss are not injected at the message level (motor,
   gimbal and GNSS-outage faults are).
-- Gazebo has no fin model, so only the bare-hull terms are cross-checked.
+- The Gazebo fin runs are open loop; the closed-loop turn study has not been
+  repeated there.
 - The termination node never exercises link loss; the firmware does.
 - `robot_localization` is installed but not in the loop; on the vehicle the
   autopilot's EKF is the estimator.

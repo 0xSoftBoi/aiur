@@ -6,7 +6,7 @@
       <inertial>
         <pose>0 0 -0.8874 0 0 0</pose>
         <mass>9.83269</mass>
-        <inertia><ixx>18.265</ixx><iyy>129.095</iyy><izz>121.352</izz>
+        <inertia><ixx>10.522</ixx><iyy>121.352</iyy><izz>121.352</izz>
           <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
         <fluid_added_mass>
           <xx>0.80193</xx><yy>8.45376</yy><zz>8.45376</zz>
@@ -22,7 +22,7 @@
       <force_inviscid_coeff>-8.4344</force_inviscid_coeff>
       <force_viscous_coeff>24.3550</force_viscous_coeff>
       <moment_inviscid_coeff>44.9636</moment_inviscid_coeff>
-      <moment_viscous_coeff>77.7971</moment_viscous_coeff>
+      <moment_viscous_coeff>-77.7971</moment_viscous_coeff>
       <eps_v>-0.4620</eps_v>
       <axial_drag_coeff>1.03761</axial_drag_coeff>
     </plugin>

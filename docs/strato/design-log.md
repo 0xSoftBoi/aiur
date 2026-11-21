@@ -397,6 +397,39 @@ two other builds sold under the same name have a GNSS or radio the firmware
 does not support. Both firmware environments build against the corrected
 board definition. Nothing has been checked on a physical board.
 
+## Rev R — fins in Gazebo
+
+```
+ros2 launch aiur_description gz_fins.launch.py
+```
+
+The fin size came from one model. Gazebo now has fins too (four `LiftDrag`
+surfaces on the stock lighter-than-air hull), and 23 open-loop cases were
+compared ([gazebo-fins.md](gazebo-fins.md)).
+
+- **Where the two share hull assumptions they agree within 7-15 %**, and
+  the gap is attributed: Gazebo's hull plugin has no yaw-rate damping and
+  double-counts an added-mass term. The fin models themselves agree to
+  0.5 %. With drag off, the in-repo integrator matches Gazebo's physics
+  engine to 1 %.
+- **Where they differ in kind, the in-repo model is the conservative one.**
+  It applies the full Munk moment; the plugin's hull model lets separation
+  remove about a quarter of it, and with that the 0.50 hull holds heading
+  with no control at all.
+- **0.30 diverges in every model.** Nothing argues for bigger fins than
+  0.50 and nothing would justify smaller.
+
+The check found errors in my first Gazebo generator, none of which touched
+the published rail comparison: one coefficient had the wrong sign, the
+separation station was a guess (0.4 L against 0.83 L from Hopkins' rule),
+and inertia was written about the wrong point. All corrected.
+
+What it does not do: both models use the same assumed fin lift slope, so it
+is still unmeasured; and whether 0.50 holds heading unaided depends on how
+much of the Munk moment is real, with a thin margin (75 % by the rule, 80 %
+at the edge). An open-loop sideslip release on the SP1 trainer measures
+both at once.
+
 ## Where the model was checked
 
 - **Lamb added-mass factors** reproduce Munk's NACA Report 184 table to
@@ -406,6 +439,8 @@ board definition. Nothing has been checked on a physical board.
 - **JP Aerospace Tandem** flew two 1.8 m propellers and managed 6 kt at
   ~29 km. The tandem model needs 100 W to sustain 3 m/s at 20 km with
   0.77 m propellers. Same regime.
+- **Gazebo with fins**: open-loop yaw divergence times within 7-15 % of the
+  in-repo model for three fin sizes, differences attributed term by term.
 - **Gazebo** (`ros2 launch aiur_description gz_check.launch.py`): the stock
   `LighterThanAirDynamics` + `Buoyancy` systems give a terminal airspeed of
   6.18 m/s against 6.00 expected (S2) and 3.14 against 3.00 (S1), and an

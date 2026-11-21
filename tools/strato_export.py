@@ -134,6 +134,11 @@ def sdf(key: str, dp, af: Airframe, thrust_n: float, rail: bool = False) -> tupl
     a = h.length_m / 2.0
     b = math.sqrt(h.volume_m3 / (4.0 / 3.0 * math.pi * a))   # ellipsoid of equal volume
     ixx, iyy, izz = af.inertia
+    # SDF wants inertia about the centre of mass; the airframe carries it
+    # about the centre of volume.  (Found by the fin cross-check; it does not
+    # affect the rail comparison, which has no rotation.)
+    shift = af.mass_kg * af.cg_below_cv_m ** 2
+    ixx, iyy = ixx - shift, iyy - shift
     re = air.density_kg_m3 * dp.mission["cruise_airspeed_m_s"] * h.length_m / air.viscosity_pa_s
     axial = h.drag_coefficient(re) * af.drag_multiplier * h.reference_area_m2
     k1, k2, _ = h.lamb_factors()
@@ -172,7 +177,7 @@ def sdf(key: str, dp, af: Airframe, thrust_n: float, rail: bool = False) -> tupl
       <force_inviscid_coeff>{-(k2-k1)*i1:.4f}</force_inviscid_coeff>
       <force_viscous_coeff>{af.crossflow_cd*j1:.4f}</force_viscous_coeff>
       <moment_inviscid_coeff>{(k2-k1)*i3:.4f}</moment_inviscid_coeff>
-      <moment_viscous_coeff>{af.crossflow_cd*j2:.4f}</moment_viscous_coeff>
+      <moment_viscous_coeff>{-af.crossflow_cd*j2:.4f}</moment_viscous_coeff>
       <eps_v>{eps - af.x_cv:.4f}</eps_v>
       <axial_drag_coeff>{axial:.5f}</axial_drag_coeff>
     </plugin>
@@ -239,7 +244,7 @@ def hopkins_eps_v(hull: Hull, n: int = 2000) -> float:
     return 0.378 * length + 0.527 * x1
 
 
-def lta_coefficients(af: Airframe, hull_model: str) -> dict:
+def lta_coefficients(af: Airframe, hull_model: str, eps_station_m: float | None = None) -> dict:
     """LighterThanAirDynamics parameters with the signs the plugin source uses.
 
     The plugin (LighterThanAirDynamics.cc, PreUpdate) applies, for crossflow
@@ -273,7 +278,8 @@ def lta_coefficients(af: Airframe, hull_model: str) -> dict:
     dx = length / n
     if hull_model == "none":
         return {"eps_station_m": xm, "eps_v": 0.0, "fi": 0.0, "fv": 0.0, "mi": 0.0, "mv": 0.0}
-    eps = hopkins_eps_v(h) if hull_model == "li-nahon" else 0.0
+    eps = 0.0 if hull_model != "li-nahon" else (
+        hopkins_eps_v(h) if eps_station_m is None else eps_station_m)
     i1 = i3 = j1 = j2 = 0.0
     for i in range(n):
         x0, x1 = i * dx, (i + 1) * dx
@@ -421,19 +427,29 @@ def _python_case(af: Airframe, case: dict, dt: float = 0.01) -> dict:
     res = run(af, case["duration_s"], lambda t, s: 0.0, u, controlled=False, initial=st,
               dt=dt, record_s=dt)
     key = "pitch_deg" if case["axis"] == "pitch" else "yaw_deg"
-    # Positive = the nose turning away from the velocity vector (divergence).
+    # Positive turn = the nose moving away from the velocity vector (divergence).
+    # flight6dof: yaw positive to starboard, initial sideslip to starboard.
     sign = 1.0 if case["axis"] == "pitch" else -1.0
-    rows = res["rows"]
-    t10 = next((r["t"] for r in rows if abs(r[key]) >= 10.0), None)
-    at = lambda t: min(rows, key=lambda r: abs(r["t"] - t))  # noqa: E731
-    last = rows[-1]
-    return {"t10_s": t10, "turn_at_t10_deg": None if t10 is None else round(sign * at(t10)[key], 2),
-            "turn_5s_deg": round(sign * at(5.0)[key], 3),
-            "turn_end_deg": round(sign * last[key], 2), "peak_turn_deg":
-            round(max((sign * r[key] for r in rows), key=abs), 2),
-            "airspeed_end_m_s": round(math.sqrt(last["u"] ** 2 + last["v"] ** 2 + last["w"] ** 2), 3),
-            "u_end_m_s": round(last["u"], 3), "yaw_end_deg": round(last["yaw_deg"], 2),
-            "pitch_end_deg": round(last["pitch_deg"], 2), "completed": res["completed"]}
+    return fin_case_metrics([(r["t"], sign * r[key], math.sqrt(r["u"] ** 2 + r["v"] ** 2 + r["w"] ** 2))
+                             for r in res["rows"]])
+
+
+def fin_case_metrics(samples: list[tuple[float, float, float]]) -> dict:
+    """Summary of one open-loop run from (t, turn_deg, airspeed) samples.
+
+    scripts/gz_fins_check.py carries a copy of this function for the Gazebo
+    side; keep the two identical.
+    """
+
+    t10 = next((t for t, a, _ in samples if abs(a) >= 10.0), None)
+    t_end, a_end, v_end = samples[-1]
+    a_prev = min(samples, key=lambda s: abs(s[0] - (t_end - 10.0)))[1]
+    drift = (a_end - a_prev + 180.0) % 360.0 - 180.0
+    peak = max((a for _, a, _ in samples), key=abs)
+    verdict = "diverges" if t10 is not None else ("settles" if abs(drift) < 0.5 else "drifting")
+    return {"t10_s": None if t10 is None else round(t10, 2), "peak_turn_deg": round(peak, 2),
+            "turn_end_deg": round(a_end, 2), "drift_last10s_deg": round(drift, 2),
+            "airspeed_end_m_s": round(v_end, 3), "verdict": verdict}
 
 
 def export_fins(pts: dict) -> None:

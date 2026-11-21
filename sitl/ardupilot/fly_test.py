@@ -173,6 +173,18 @@ class Vehicle:
             M.MAV_FRAME_LOCAL_NED, mask, 0, 0, 0,
             speed * math.cos(h), speed * math.sin(h), 0, 0, 0, 0, 0, 0)
 
+    def heading_groundspeed(self, heading_deg: float, ground_speed: float) -> None:
+        """Explicit yaw plus a velocity vector along it.  Rover takes the
+        speed as signed along the commanded yaw, so a negative ground speed
+        ("fall back with the wind, bow first") is expressible."""
+
+        h = math.radians(heading_deg)
+        mask = 0b0000_1001_1100_0111  # velocity + yaw
+        self.m.mav.set_position_target_local_ned_send(
+            int(self.sim_t * 1e3), self.m.target_system, self.m.target_component,
+            M.MAV_FRAME_LOCAL_NED, mask, 0, 0, 0,
+            ground_speed * math.cos(h), ground_speed * math.sin(h), 0, 0, 0, 0, h, 0)
+
     def goto_local(self, north: float, east: float) -> None:
         mask = 0b0000_1101_1111_1000  # position only
         self.m.mav.set_position_target_local_ned_send(
@@ -269,7 +281,7 @@ def test_station(v: Vehicle, a) -> dict:
     if v.sim_t < a.start_after:
         print(f"[{v.sim_t:8.1f}] holding until t={a.start_after:g} s (wind ramp)", flush=True)
         v.run_until(a.start_after)
-    wn, we = a.wind
+    wn, we = a.wind[0], a.wind[1]
     wmag = math.hypot(wn, we)
     un, ue = ((-wn / wmag, -we / wmag) if wmag > 0 else (1.0, 0.0))
     n0, e0 = v.pos.x, v.pos.y
@@ -280,9 +292,28 @@ def test_station(v: Vehicle, a) -> dict:
     v.recording = True
     last = [0.0, 0.0]
 
+    keeper = None
+    if a.guidance == "companion":
+        # The in-repo outer loop, unchanged, standing in for the companion
+        # computer: position error + wind estimate -> heading and airspeed.
+        # Rover's speed loop works on ground speed, so the airspeed demand
+        # is converted with the same wind estimate.  The estimate is the
+        # plant's mean wind (flight6dof.station_keep uses the truth wind
+        # low-passed over 60 s; neither is a real estimator).
+        sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
+        from aiur.strato.guidance import StationKeeper
+        keeper = StationKeeper(a.max_airspeed)
+
     def tick():
-        # the target is sent once; re-send rarely in case a packet is lost
-        if last[0] == 0.0 or v.sim_t - last[0] >= 300.0 and v.mode == GUIDED and a.resend:
+        if keeper is not None:
+            if v.sim_t - last[0] >= 1.0:
+                last[0] = v.sim_t
+                c = keeper.command(tn - v.pos.x, te - v.pos.y, wn, we)
+                h = c.heading_rad
+                gs = c.airspeed_m_s + wn * math.cos(h) + we * math.sin(h)
+                v.heading_groundspeed(math.degrees(h), gs)
+        # stock guidance: the target is sent once (re-sent rarely if asked)
+        elif last[0] == 0.0 or v.sim_t - last[0] >= 300.0 and v.mode == GUIDED and a.resend:
             last[0] = v.sim_t
             v.goto_local(tn, te)
         if v.sim_t - last[1] >= 120.0:
@@ -296,7 +327,7 @@ def test_station(v: Vehicle, a) -> dict:
     rows = [r for r in v.rows if r[0] >= t0]
     half = [r for r in rows if r[0] >= t0 + 0.5 * a.duration]
     dist = lambda r: math.hypot(r[5] - tn, r[6] - te)  # noqa: E731
-    res = {"test": "station", "wind_ned": list(a.wind), "upwind_m": a.upwind_m, "duration_s": a.duration,
+    res = {"test": "station", "guidance": a.guidance, "wind_ned": list(a.wind), "upwind_m": a.upwind_m, "duration_s": a.duration,
            "t_start_s": round(t0, 1), "t_end_s": round(t1, 1), "target_ne": [round(tn, 1), round(te, 1)]}
     arrive = next((r[0] - t0 for r in rows if dist(r) <= 50.0), None)
     res["ekf"] = {
@@ -312,9 +343,12 @@ def test_station(v: Vehicle, a) -> dict:
         time.sleep(0.5)
         tr = load_truth(a.truth, t0, t1, a.truth_offset)
         if tr:
-            # truth position is in the plant's frame; the EKF origin is the
-            # plant origin (SITL home), so the same target applies.
-            td = lambda r: math.hypot(r["n"] - tn, r["e"] - te)  # noqa: E731
+            # Truth position is in the plant's frame.  The EKF origin is
+            # wherever the vehicle was when the EKF set it (it drifts with
+            # the gust before that), so shift the target by the offset
+            # between the two frames measured at the start of the test.
+            on, oe = n0 - tr[0]["n"], e0 - tr[0]["e"]
+            td = lambda r: math.hypot(r["n"] - (tn - on), r["e"] - (te - oe))  # noqa: E731
             th = [r for r in tr if r["t"] >= t0 + 0.5 * a.duration]
             res["truth"] = {
                 "final_distance_m": round(td(tr[-1]), 1),
@@ -327,8 +361,9 @@ def test_station(v: Vehicle, a) -> dict:
                 "gimbal_saturated_fraction": round(
                     sum(1 for r in tr if abs(r["gimbal_yaw_deg"]) >= 24.5) / len(tr), 3),
                 "max_abs_pitch_deg": round(max(abs(r["pitch_deg"]) for r in tr), 2),
-                "ekf_position_error_final_m": round(math.hypot(rows[-1][5] - tr[-1]["n"],
-                                                               rows[-1][6] - tr[-1]["e"]), 2)}
+                "ekf_origin_offset_ne_m": [round(on, 1), round(oe, 1)],
+                "ekf_position_error_final_m": round(math.hypot(rows[-1][5] - on - tr[-1]["n"],
+                                                               rows[-1][6] - oe - tr[-1]["e"]), 2)}
     return res
 
 
@@ -362,6 +397,10 @@ def main(argv=None) -> int:
                     help="the wind the plant was started with (to find 'upwind')")
     ap.add_argument("--upwind-m", type=float, default=1500.0)
     ap.add_argument("--start-after", type=float, default=0.0, help="sim time at which the plant wind is steady")
+    ap.add_argument("--guidance", choices=("rover", "companion"), default="rover",
+                    help="rover: one GUIDED position target, then Rover's boat loiter.  companion: "
+                         "aiur.strato.guidance.StationKeeper here, sending heading+speed at 1 Hz")
+    ap.add_argument("--max-airspeed", type=float, default=6.0, help="companion guidance airspeed limit")
     ap.add_argument("--resend", action="store_true", help="re-send the position target every 300 s")
     ap.add_argument("--duration", type=float, default=300.0)
     ap.add_argument("--set", action="append", default=[], metavar="NAME=VALUE",
