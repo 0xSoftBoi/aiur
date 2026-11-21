@@ -342,7 +342,15 @@ class FlightController:
     speed_integral_n_per_m: float = 0.15
     authority_floor: float = 0.30
     use_fins: bool = False
+    #: Integral gain as a fraction of wn^3.  At cruise the Munk moment, the
+    #: fins and the pendulum nearly cancel in pitch, so the airframe has
+    #: almost no stiffness of its own and a PD loop holds whatever attitude
+    #: it happens to be in (mission6 found it flying 9 degrees nose-down
+    #: against a 1 kg lift surplus).  The integrator removes that offset.
+    integral_fraction: float = 0.10
     _int: float = 0.0
+    _yaw_int: float = 0.0
+    _pitch_int: float = 0.0
     saturated_s: float = 0.0
 
     @classmethod
@@ -360,8 +368,20 @@ class FlightController:
         _, q, r = rate
         wn, z = self.natural_freq_rad_s, self.damping
         err = math.atan2(math.sin(heading_cmd - yaw), math.cos(heading_cmd - yaw))
-        n_cmd = self.yaw_inertia * (wn * wn * err - 2 * z * wn * r)
-        m_cmd = self.pitch_inertia * (wn * wn * (pitch_cmd - pitch) - 2 * z * wn * q)
+        m_max = self.lever_arm_m * self.max_thrust_n * math.sin(self.gimbal_limit_rad)
+        ki = self.integral_fraction * wn**3
+        e_pitch = pitch_cmd - pitch
+        # Anti-windup: integrate only what the gimbal could actually deliver.
+        # Pitch only, and only half the authority.  Yaw is left PD: its error
+        # is driven by guidance rather than by a standing moment, and an
+        # integrator there winds up on every heading change (38 degrees of
+        # overshoot on a 90 degree turn when tried).
+        lim = 0.5 * m_max
+        if abs(e_pitch) < 0.35:
+            self._pitch_int = max(-lim, min(lim, self._pitch_int
+                                            + self.pitch_inertia * ki * e_pitch * dt))
+        n_cmd = self.yaw_inertia * (wn * wn * err - 2 * z * wn * r) + self._yaw_int
+        m_cmd = self.pitch_inertia * (wn * wn * e_pitch - 2 * z * wn * q) + self._pitch_int
         # speed loop
         e_v = airspeed_cmd - airspeed
         self._int = max(-self.max_thrust_n, min(self.max_thrust_n,
@@ -373,9 +393,12 @@ class FlightController:
                                                         * min(1.0, abs(err) / 0.2), want)))
         thrust = max(0.0, min(self.max_thrust_n, thrust))
         t_eff = max(thrust_now, 0.05 * self.max_thrust_n)
-        # Stern thruster at x < 0: side force +y gives yaw moment x*Fy < 0.
+        # Stern thruster at x = -arm.  r x F = (x,0,0) x (0,Fy,Fz) = (0, -x Fz, x Fy):
+        # yaw moment is -arm*Fy, pitch moment is +arm*Fz.  The two signs differ,
+        # and getting the pitch one wrong is positive feedback that pendulum
+        # stability hides at zero pitch command (found by mission6).
         sy = -n_cmd / (self.lever_arm_m * t_eff)
-        sp = -m_cmd / (self.lever_arm_m * t_eff)
+        sp = m_cmd / (self.lever_arm_m * t_eff)
         sat = abs(sy) > math.sin(self.gimbal_limit_rad) or abs(sp) > math.sin(self.gimbal_limit_rad)
         self.saturated_s += dt if sat else 0.0
         lim = math.sin(self.gimbal_limit_rad)

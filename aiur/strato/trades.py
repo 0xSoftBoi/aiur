@@ -36,7 +36,7 @@ def film_trade(mission_key: str = "S2-dayloiter") -> dict:
         dp = size_hull(MISSIONS[mission_key], key, volume_limit_m3=50_000.0)
         r = _row(dp)
         if dp.closed:
-            r["envelope_usd"] = round(dp.geometry["surface_area_m2"] * 1.18 * FILMS[key].usd_per_m2, 0)
+            r["envelope_usd"] = round(dp.geometry["surface_area_m2"] * 1.38 * FILMS[key].usd_per_m2, 0)
             r["cold_ok"] = FILMS[key].min_temp_k <= 200.0
         out[key] = r
     return out
@@ -131,14 +131,22 @@ def overnight_trade() -> dict:
                             ("superpressure LLDPE 38 um", "lldpe-38um", True),
                             ("superpressure PE/EVOH 30 um", "pe-evoh-30um", True),
                             ("superpressure BoPET 12 um", "pet-12um", True),
-                            ("superpressure UHMWPE 18 g/m2", "dcf-18gsm", True)):
-        dp = size_hull(m, film, superpressure=sp, volume_limit_m3=100_000.0)
+                            ("superpressure UHMWPE 18 g/m2", "dcf-18gsm", True),
+                            ("tendon-netted LLDPE 20 um", "lldpe-20um", "net"),
+                            ("tendon-netted LLDPE 38 um", "lldpe-38um", "net")):
+        dp = size_hull(m, film, superpressure=bool(sp), netted=sp == "net",
+                       volume_limit_m3=100_000.0)
         r = _row(dp)
         r["plies_needed"] = round(dp.geometry.get("film_plies_equiv", 0), 2)
         r["design_dp_pa"] = round(dp.structure.get("design_pressure_pa", 0), 0)
         r["ballast_kg_per_night"] = round(dp.mass_kg.get("ballast", 0), 2)
         if dp.closed:
             r["unit_usd_first"] = unit_cost(dp, 1)["unit_usd"]
+        net = dp.structure.get("net") or {}
+        if net:
+            r["mesh_pitch_m"] = round(net["mesh_pitch_m"], 2)
+            r["tendon_m"] = round(net["tendon_length_m"])
+            r["net_kg"] = round(net["net_kg"], 2)
         out[label] = r
     return out
 

@@ -229,8 +229,8 @@ def write_bom(path: str, key: str, dp) -> float:
         rows.append([group, "-", name, part, qty, unit, round(usd / max(qty, 1e-9), 2),
                      round(usd, 0), round(mass, 3), "sized", ""])
     if dp.architecture == "hull":
-        sized("envelope", "Hull film incl. 18 % gore waste", g["film"],
-              round(g["surface_area_m2"] * 1.18, 0), "m2", uc["envelope film"], m["envelope_film"])
+        sized("envelope", "Hull film incl. gore nesting waste (x1.38)", g["film"],
+              round(g["surface_area_m2"] * 1.38, 0), "m2", uc["envelope film"], m["envelope_film"])
         sized("envelope", "Seam tape, load patches, relief valve, fill port, nose cap",
               "PE seam tape; 3D-printed fittings", 1, "set",
               uc["seam tape, load patches, fittings"], m["seams_patches"] + m["fittings_valves"])

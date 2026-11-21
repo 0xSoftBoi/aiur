@@ -12,7 +12,7 @@
     </plugin>
     <plugin filename="gz-sim-apply-link-wrench-system" name="gz::sim::systems::ApplyLinkWrench">
       <persistent><entity_name>aiur_S2-dayloiter_hull::base_link</entity_name><entity_type>link</entity_type>
-        <force>2.5077 0 0</force><torque>0 0 0</torque></persistent>
+        <force>2.5648 0 0</force><torque>0 0 0</torque></persistent>
     </plugin>
     <include><uri>model://S2-dayloiter_hull</uri><pose>0 0 100 0 0 0</pose></include>
   </world>

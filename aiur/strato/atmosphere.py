@@ -126,46 +126,63 @@ def pressure_altitude_m(pressure_pa: float) -> float:
 
 
 # --- winds -------------------------------------------------------------------
-# Each profile is (altitude_km, speed_m_s, direction_from_deg).  The shape that
-# matters is universal at mid-latitudes: a tropospheric jet near 10-12 km, a
-# minimum-wind layer near 18-21 km, and winds that build again above it.  The
-# *level* depends on season and percentile.  Values are [estimate] anchored on
-# the published envelope (docs/strato/references.md, "winds"): typically
-# 5-15 m/s in the 18-22 km layer, 95th percentile under ~26 m/s outside
-# winter, and 99th percentile 35-53 m/s in the worst season.  Replace with
-# ERA5 or IGRA statistics for the actual site before committing to a flight.
+# Each profile is (altitude_km, speed_m_s, direction_from_deg).  The first
+# revision of these tables was estimated from published ranges; it was 30-70 %
+# too pessimistic for summer at 20-22 km and 20-25 % too optimistic for winter.
+# They are now measured.
 
 WIND_PROFILES: dict[str, tuple[tuple[float, float, float], ...]] = {
-    # 50N continental site, June-August.  The stratosphere is in its summer
-    # easterly regime and the minimum-wind layer is at its calmest.
+    # [cited] Computed by tools/strato_winds.py from NOAA IGRA v2 radiosondes,
+    # 2005 onward: the mean of per-station percentiles at Kyiv, Lindenberg,
+    # Praha-Libus and Legionowo (about 58,000 soundings; docs/strato/winds.md).
+    # Speeds are percentiles of wind speed at each level; directions are the
+    # vector-mean bearing.  Two cautions: a stack of per-level 90th
+    # percentiles is windier than any real 90th-percentile day (it overstates
+    # ascent drift by 10-14 %), and the summer bearing near 20 km is a
+    # reversal layer whose mean vector is ~1 m/s, so do not read it as a
+    # forecast.
     "midlat-summer-p50": (
-        (0, 3, 250), (1.5, 6, 255), (5, 12, 265), (9, 19, 270), (11.5, 22, 270),
-        (14, 13, 270), (16, 8, 275), (18, 6, 300), (20, 6, 80), (22, 8, 90),
-        (25, 11, 90), (30, 16, 90),
+        (0, 2.2, 275), (1, 5.9, 275), (2, 7.2, 270), (3, 8.6, 270), (5, 10.8, 265),
+        (7, 13.5, 265), (9, 17.1, 265), (10, 18.9, 265), (11, 19.4, 265),
+        (12, 17.8, 265), (13, 15.1, 265), (14, 13, 260), (15, 11, 255), (16, 9.2, 255),
+        (17, 7.4, 250), (18, 5.8, 245), (19, 4.9, 225), (20, 4.5, 170), (21, 4.3, 120),
+        (22, 4.8, 105), (24, 6.1, 100), (26, 7.7, 95), (28, 8.2, 100), (30, 9, 95),
     ),
     "midlat-summer-p90": (
-        (0, 7, 250), (1.5, 12, 255), (5, 22, 265), (9, 34, 270), (11.5, 40, 270),
-        (14, 24, 270), (16, 15, 275), (18, 12, 290), (20, 12, 80), (22, 14, 90),
-        (25, 18, 90), (30, 24, 90),
+        (0, 4.2, 275), (1, 11.6, 275), (2, 13.2, 270), (3, 15.7, 270), (5, 20.4, 265),
+        (7, 26.4, 265), (9, 33.9, 265), (10, 36.7, 265), (11, 36.8, 265),
+        (12, 32.9, 265), (13, 27.7, 265), (14, 23.9, 260), (15, 20.1, 255),
+        (16, 16.6, 255), (17, 13.7, 250), (18, 10.6, 245), (19, 8.3, 225),
+        (20, 7.2, 170), (21, 7.6, 120), (22, 8, 105), (24, 10.2, 100), (26, 11.8, 95),
+        (28, 12.5, 100), (30, 13.8, 95),
     ),
-    # 50N, December-February.  Stronger jet, and the polar-night jet reaches
-    # down into the 20 km layer: there is no calm layer to hide in.
+    # Winter over Europe has no minimum-wind layer at all: about 18 m/s from
+    # 13 to 19 km and rising above.
     "midlat-winter-p50": (
-        (0, 4, 240), (1.5, 9, 250), (5, 20, 265), (9, 32, 270), (11, 36, 270),
-        (14, 24, 270), (16, 17, 270), (18, 15, 270), (20, 15, 270), (22, 18, 270),
-        (25, 24, 270), (30, 35, 270),
+        (0, 3, 245), (1, 9.6, 270), (2, 10.4, 280), (3, 11.8, 285), (5, 15.7, 285),
+        (7, 20.2, 290), (9, 23.6, 295), (10, 23.5, 295), (11, 22, 295), (12, 20.1, 295),
+        (13, 18.9, 290), (14, 18.1, 290), (15, 18, 290), (16, 18.1, 285),
+        (17, 18.1, 285), (18, 18.6, 285), (19, 19.1, 285), (20, 20.2, 285),
+        (21, 21.2, 280), (22, 22.6, 280), (24, 26.5, 280), (26, 30.8, 280),
+        (28, 36.2, 275), (30, 42.1, 275),
     ),
     "midlat-winter-p90": (
-        (0, 9, 240), (1.5, 16, 250), (5, 34, 265), (9, 55, 270), (11, 62, 270),
-        (14, 40, 270), (16, 30, 270), (18, 27, 270), (20, 28, 270), (22, 32, 270),
-        (25, 40, 270), (30, 55, 270),
+        (0, 5.8, 245), (1, 18.9, 270), (2, 19.7, 280), (3, 21.9, 285), (5, 29.1, 285),
+        (7, 38.5, 290), (9, 45.7, 295), (10, 45.8, 295), (11, 42.7, 295),
+        (12, 37.1, 295), (13, 32.8, 290), (14, 30.9, 290), (15, 30.7, 290),
+        (16, 30.8, 285), (17, 31.6, 285), (18, 33, 285), (19, 34.7, 285),
+        (20, 36.8, 285), (21, 39.2, 280), (22, 42, 280), (24, 48.2, 280),
+        (26, 55.9, 280), (28, 63.3, 275), (30, 73.3, 275),
     ),
-    # Shoulder seasons: the stratospheric wind reverses and passes through
-    # near-zero ("turnaround"), the classic long-duration balloon window.
+    # May and September only.  The full spring and autumn seasons have long
+    # tails (20 km p90 of 18-20 m/s) and are not this calm.
     "midlat-turnaround-p50": (
-        (0, 3, 250), (1.5, 7, 255), (5, 15, 265), (9, 24, 270), (11.5, 28, 270),
-        (14, 16, 270), (16, 9, 270), (18, 6, 270), (20, 5, 250), (22, 5, 120),
-        (25, 5, 100), (30, 8, 90),
+        (0, 2.2, 270), (1, 6.7, 265), (2, 7.5, 265), (3, 8.6, 270), (5, 11, 270),
+        (7, 14.2, 270), (9, 17.6, 270), (10, 18.9, 275), (11, 18.1, 275),
+        (12, 15.7, 275), (13, 13.2, 275), (14, 11.3, 270), (15, 9.8, 270),
+        (16, 8.5, 265), (17, 7.5, 265), (18, 6.5, 265), (19, 5.8, 265), (20, 5.3, 265),
+        (21, 5.1, 265), (22, 5, 270), (24, 5.1, 140), (26, 5.5, 115), (28, 6.4, 200),
+        (30, 7.3, 240),
     ),
     "calm": ((0, 0.0, 270), (30, 0.0, 270)),
 }

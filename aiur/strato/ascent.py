@@ -161,7 +161,58 @@ class AscentSim:
                 self.landed = True
             return
 
-        # --- gas state
+        self.update_gas(air)
+        if self.burst:
+            self.descending = True
+            return
+        self.apply_buoyancy_commands(air, dt, vent_open, ballast_kg_s)
+
+        # --- vertical dynamics
+        latex = cfg.cell_type == "latex"
+        volume, fill = self.volume, self.fill
+        mass = self.mass_kg
+        buoy = air.density_kg_m3 * volume * G0
+        cell_v = volume / max(cfg.n_cells, 1)
+        a_sphere = cfg.n_cells * math.pi * (3.0 * cell_v / (4.0 * math.pi)) ** (2.0 / 3.0)
+        area = a_sphere if latex else (1.0 - fill**2) * a_sphere + fill**2 * cfg.cross_area_full_m2
+        w = self.w
+        drag = -0.5 * air.density_kg_m3 * cfg.ascent_cd * area * abs(w) * w
+        virtual = mass + 0.5 * air.density_kg_m3 * volume
+        trim_n = max(-1.0, min(1.0, trim)) * cfg.trim_thrust_n
+        w += (buoy - mass * G0 + drag + trim_n) / virtual * dt
+        w = max(-40.0, min(40.0, w))
+        z_new = self.z + w * dt
+        if z_new < cfg.launch_altitude_m and self.t > 60.0:
+            self.z = cfg.launch_altitude_m
+            self.w = 0.0
+            self.landed = True
+            return
+
+        an, ae = air_velocity_ne
+        self.air_speed_cmd = math.hypot(an, ae)
+        self.update_thermal(air, dt, w, self.air_speed_cmd)
+
+        # --- horizontal: the vehicle moves with the air plus its own airspeed
+        self.vel_north = wv.north_m_s + an
+        self.vel_east = wv.east_m_s + ae
+        self.north += self.vel_north * dt
+        self.east += self.vel_east * dt
+        self.z = z_new
+        self.w = w
+        self.t += dt
+
+    # The three pieces below are the buoyancy model proper.  ``step`` uses
+    # them with its own one-dimensional dynamics; ``mission6.UnifiedSim``
+    # uses them with the 6-DoF model supplying altitude and climb rate.
+
+    @property
+    def mass_kg(self) -> float:
+        return self.cfg.dry_mass_kg + self.ballast + self.m_gas
+
+    def update_gas(self, air) -> None:
+        """Cell volume, pressure, spill and burst at the present altitude."""
+
+        cfg, gas = self.cfg, self.gas
         latex = cfg.cell_type == "latex"
         p_gas = air.pressure_pa + (cfg.skin_pressure_pa if latex else 0.0)
         v_free = self.m_gas * gas.gas_constant * self.t_gas / p_gas
@@ -193,21 +244,21 @@ class AscentSim:
             if volume > vmax:
                 self.burst = True
         self.volume, self.dp = volume, dp
-        fill = min(1.0, volume / vmax)
-        self.fill = fill
-        if self.burst:
-            self.descending = True
-            return
+        self.fill = min(1.0, volume / vmax)
 
-        # --- commands
+    def apply_buoyancy_commands(self, air, dt: float, vent_open: bool,
+                                ballast_kg_s: float) -> None:
+        cfg, gas = self.cfg, self.gas
         if vent_open and not cfg.valve_fail_closed:
+            latex = cfg.cell_type == "latex"
+            p_gas = air.pressure_pa + (cfg.skin_pressure_pa if latex else 0.0)
             if latex:
                 dpv = cfg.skin_pressure_pa
             elif cfg.cell_type == "superpressure":
-                dpv = max(dp, 2.0)
+                dpv = max(self.dp, 2.0)
             else:
                 # Apex valve on a zero-pressure cell sees the gas head.
-                head = (volume / max(cfg.n_cells, 1) * 6.0 / math.pi) ** (1.0 / 3.0)
+                head = (self.volume / max(cfg.n_cells, 1) * 6.0 / math.pi) ** (1.0 / 3.0)
                 dpv = (air.density_kg_m3 - gas.density(air.pressure_pa, self.t_gas)) * G0 * head
             rho_g = gas.density(p_gas, self.t_gas)
             mdot = cfg.n_cells * cfg.valve_cd * cfg.valve_area_m2 * math.sqrt(
@@ -218,53 +269,28 @@ class AscentSim:
         if ballast_kg_s > 0.0 and self.ballast > 0.0:
             self.ballast -= min(self.ballast, ballast_kg_s * dt)
 
-        # --- vertical dynamics
-        mass = cfg.dry_mass_kg + self.ballast + self.m_gas
-        buoy = air.density_kg_m3 * volume * G0
-        cell_v = volume / max(cfg.n_cells, 1)
-        a_sphere = cfg.n_cells * math.pi * (3.0 * cell_v / (4.0 * math.pi)) ** (2.0 / 3.0)
-        area = a_sphere if latex else (1.0 - fill**2) * a_sphere + fill**2 * cfg.cross_area_full_m2
-        w = self.w
-        drag = -0.5 * air.density_kg_m3 * cfg.ascent_cd * area * abs(w) * w
-        virtual = mass + 0.5 * air.density_kg_m3 * volume
-        trim_n = max(-1.0, min(1.0, trim)) * cfg.trim_thrust_n
-        w += (buoy - mass * G0 + drag + trim_n) / virtual * dt
-        w = max(-40.0, min(40.0, w))
-        z_new = self.z + w * dt
-        if z_new < cfg.launch_altitude_m and self.t > 60.0:
-            self.z = cfg.launch_altitude_m
-            self.w = 0.0
-            self.landed = True
-            return
+    def update_thermal(self, air, dt: float, climb_m_s: float, airspeed_m_s: float) -> None:
+        """Advance gas temperature: film heat exchange plus adiabatic work."""
 
-        # --- gas thermodynamics
+        cfg, gas = self.cfg, self.gas
+        fill = self.fill
+        cell_v = self.volume / max(cfg.n_cells, 1)
         s_eff = cfg.n_cells * 4.0 * math.pi * (3.0 * cell_v / (4.0 * math.pi)) ** (2.0 / 3.0)
-        if not latex:
+        if cfg.cell_type != "latex":
             s_eff = (1.0 - fill) * s_eff + fill * cfg.full_surface_m2
-        an, ae = air_velocity_ne
-        self.air_speed_cmd = math.hypot(an, ae)
-        rel_speed = math.hypot(w, self.air_speed_cmd)
+        rel_speed = math.hypot(climb_m_s, airspeed_m_s)
         h_ext = external_h_w_m2k(air, cfg.length_m, rel_speed, self.t_gas - air.temperature_k)
         h_int = 2.5
         sun = direct_irradiance_w_m2(self.z, self.sun_el)
         t_film = film_temperature_k(air, cfg.optics, self.t_gas, sun, self.sun_el,
                                     h_ext, h_int, self.env)
         q = h_int * s_eff * (t_film - self.t_gas)
-        dp_amb = -air.density_kg_m3 * G0 * w * dt
+        dp_amb = -air.density_kg_m3 * G0 * climb_m_s * dt
         expanding = cfg.cell_type != "superpressure" or fill < 1.0
         dt_ad = (gas.gas_constant * self.t_gas / (gas.cp_j_kgk * air.pressure_pa)) * dp_amb \
             if expanding else 0.0
         self.t_gas += q * dt / (self.m_gas * gas.cp_j_kgk) + dt_ad
         self.supertemp = self.t_gas - air.temperature_k
-
-        # --- horizontal: the vehicle moves with the air plus its own airspeed
-        self.vel_north = wv.north_m_s + an
-        self.vel_east = wv.east_m_s + ae
-        self.north += self.vel_north * dt
-        self.east += self.vel_east * dt
-        self.z = z_new
-        self.w = w
-        self.t += dt
 
     @property
     def range_m(self) -> float:
@@ -273,7 +299,8 @@ class AscentSim:
 
 def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
     sim = AscentSim(cfg)
-    ctl = FloatController(cfg.target_float_m, vent_enabled=cfg.cell_type != "zero-pressure")
+    zero_p = cfg.cell_type == "zero-pressure"
+    ctl = FloatController(cfg.target_float_m, vent_enabled=not zero_p, hold_enabled=not zero_p)
     keeper = StationKeeper(cfg.cruise_airspeed_m_s)
     fence = Geofence(max_flight_s=cfg.max_time_s)
     phase = FlightPhase.ASCENT
@@ -330,10 +357,12 @@ def simulate(cfg: AscentConfig, record_every_s: float = 30.0) -> AscentResult:
         if phase == FlightPhase.ASCENT and sim.z > cfg.target_float_m - ctl.approach_m:
             phase = FlightPhase.FLOAT_ENTRY
             log(f"float entry, climb {sim.w:.2f} m/s, gas {sim.supertemp:+.1f} K vs air")
-        if phase == FlightPhase.FLOAT_ENTRY and abs(sim.w) < 0.3 and (
-                abs(sim.z - cfg.target_float_m) < 1500.0 or sim.fill >= 0.999):
+        settled = sim.fill >= 0.999 if zero_p else abs(sim.z - cfg.target_float_m) < 1500.0
+        if phase == FlightPhase.FLOAT_ENTRY and abs(sim.w) < 0.3 and settled:
             phase = FlightPhase.STATION_KEEP
             float_entry_t = sim.t
+            if zero_p:
+                ctl.settle(max_alt)
             log(f"at float, {sim.range_m/1000:.1f} km downrange, fill {100*sim.fill:.0f} %")
         if phase == FlightPhase.STATION_KEEP:
             float_alts.append(sim.z)
@@ -424,7 +453,10 @@ def config_from_design(dp, **overrides) -> AscentConfig:
             burst_pa=film.ultimate_n_per_m * dp.geometry["film_plies_equiv"] * 0.6
             / (dp.geometry["diameter_m"] / 2.0),
         )
-    cfg.trim_thrust_n = 0.6 * dp.propulsion["dash"]["thrust_n"] * dp.propulsion["n_props"]
+    # Vertical force from pitching the hull at cruise.  0.25 of dash thrust is
+    # what the unified 6-DoF run (mission6) delivers at 8 degrees of pitch;
+    # the 0.6 first assumed here was about three times too generous.
+    cfg.trim_thrust_n = 0.25 * dp.propulsion["dash"]["thrust_n"] * dp.propulsion["n_props"]
     cfg.gas = m["gas"]
     cfg.free_lift_fraction = m["free_lift_fraction"]
     cfg.target_float_m = m["float_altitude_m"]

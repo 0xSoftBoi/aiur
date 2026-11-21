@@ -269,9 +269,18 @@ def sealed_beam_pressure_at_altitude(gauge_ground_pa: float, altitude_m: float,
 
 # --- hull architecture -------------------------------------------------------
 
+#: A flat-gored film hull is a polygon in section, not a circle: 12 gores
+#: enclose 2.2 % less than the smooth hull.  Widening each gore by 1.1 %
+#: recovers it; the budget carries that film.  [patterns.py lobing table]
+LOBING_FILM_FACTOR = 1.011
+#: UHMWPE tendon: specific strength (N m / kg) and a working safety factor.
+TENDON_SPECIFIC_STRENGTH = 3.0e9 / 970.0
+TENDON_SAFETY = 5.0
+
+
 def _hull_budget(volume: float, mission: Mission, film_key: str, fineness: float,
                  av: Avionics, fin_ratio: float, n_props: int, superpressure: bool,
-                 array_key: str, cell_key: str, series: int) -> DesignPoint:
+                 array_key: str, cell_key: str, series: int, netted: bool = False) -> DesignPoint:
     air = isa(mission.float_altitude_m)
     gas = GASES[mission.gas]
     film = FILMS[film_key]
@@ -312,17 +321,43 @@ def _hull_budget(volume: float, mission: Mission, film_key: str, fineness: float
         dp_design = dp_min
     gas_head = (air.density_kg_m3 - gas.density(air.pressure_pa, air.temperature_k)) * G0 * 2 * radius
     hoop = (dp_design + gas_head) * radius
-    plies = max(1.0, hoop / film.allowable_n_per_m)
+    net = {}
+    m_net = 0.0
+    if netted:
+        # Tendon-netted hull, the airship form of a pumpkin balloon: a mesh of
+        # UHMWPE tendons carries the pressure load and the film only spans
+        # between tendons, bulging to a radius about equal to the mesh pitch.
+        # Film stress then depends on the pitch, not on the hull radius, so
+        # cheap film can hold superpressure it could never hold as a monolith.
+        pitch = min(radius, max(0.08, film.allowable_n_per_m / (dp_design + gas_head)))
+        area0 = hull.surface_area_m2
+        # Hoop rings carry p*R per metre of length, meridional tendons p*R/2
+        # per metre of girth: total load-length is 1.5 p R * area.  [physics]
+        load_length = 1.5 * (dp_design + gas_head) * radius * area0
+        m_tendon = load_length * TENDON_SAFETY / TENDON_SPECIFIC_STRENGTH
+        tendon_m = 2.0 * area0 / pitch
+        # Sleeve tape that bonds each tendon to the film: 1.2 g per metre.
+        m_net = 1.6 * m_tendon + 0.0012 * tendon_m
+        plies = 1.0
+        net = {"mesh_pitch_m": pitch, "tendon_length_m": tendon_m, "tendon_kg": m_tendon,
+               "net_kg": m_net, "film_bulge_load_n_per_m": (dp_design + gas_head) * pitch}
+    else:
+        plies = max(1.0, hoop / film.allowable_n_per_m)
     if plies > 1.0 and not superpressure:
         flags.append("film hoop load exceeds allowable even at relief pressure")
 
     # --- masses
     area = hull.surface_area_m2
-    m_film = film.areal_density_kg_m2 * plies * area
+    m_film = film.areal_density_kg_m2 * plies * area * LOBING_FILM_FACTOR \
+        * (1.04 if netted else 1.0)  # bulged panels are longer than their chord
     m_seams = 0.10 * m_film + 0.004 * area  # seam overlap, tapes, load patches
     m_fittings = 0.30 + 0.0015 * area       # relief/vent valve, fill port, nose cap
     fin_area = fin_ratio * hull.reference_area_m2
-    m_fins = 0.085 * fin_area + 0.20        # film skin + air-beam spars + valves
+    # Film skin + air-beam spars + valves.  0.115 kg/m2 is from the cut
+    # patterns with spars filled to 10 kPa on the ground; the first guess of
+    # 0.085 was 40 % light, because spar diameter is set by wrinkling under
+    # launch loads, not by fabric strength.  [patterns.py]
+    m_fins = 0.115 * fin_area + 0.20
     m_spine = 0.018 * length + 0.10         # UHMWPE webbing spine + load lines
     m_term = (0.04 if mission.recoverable else 0.0)  # filled in below
     lift_per_m3 = gas.lift_per_m3(air, superpressure_pa=dp_min)
@@ -330,7 +365,7 @@ def _hull_budget(volume: float, mission: Mission, film_key: str, fineness: float
 
     masses = {
         "envelope_film": m_film, "seams_patches": m_seams, "fittings_valves": m_fittings,
-        "fins": m_fins, "spine_rigging": m_spine,
+        "fins": m_fins, "spine_rigging": m_spine, "tendon_net": m_net,
         "propulsion": prop["mass_kg"], "battery": energy["pack_kg"],
         "solar_array": energy["array_kg"],
         "avionics": av.mass_kg, "avionics_bay": av.bay_mass_kg,
@@ -384,7 +419,7 @@ def _hull_budget(volume: float, mission: Mission, film_key: str, fineness: float
         "hull_wrinkle_moment_nm": wrinkle_moment,
         "distributed_bending_nm": suspended_n * length / 32.0,
         "day_supertemp_k": day_dt, "night_supertemp_k": night_dt,
-        "superpressure": superpressure,
+        "superpressure": superpressure, "net": net,
     }
     if dp.structure["distributed_bending_nm"] > wrinkle_moment:
         flags.append("hull wrinkles under suspended load at relief pressure: raise pressure or spread load")
@@ -425,20 +460,20 @@ def _hull_stability(hull: Hull, air, mass_kg: float, airspeed: float, fin_area: 
 
 
 def size_hull(mission: Mission, film_key: str = "lldpe-20um", fineness: float = 4.0,
-              av: Avionics = Avionics(), fin_ratio: float = 0.60, n_props: int = 1,
+              av: Avionics = Avionics(), fin_ratio: float = 0.50, n_props: int = 1,
               superpressure: bool = False, array_key: str = "mono-si-laminate",
               cell_key: str = "21700-5.0Ah", series: int = 6,
-              volume_limit_m3: float = 200_000.0) -> DesignPoint:
+              volume_limit_m3: float = 200_000.0, netted: bool = False) -> DesignPoint:
     """Smallest hull whose lift carries its own budget."""
 
     def margin(v: float) -> float:
         return _hull_budget(v, mission, film_key, fineness, av, fin_ratio, n_props,
-                            superpressure, array_key, cell_key, series).lift["margin_kg"]
+                            superpressure, array_key, cell_key, series, netted).lift["margin_kg"]
 
     lo, hi = 2.0, volume_limit_m3
     if margin(hi) < 0.0:
         dp = _hull_budget(hi, mission, film_key, fineness, av, fin_ratio, n_props,
-                          superpressure, array_key, cell_key, series)
+                          superpressure, array_key, cell_key, series, netted)
         dp.reason = f"no closure below {volume_limit_m3:.0f} m3"
         return dp
     for _ in range(60):
@@ -448,7 +483,7 @@ def size_hull(mission: Mission, film_key: str = "lldpe-20um", fineness: float = 
         else:
             lo = mid
     dp = _hull_budget(hi, mission, film_key, fineness, av, fin_ratio, n_props,
-                      superpressure, array_key, cell_key, series)
+                      superpressure, array_key, cell_key, series, netted)
     dp.closed = True
     _launch(dp, mission)
     return dp
@@ -562,6 +597,13 @@ def station_keeping_availability(sustained_airspeed_m_s: float, altitude_m: floa
 # --- the ladder --------------------------------------------------------------
 
 MISSIONS = {
+    # SP1: the low-altitude trainer.  Reusable ripstop, helium, flown at a
+    # few tens of metres to learn ground handling, inflation and control
+    # before anything is sent to the stratosphere.
+    "SP1-trainer": Mission("SP1-trainer", 150.0, payload_kg=0.3, payload_w=2.0,
+                           cruise_airspeed_m_s=3.0, dash_airspeed_m_s=6.0,
+                           energy_mode="battery", powered_hours=0.75, gas="helium",
+                           free_lift_fraction=0.02, recoverable=False),
     # S1: the cheapest thing that is honestly a powered airship in the
     # stratosphere.  One hour of powered, controlled flight at float.
     "S1-touch": Mission("S1-touch", 20_000.0, payload_kg=0.5, payload_w=3.0,
@@ -584,12 +626,15 @@ MISSIONS = {
 
 def ladder() -> dict:
     out = {}
+    out["SP1-trainer/hull"] = size_hull(MISSIONS["SP1-trainer"], "nylon-tpu-70gsm")
     out["S1-touch/tandem"] = size_tandem(MISSIONS["S1-touch"], "1600g")
     out["S1-touch/hull"] = size_hull(MISSIONS["S1-touch"], "lldpe-20um")
     out["S2-dayloiter/hull"] = size_hull(MISSIONS["S2-dayloiter"], "lldpe-20um")
     out["S3-diurnal/hull-zp-ballast"] = size_hull(MISSIONS["S3-diurnal"], "lldpe-38um")
     out["S3-diurnal/hull-superpressure"] = size_hull(MISSIONS["S3-diurnal"], "dcf-18gsm",
                                                      superpressure=True)
+    out["S3-diurnal/hull-netted"] = size_hull(MISSIONS["S3-diurnal"], "lldpe-20um",
+                                              superpressure=True, netted=True)
     out["S4-carrier/hull-superpressure"] = size_hull(MISSIONS["S4-carrier"], "dcf-34gsm",
                                                      superpressure=True)
     return out

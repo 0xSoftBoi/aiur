@@ -64,19 +64,45 @@ class FloatController:
     trim_rate_m_s: float = 0.8
     #: Seconds of saturated up-trim before ballast is spent instead.
     trim_patience_s: float = 90.0
+    offload_trim: float = 0.5
+    #: Altitude trim is fine control for a cell that has already settled.  A
+    #: zero-pressure hull must be left alone until it has filled and spilled;
+    #: braking its climb with trim leaves it slack below its natural float
+    #: (unified-simulation finding).  The caller sets this at float.
+    hold_enabled: bool = True
+    #: Hold this far below the altitude at which the hull spilled, so the
+    #: cell stays just full and a warming gas spills rather than climbs.
+    spill_margin_m: float = 150.0
+    one_sided: bool = False
     _saturated_s: float = 0.0
+
+    def settle(self, spill_altitude_m: float) -> None:
+        """Call once when a zero-pressure hull has filled: hold from here."""
+
+        self.target_m = spill_altitude_m - self.spill_margin_m
+        self.hold_enabled = True
+        # From here the hold is one-sided and ratchets upward: a full hull
+        # that warms simply spills and floats a little higher, and pushing it
+        # back down would spend thrust fighting free lift.  Trim only ever
+        # lifts, against a reference that follows the highest altitude seen.
+        self.one_sided = True
 
     def command(self, altitude_m: float, climb_m_s: float, dt_s: float = 1.0) -> FloatCommand:
         predicted = altitude_m + climb_m_s * self.lead_s
         vent = False
         ballast = 0.0
         trim = 0.0
-        if altitude_m > self.target_m - self.approach_m:
+        if self.one_sided:
+            self.target_m = max(self.target_m, altitude_m - self.spill_margin_m)
+        if self.hold_enabled and altitude_m > self.target_m - self.approach_m:
             trim = ((self.target_m - altitude_m) / self.trim_error_m
                     - climb_m_s / self.trim_rate_m_s)
-            trim = max(-1.0, min(1.0, trim))
-        self._saturated_s = self._saturated_s + dt_s if trim >= 0.999 else 0.0
-        if self._saturated_s > self.trim_patience_s and climb_m_s < 0.0:
+            trim = max(0.0 if self.one_sided else -1.0, min(1.0, trim))
+        # Trim is for transients.  A vehicle that needs sustained up-trim is
+        # simply heavy, and carrying that on the propeller costs power all
+        # day; shed ballast until the trim demand is back near neutral.
+        self._saturated_s = self._saturated_s + dt_s if trim >= self.offload_trim else 0.0
+        if self._saturated_s > self.trim_patience_s:
             ballast = self.ballast_rate_kg_s
         if not self.vent_enabled:
             if predicted < self.target_m - self.band_m and climb_m_s < self.sink_trigger_m_s \
@@ -97,6 +123,46 @@ class FloatController:
             ballast = self.ballast_rate_kg_s
             vent = False
         return FloatCommand(vent, ballast, trim)
+
+
+@dataclass
+class EntryGuidance:
+    """Pitch and airspeed setpoints around float, as sent to the autopilot.
+
+    Two rules, both learned from the unified simulation:
+
+    * Do not fly while the hull is still climbing fast.  At 3 m/s of climb
+      and 3 m/s of airspeed the hull sits at 45 degrees of incidence, the
+      Munk moment wins and the thrust ends up pointing at the ground.  Idle
+      until the spill has slowed the climb, then fly *along the flight path*.
+    * At float, altitude trim is a small pitch angle held at a useful
+      airspeed: lift needs flow.
+    """
+
+    cruise_airspeed_m_s: float
+    entry_max_climb_m_s: float = 1.2
+    entry_pitch_limit_deg: float = 20.0
+    pitch_authority_deg: float = 8.0
+    trim_airspeed_fraction: float = 0.8
+
+    def pitch_command_rad(self, phase: str, trim: float, climb_m_s: float,
+                          airspeed_m_s: float) -> float:
+        if phase == FlightPhase.STATION_KEEP.value:
+            return math.radians(self.pitch_authority_deg) * max(-1.0, min(1.0, trim))
+        if phase in (FlightPhase.ASCENT.value, FlightPhase.FLOAT_ENTRY.value) \
+                and climb_m_s <= self.entry_max_climb_m_s:
+            lim = math.radians(self.entry_pitch_limit_deg)
+            return max(-lim, min(lim, math.atan2(climb_m_s, max(airspeed_m_s, 1.0))))
+        return 0.0
+
+    def airspeed_command(self, phase: str, trim: float, climb_m_s: float,
+                         keeper_airspeed_m_s: float) -> float:
+        if phase == FlightPhase.STATION_KEEP.value:
+            floor = self.trim_airspeed_fraction * self.cruise_airspeed_m_s if abs(trim) > 0.3 else 0.0
+            return max(keeper_airspeed_m_s, floor)
+        if phase in (FlightPhase.ASCENT.value, FlightPhase.FLOAT_ENTRY.value):
+            return 0.0 if climb_m_s > self.entry_max_climb_m_s else self.cruise_airspeed_m_s
+        return 0.0
 
 
 @dataclass(frozen=True)

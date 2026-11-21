@@ -4,27 +4,27 @@
   <model name="aiur_S2-dayloiter_hull_rail">
     <link name="base_link">
       <inertial>
-        <pose>0 0 -1.2287 0 0 0</pose>
-        <mass>15.25561</mass>
-        <inertia><ixx>44.910</ixx><iyy>275.365</iyy><izz>252.334</izz>
+        <pose>0 0 -1.2139 0 0 0</pose>
+        <mass>15.76194</mass>
+        <inertia><ixx>46.329</ixx><iyy>289.673</iyy><izz>266.446</izz>
           <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
         <fluid_added_mass>
-          <xx>1.24421</xx><yy>13.11617</yy><zz>13.11617</zz>
-          <pp>0</pp><qq>146.0986</qq><rr>146.0986</rr>
+          <xx>1.28550</xx><yy>13.55150</yy><zz>13.55150</zz>
+          <pp>0</pp><qq>154.2693</qq><rr>154.2693</rr>
         </fluid_added_mass>
       </inertial>
-      <collision name="hull"><geometry><ellipsoid><radii>8.7095 2.1687 2.1687</radii></ellipsoid></geometry></collision>
-      <visual name="hull"><geometry><ellipsoid><radii>8.7095 2.1687 2.1687</radii></ellipsoid></geometry></visual>
+      <collision name="hull"><geometry><ellipsoid><radii>8.8048 2.1924 2.1924</radii></ellipsoid></geometry></collision>
+      <visual name="hull"><geometry><ellipsoid><radii>8.8048 2.1924 2.1924</radii></ellipsoid></geometry></visual>
     </link>
     <plugin filename="gz-sim-lighter_than_air_dynamics-system" name="gz::sim::systems::LighterThanAirDynamics">
       <air_density>0.08891</air_density>
       <link_name>base_link</link_name>
-      <force_inviscid_coeff>-11.3038</force_inviscid_coeff>
-      <force_viscous_coeff>32.6407</force_viscous_coeff>
-      <moment_inviscid_coeff>69.7619</moment_inviscid_coeff>
-      <moment_viscous_coeff>120.7038</moment_viscous_coeff>
-      <eps_v>-0.5348</eps_v>
-      <axial_drag_coeff>1.47598</axial_drag_coeff>
+      <force_inviscid_coeff>-11.5526</force_inviscid_coeff>
+      <force_viscous_coeff>33.3590</force_viscous_coeff>
+      <moment_inviscid_coeff>72.0773</moment_inviscid_coeff>
+      <moment_viscous_coeff>124.7099</moment_viscous_coeff>
+      <eps_v>-0.5407</eps_v>
+      <axial_drag_coeff>1.51178</axial_drag_coeff>
     </plugin>
     <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
       <odom_frame>map</odom_frame><robot_base_frame>base_link</robot_base_frame>

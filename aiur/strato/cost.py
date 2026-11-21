@@ -21,6 +21,7 @@ import sys
 from .harness import load, review
 
 LABOUR_USD_PER_H = 18.0
+FILM_PURCHASE_FACTOR = 1.38
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,7 @@ def unit_cost(dp, units: int = 1, learning: Learning = Learning()) -> dict:
     """Bill of cost for one vehicle at cumulative production ``units``."""
 
     data = load()
-    tier = "S1" if dp.mission["name"].startswith("S1") else "S2"
+    tier = "S2" if dp.mission["name"].startswith(("S2", "S3", "S4")) else "S1"
     rep = review(data, tier)
     g, m, p, e = dp.geometry, dp.mass_kg, dp.propulsion, dp.energy
     parts: dict = {}
@@ -46,15 +47,25 @@ def unit_cost(dp, units: int = 1, learning: Learning = Learning()) -> dict:
     if dp.architecture == "hull":
         from .materials import FILMS
         film = next(f for f in FILMS.values() if f.name == g["film"])
-        area = g["surface_area_m2"] * g["film_plies_equiv"] * 1.18  # gore waste
+        # Purchased roll area over hull area.  A gore fills ~73 % of its
+        # bounding rectangle and nests poorly; 1.38 is the best case on a
+        # well-matched roll, not the 1.18 first assumed.  [patterns.py]
+        area = g["surface_area_m2"] * g["film_plies_equiv"] * FILM_PURCHASE_FACTOR
         parts["envelope film"] = area * film.usd_per_m2
         parts["seam tape, load patches, fittings"] = 60.0 + 0.9 * g["surface_area_m2"]
-        parts["fins (film + air-beam fabric + valves)"] = 9.0 * g["fin_area_total_m2"] + 40.0
+        # Spar fabric dominates: ~1 m2 of coated ripstop per m2 of fin.
+        parts["fins (film + air-beam fabric + valves)"] = 14.0 * g["fin_area_total_m2"] + 40.0
+        net = dp.structure.get("net") or {}
+        if net:
+            parts["tendon net (UHMWPE line + sleeve tape)"] = 0.22 * net["tendon_length_m"]
         parts["spine webbing, rigging, pods"] = 6.0 * g["length_m"] + 70.0
         # Sealing: gore length x gores; a bar sealer does ~1.2 m/min incl. handling.
-        seam_m = 12 * g["length_m"] * 1.1 + 4 * 14.0
+        # Fin seam scales with hull length (4.1 x L from the patterns).
+        seam_m = 12 * g["length_m"] * 1.1 + 4.1 * g["length_m"]
         labour_h["cut and seal envelope"] = seam_m / 1.2 / 60.0 * 2.2 + 4.0
         labour_h["fins"] = 6.0
+        if net:
+            labour_h["lay and tape tendon net"] = net["tendon_length_m"] / 2.0 / 60.0
         reusable_fraction_env = 0.0
     else:
         from .materials import LATEX
