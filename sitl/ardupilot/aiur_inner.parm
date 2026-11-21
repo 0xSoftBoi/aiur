@@ -3,13 +3,18 @@
 # reproducible from aiur_s2.parm alone.
 
 # An airspeed sensor, so the script can enforce the airspeed limit.
-# 100 = SITL: the plant sends equivalent airspeed in the JSON "airspeed"
-# field.  HARDWARE NOTE: at 20 km and 6 m/s the dynamic pressure is 1.6 Pa.
-# No pitot/differential-pressure sensor resolves that; the flight sensor has
-# to be an anemometer (ultrasonic or hot-film) presented to ArduPilot as an
-# airspeed backend.  SITL's sensor here is noise-free.
+# 100 = SITL: the plant sends true airspeed in the JSON "airspeed" field.
 ARSPD_TYPE 100
 ARSPD_USE 1
+# SITL models a pitot: differential pressure plus +/-2 Pa of noise
+# (SIM_ARSPD_RND default 2).  At 20 km and 6 m/s the whole signal is 1.6 Pa
+# (0.7 Pa at 4 m/s), so the default noise is larger than the signal.  That
+# is the hardware finding - no pitot or differential-pressure sensor
+# resolves this - and the flight sensor has to
+# be an anemometer (ultrasonic or hot-film) presented to ArduPilot as an
+# airspeed backend.  Noise is set to zero here to stand in for one; its real
+# error model is not simulated.
+SIM_ARSPD_RND 0
 # No pre-flight zero-airspeed calibration of a sensor that is never at rest.
 ARSPD_SKIP_CAL 1
 # The speed-ratio autocal and the "airspeed vs wind" health checks are for

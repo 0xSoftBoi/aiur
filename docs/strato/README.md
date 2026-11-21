@@ -108,7 +108,8 @@ in the [design log](design-log.md).
   The stratospheric carrier is release-only.
 - **Claim any of this is tested on hardware.** No film has been sealed, no
   motor run in a chamber, no firmware flashed. The real ArduPilot firmware
-  has flown the simulated hull, but only at float and only in software.
+  has flown the simulated hull through the ROS stack, but only
+  station-keeping at float, only in software, with an ideal airspeed sensor.
 
 ## Run it
 

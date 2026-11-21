@@ -108,6 +108,7 @@ local function read_demands(now)
   end
 end
 
+-- True airspeed: the airspeed library reports equivalent airspeed.
 local function airspeed_tas()
   local eas = ahrs:airspeed_estimate()
   if eas == nil then return nil end

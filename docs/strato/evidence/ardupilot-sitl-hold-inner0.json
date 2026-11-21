@@ -1,0 +1,43 @@
+{
+ "test": "failsafe",
+ "wind_ned": [
+  0.0,
+  -4.0,
+  0.0
+ ],
+ "t_hold_s": 220.1,
+ "duration_s": 300.0,
+ "mode_at_end": 4,
+ "mean_throttle_pct": 0.0,
+ "zero_throttle_fraction": 1.0,
+ "rms_heading_off_upwind_deg": 117.9,
+ "max_heading_off_upwind_deg": 180.0,
+ "drift_m": 1282.6,
+ "mean_drift_speed_m_s": 4.28,
+ "statustext": [
+  [
+   0.0,
+   "Barometer 1 calibration complete"
+  ],
+  [
+   0.0,
+   "Barometer 2 calibration complete"
+  ],
+  [
+   0.0,
+   "Beginning INS calibration. Do not move vehicle"
+  ],
+  [
+   0.0,
+   "ArduPilot Ready"
+  ],
+  [
+   0.0,
+   "aiur_pitch.lua loaded"
+  ],
+  [
+   0.0,
+   "RCInput: decoding UDP (Pulses)"
+  ]
+ ]
+}

@@ -70,7 +70,7 @@ def setup(context):
     ns = "aiur"
     cruise, dash = float(L("max_airspeed")), float(L("dash_airspeed"))
     report = Node(package="aiur_flight", executable="station_report", namespace=ns, output="screen",
-                  parameters=[{"duration_s": float(L("duration_s")), "relative_time": True,
+                  parameters=[{"duration_s": float(L("duration_s")), "relative_time": True, "report_wind": True,
                                "output": L("output")}])
     return [
         sitl,

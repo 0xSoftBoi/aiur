@@ -87,6 +87,7 @@ class Bridge(Node):
         self.ap_ready = False
         self.ap_next = 0.0              # wall time of the next start-up action
         self.ap_hb = 0.0
+        self.ap_streams = 0.0
         self.wind = [0.0, 0.0]          # east, north; from the station keeper
         self.home = None
         self.att = None
@@ -196,9 +197,13 @@ class Bridge(Node):
             mv.heartbeat_send(mav.MAV_TYPE_ONBOARD_CONTROLLER, mav.MAV_AUTOPILOT_INVALID, 0, 0, 0)
         if not self.ap_seen or self.ap_ready or now < self.ap_next:
             return
-        self.ap_next = now + 2.0
+        # Short steps: against SITL at 15x, a 2 s wall-clock retry is 30 s of flight.
+        self.ap_next = now + 0.25
         ok = self.ap_fix >= 3 and (self.ap_ekf & EKF_OK) == EKF_OK
         if not ok:
+            if now < self.ap_streams:
+                return
+            self.ap_streams = now + 2.0
             for mid, hz in ((mav.MAVLINK_MSG_ID_GLOBAL_POSITION_INT, self.stream_hz),
                             (mav.MAVLINK_MSG_ID_ATTITUDE, 2.0 * self.stream_hz),
                             (mav.MAVLINK_MSG_ID_SERVO_OUTPUT_RAW, self.stream_hz),

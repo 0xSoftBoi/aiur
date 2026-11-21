@@ -15,7 +15,7 @@ Protocol (libraries/SITL/examples/JSON/readme.md, ArduPilot Rover-4.7.3):
     plant -> SITL   "\n" + JSON + "\n" with timestamp (s, absolute physics
                     time), imu.gyro, imu.accel_body, position (NED m),
                     quaternion, velocity (NED m/s); optionally airspeed
-                    (equivalent airspeed, m/s), which is sent here
+                    (true airspeed, m/s), which is sent here
 
 Lock-step: exactly one physics step of ``--dt`` seconds per *new* frame_count
 and exactly one reply per packet.  ArduPilot advances its clock by the
@@ -85,7 +85,6 @@ class Plant:
         dp = ladder()[args.design]
         self.af = f6.Airframe.from_design(dp)
         self.dt = args.dt
-        self.eas_per_tas = math.sqrt(self.af.air.density_kg_m3 / 1.225)
         self.imu_r = (args.imu_x, 0.0, self.af.rg[2] if args.imu_z is None else args.imu_z)
         self.log = open(args.log, "w") if args.log else None
         if self.log:
@@ -195,9 +194,10 @@ class Plant:
             "position": [round(c, 4) for c in st.pos],
             "quaternion": [round(c, 8) for c in st.quat],
             "velocity": [round(c, 5) for c in v_ned],
-            # Equivalent airspeed along the body x axis, for ArduPilot's SITL
-            # airspeed sensor (ARSPD_TYPE 100).  Ignored unless ARSPD is set.
-            "airspeed": round(max(v[0], 0.0) * self.eas_per_tas, 5),
+            # TRUE airspeed along the body x axis, for ArduPilot's SITL airspeed
+            # sensor (ARSPD_TYPE 100); SITL converts it to equivalent airspeed
+            # and a differential pressure itself.  Ignored unless ARSPD is set.
+            "airspeed": round(max(v[0], 0.0), 5),
         }
         if self.log and self.t >= self.next_log:
             self.next_log += self.args.log_dt

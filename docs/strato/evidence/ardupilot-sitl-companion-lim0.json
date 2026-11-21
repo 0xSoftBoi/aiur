@@ -1,0 +1,70 @@
+{
+ "test": "station",
+ "guidance": "companion",
+ "bearing_from_upwind_deg": 0.0,
+ "wind_ned": [
+  0.0,
+  -6.0,
+  0.0
+ ],
+ "upwind_m": 1500.0,
+ "duration_s": 1800.0,
+ "t_start_s": 100.0,
+ "t_end_s": 1900.0,
+ "target_ne": [
+  1.1,
+  1438.9
+ ],
+ "ekf": {
+  "final_distance_m": 11978.4,
+  "rms_distance_second_half_m": 9411.9,
+  "max_distance_second_half_m": 11978.4,
+  "time_to_within_50m_s": null,
+  "altitude_excursion_m": 3.1,
+  "steering_saturated_fraction": 0.0,
+  "throttle_saturated_fraction": 0.0,
+  "mean_throttle_pct": 0.5
+ },
+ "truth": {
+  "final_distance_m": 11979.7,
+  "rms_distance_second_half_m": 9413.7,
+  "max_distance_second_half_m": 11979.7,
+  "altitude_excursion_m": 3.1,
+  "mean_thrust_power_w": 0.34,
+  "mean_airspeed_m_s": 0.34,
+  "max_airspeed_m_s": 8.05,
+  "gimbal_saturated_fraction": 0.0,
+  "max_abs_pitch_deg": 1.65,
+  "ekf_origin_offset_ne_m": [
+   -0.0,
+   -0.5
+  ],
+  "ekf_position_error_final_m": 1.28
+ },
+ "statustext": [
+  [
+   0.0,
+   "Barometer 1 calibration complete"
+  ],
+  [
+   0.0,
+   "Barometer 2 calibration complete"
+  ],
+  [
+   0.0,
+   "Beginning INS calibration. Do not move vehicle"
+  ],
+  [
+   0.0,
+   "ArduPilot Ready"
+  ],
+  [
+   0.0,
+   "aiur_pitch.lua loaded"
+  ],
+  [
+   0.0,
+   "RCInput: decoding UDP (Pulses)"
+  ]
+ ]
+}

@@ -515,6 +515,72 @@ jet is weaker than the estimate was) and then cannot stay.
 One station, complete soundings only, and yesterday's sounding is not a
 forecast: this is a planning rate, not a launch criterion.
 
+## Rev U — a thrust floor on the autopilot, and ROS flying ArduPilot
+
+```
+INNER=1 WIND_E=-6 sitl/ardupilot/run_sitl.sh companion
+INNER=1 sitl/ardupilot/run_sitl.sh failsafe
+ros2 launch aiur_bringup sitl_ardupilot.launch.py inner:=1 gust:=0.5
+```
+
+Rev S ended on stock Rover's flaw: it cuts throttle to slow down, and on a
+vectored-thrust hull that is cutting the rudder. `aiur_inner.lua` runs the
+in-repo `FlightController` law on the autopilot at 50 Hz - heading error to
+gimbal angle through the *current* thrust, with a thrust floor - and
+overrides Rover's steering and throttle outputs while Rover keeps arming,
+estimation and modes. Rows marked * I re-ran from a clean directory.
+
+| ArduRover 4.7.3 SITL, S2 hull | Stock Rover | With `aiur_inner.lua` | In-repo |
+| --- | ---: | ---: | ---: |
+| 90 degree turn: rise / overshoot | 19.1 s / 3.3 deg | 13.0 s / 7.1 deg | 13.0 s / 8.3 deg |
+| Wind at the 6 m/s airspeed limit, 30 min: final distance* | 11,980 m | 1,501 m | 1,516 m |
+| Same, time at zero thrust | 99 % | 0 % | - |
+| HOLD for 300 s in 4 m/s wind: drift* | 1,283 m | 3.7 m | - |
+| Same, heading off the wind (RMS)* | 118 deg | 0.2 deg | - |
+| Crosswind transit, gusts: final distance | 44.5 m | 10.8 m | 80.5 m |
+| Upwind station, gusts: gimbal saturated | 26 % | 15 % | 18 % |
+
+Wind at the limit is the case that separates them: stock Rover sheds
+throttle, loses the bow, ends up pointing downwind and sits at zero thrust
+while it is blown 12 km away; the script weathercocks and holds. HOLD is
+the same failure with a worse name - stock Rover's safe state drifts at
+wind speed.
+
+**ROS now flies ArduPilot.** The bridge has an ArduRover mode (connect,
+request streams, GUIDED, arm, heading + signed ground speed as
+`SET_ATTITUDE_TARGET`), and one launch file runs the plant, ArduRover, the
+bridge and `station_keeper`. Station 1.5 km upwind in 4 m/s, 30 min:
+
+| Chain | Gust | Final / RMS distance | Wind estimated (true 4.00) |
+| --- | ---: | ---: | ---: |
+| In-repo | 0.5 | 58 / 125 m | given |
+| ROS + stock Rover* | 0 | 2,295 / 1,064 m | 4.9, wandering |
+| ROS + inner loop* | 0.5 | 87 / 130 m | 4.5 |
+| ROS + inner loop + measured airspeed | 0.5 | 85 / 131 m | 4.1 |
+
+The stock-Rover row is a second, independent failure. `station_keeper`
+infers wind as ground velocity minus the air velocity it commanded, which
+assumes the autopilot flies *air* velocity. Rover flies ground speed, so
+the estimator is handed back its own number and the wind is unobservable;
+when Rover then fails to track, the estimate runs away. With the inner
+loop holding airspeed, the same estimator converges.
+
+Two things this leaves open, both hardware:
+
+- **Airspeed sensing.** The inner loop's airspeed limit and the better wind
+  estimate lean on a pitot reading. At 20 km and 6 m/s the whole signal is
+  1.6 Pa; these runs used a noiseless sensor because SITL's default pitot
+  noise is larger than that. The Sensirion part in the netlist has a
+  zero-point error near 0.1 Pa, which is a few percent of airspeed at 6 m/s
+  and useless at 3 m/s. Whether it works at -56 C through a tube is a bench
+  question, and S1 at 3 m/s should plan on having no airspeed at all.
+- **HOLD no longer stops the motor** with the script running; disarm does.
+  That is deliberate and must be in the ground procedure. On an EKF
+  failure the script has nothing to steer by and thrust is cut as in stock.
+
+Not flown under ArduPilot: ascent, the full mission chain, a real
+link-loss failsafe trigger, DroneCAN, real sensors, the trainer.
+
 ## Where the model was checked
 
 - **Lamb added-mass factors** reproduce Munk's NACA Report 184 table to
@@ -524,6 +590,8 @@ forecast: this is a planning rate, not a launch criterion.
 - **JP Aerospace Tandem** flew two 1.8 m propellers and managed 6 kt at
   ~29 km. The tandem model needs 100 W to sustain 3 m/s at 20 km with
   0.77 m propellers. Same regime.
+- **ArduPilot with the thrust-floor script and through ROS**: wind-at-limit,
+  HOLD drift and the ROS station-keeping runs re-run and reproduced.
 - **ArduPilot.** ArduRover 4.7.3 SITL flying the in-repo plant: turns and
   station-keeping within 20 % of the in-repo controller; re-run from a
   clean directory, reproduced exactly.

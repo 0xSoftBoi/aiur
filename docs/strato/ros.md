@@ -67,9 +67,20 @@ real wire format, but the thing on the other end of *this* launch is the
 repo's simulation. ArduPilot itself is flown separately, in
 [`sitl/ardupilot`](../../sitl/ardupilot/) ([ardupilot-sitl.md](ardupilot-sitl.md)):
 stock ArduRover (boat, vectored thrust) accepts heading plus signed speed
-as `SET_ATTITUDE_TARGET` and flies the same 6-DoF plant. The two are not
-yet joined - the bridge has not been pointed at ArduPilot SITL, and its
-thrust field carries airspeed fraction where Rover expects signed speed.
+as `SET_ATTITUDE_TARGET` and flies the same 6-DoF plant. The bridge has an
+`autopilot:=ardurover` mode for it:
+
+```
+export PYTHONPATH=<repo>:$PYTHONPATH
+ros2 launch aiur_bringup sitl_ardupilot.launch.py inner:=1 gust:=0.5
+```
+
+runs the plant, ArduRover SITL (downloaded on first use), the bridge and
+`station_keeper`, and ends with one `STATION_REPORT` line: 87 m final and
+130 m RMS from station in a 4 m/s wind with gusts. Use `inner:=1`: with
+stock Rover the wind estimator diverges (see the design log, Rev U). Only
+station-keeping is flown this way; the ascent and the full mission chain
+have not been run against ArduPilot.
 
 ## Station-keeping with the full control chain
 
@@ -183,8 +194,9 @@ unaided" flips on how much of the Munk moment is real.
 
 ## Known gaps
 
-- ArduPilot SITL flies the 6-DoF plant, but not through this ROS stack and
-  not the ascent; stock Rover has no thrust floor, pitch or altitude loop.
+- Under ArduPilot only station-keeping at float is flown (through ROS and
+  directly); not the ascent, the float manager or termination. Airspeed in
+  those runs comes from a noiseless sensor.
 - Sensor noise and radio loss are not injected at the message level (motor,
   gimbal and GNSS-outage faults are).
 - The Gazebo fin runs are open loop; the closed-loop turn study has not been

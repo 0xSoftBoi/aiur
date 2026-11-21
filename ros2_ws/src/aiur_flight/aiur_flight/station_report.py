@@ -3,6 +3,8 @@
 `relative_time` (default False): count `duration_s` from the first odometry
 message instead of from stamp zero, for an autopilot that has been up for a
 while before the companion takes over (ArduPilot SITL).
+`report_wind` (default False): also report the station keeper's wind
+estimate (mean over the second half, east/north).
 """
 
 import json
@@ -10,6 +12,7 @@ import math
 import os
 
 import rclpy
+from geometry_msgs.msg import Vector3Stamped
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 
@@ -23,6 +26,10 @@ class StationReport(Node):
         self.out = self.declare_parameter("output", "/tmp/aiur_station.json").value
         self.relative = bool(self.declare_parameter("relative_time", False).value)
         self.t0 = None
+        self.wind = []
+        self.elapsed = 0.0
+        if bool(self.declare_parameter("report_wind", False).value):
+            self.create_subscription(Vector3Stamped, "wind/estimate", self.on_wind, 10)
         self.rows, self.thrust, self.sat, self.n = [], 0.0, 0, 0
         self.create_subscription(PropulsionCommand, "cmd/propulsion", self.on_cmd, 10)
         self.create_subscription(Odometry, "odom", self.on_odom, 10)
@@ -32,12 +39,16 @@ class StationReport(Node):
         self.thrust += m.thrust_n
         self.sat += abs(m.gimbal_yaw_rad) > 0.43 or abs(m.gimbal_pitch_rad) > 0.43
 
+    def on_wind(self, m: Vector3Stamped) -> None:
+        self.wind.append((self.elapsed, m.vector.x, m.vector.y))
+
     def on_odom(self, m: Odometry) -> None:
         t = m.header.stamp.sec + m.header.stamp.nanosec * 1e-9
         if self.relative:
             if self.t0 is None:
                 self.t0 = t
             t -= self.t0
+        self.elapsed = t
         p = m.pose.pose.position
         self.rows.append((t, math.hypot(p.x, p.y), p.z))
         if t >= self.duration:
@@ -49,6 +60,10 @@ class StationReport(Node):
                    "altitude_excursion_m": round(max(abs(r[2]) for r in self.rows), 1),
                    "mean_thrust_n": round(self.thrust / max(self.n, 1), 2),
                    "gimbal_saturated_fraction": round(self.sat / max(self.n, 1), 3)}
+            if self.wind:
+                w = [r for r in self.wind if r[0] > self.duration / 2] or self.wind
+                res["wind_estimate_east_north_m_s"] = [round(sum(r[1] for r in w) / len(w), 2),
+                                                       round(sum(r[2] for r in w) / len(w), 2)]
             os.makedirs(os.path.dirname(self.out) or ".", exist_ok=True)
             with open(self.out, "w") as fh:
                 json.dump(res, fh, indent=2)
